@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation — Native Federation Docs</title>
+  <meta name="description" content="In-depth articles and documentation resources covering Native Federation and Micro Frontend architecture patterns with Angular.">
+  <link rel="canonical" href="https://native-federation.dev/docs/documentation.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Documentation — Native Federation Docs">
+  <meta property="og:description" content="In-depth articles and documentation for Native Federation.">
+  <meta property="og:url" content="https://native-federation.dev/docs/documentation.html">
+  <meta property="og:image" content="https://native-federation.dev/images/sujet-light.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../images/logo.png">
+  <link rel="apple-touch-icon" href="../images/logo.png">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Documentation</h1>
+      <p class="doc-lead">In-depth articles covering the full spectrum of Native Federation and Micro Frontend architecture with Angular.</p>
+
+      <h2>Article Series</h2>
+      <p>The comprehensive article series on Angular Architects covers everything you need to know about building Micro Frontends with Angular:</p>
+
+      <div class="workshop-cta">
+        <h3>The Microfrontend Revolution</h3>
+        <p>A multi-part article series covering Module Federation concepts, configuration, advanced patterns, and production strategies. Thanks to the shared API, these articles apply equally to Native Federation.</p>
+        <a href="https://www.angulararchitects.io/en/aktuelles/the-microfrontend-revolution-part-2-module-federation-with-angular/" target="_blank" rel="noopener" class="btn btn-primary">Read the Series</a>
+      </div>
+
+      <div class="callout">
+        <p>Although these articles were originally written for Module Federation, they fully apply to Native Federation thanks to the identical API. Simply use imports from <code>@angular-architects/native-federation</code> instead.</p>
+      </div>
+
+      <h2>Mental Model</h2>
+      <p>The underlying mental model enables runtime integration: loading parts of a separately built and deployed application into yours. This is essential for both Micro Frontend architectures and plugin-based solutions.</p>
+
+      <h3>Key Concepts</h3>
+      <ul>
+        <li><strong>Remote:</strong> A separately built and deployed application that exposes EcmaScript modules loadable by other applications.</li>
+        <li><strong>Host:</strong> An application that loads one or more remotes on demand. From your framework's perspective, this looks like traditional lazy loading — the key difference is that the host doesn't know about remotes at compile time.</li>
+        <li><strong>Shared Dependencies:</strong> Libraries used by multiple remotes and the host. Instead of downloading a library multiple times, it's downloaded once and shared at runtime.</li>
+        <li><strong>Version Mismatch Handling:</strong> When applications use different versions of a shared library, Native Federation handles this through several strategies — falling back to a compatible version (via semantic versioning), using a different compatible one, or throwing an error.</li>
+      </ul>
+
+      <h2>Quick Links</h2>
+      <ul>
+        <li><a href="example.html">Working Example</a></li>
+        <li><a href="tutorial.html">Step-by-Step Tutorial</a></li>
+        <li><a href="faq.html">Frequently Asked Questions</a></li>
+        <li><a href="https://github.com/angular-architects/module-federation-plugin" target="_blank" rel="noopener">GitHub Repository</a></li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../components.js"></script>
+</body>
+</html>

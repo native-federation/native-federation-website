@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Example — Native Federation Docs</title>
+  <meta name="description" content="A working example of Native Federation loading a Micro Frontend into a shell application using Angular.">
+  <link rel="canonical" href="https://native-federation.dev/docs/example.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Example — Native Federation Docs">
+  <meta property="og:description" content="A working example of Native Federation loading a Micro Frontend into a shell application.">
+  <meta property="og:url" content="https://native-federation.dev/docs/example.html">
+  <meta property="og:image" content="https://native-federation.dev/images/sujet-light.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../images/logo.png">
+  <link rel="apple-touch-icon" href="../images/logo.png">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Example</h1>
+      <p class="doc-lead">A ready-to-run example showing Native Federation in action — loading a Micro Frontend into a shell application.</p>
+
+      <p>We migrated the original webpack Module Federation example to Native Federation. The example demonstrates a host (shell) application dynamically loading a remote Micro Frontend at runtime.</p>
+
+      <h2>Get the Example</h2>
+
+      <p>Clone the example repository and install dependencies:</p>
+
+      <pre><code>git clone https://github.com/manfredsteyer/module-federation-plugin-example.git --branch nf-standalone-solution
+
+cd module-federation-plugin-example
+
+npm i</code></pre>
+
+      <h2>Run It</h2>
+
+      <p>Start the Micro Frontend first:</p>
+
+      <pre><code>ng serve mfe1 -o</code></pre>
+
+      <p>Wait until the Micro Frontend is running, then open a second terminal and start the shell:</p>
+
+      <pre><code>ng serve shell -o</code></pre>
+
+      <p>The shell will load the Micro Frontend at runtime. Navigate to the second menu item to see the remote component rendered inside the host.</p>
+
+      <h2>Demo Repository</h2>
+
+      <p>For additional testing, the <a href="https://github.com/manfredsteyer/nf-test.git" target="_blank" rel="noopener">demo repository</a> tests Native Federation together with several popular Angular UI libraries, compiling demo apps built with them using Native Federation.</p>
+
+      <img src="../images/demo-repo.png" alt="Native Federation demo repository showing compatibility tests with various UI libraries" width="500" loading="lazy">
+
+      <div class="callout">
+        <p>This demo repository is primarily for testing purposes. For an initial example or step-by-step instructions, see the <a href="tutorial.html">Tutorial</a>.</p>
+      </div>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../components.js"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Native &amp; Module Federation — Native Federation Docs</title>
+  <meta name="description" content="Learn how to combine Native Federation and webpack Module Federation side-by-side, including migration strategies.">
+  <link rel="canonical" href="https://native-federation.dev/docs/native-and-module-federation.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Native & Module Federation — Native Federation Docs">
+  <meta property="og:description" content="Combine Native Federation and Module Federation side-by-side.">
+  <meta property="og:url" content="https://native-federation.dev/docs/native-and-module-federation.html">
+  <meta property="og:image" content="https://native-federation.dev/images/sujet-light.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../images/logo.png">
+  <link rel="apple-touch-icon" href="../images/logo.png">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Native Federation &amp; Module Federation</h1>
+      <p class="doc-lead">Native Federation can work alongside webpack Module Federation. This guide covers how to combine both technologies and how to migrate from Module Federation to Native Federation.</p>
+
+      <h2>Same API, Different Runtime</h2>
+      <p>The package <code>@angular-architects/native-federation</code> uses the same API as <code>@angular-architects/module-federation</code>. To switch, simply change your imports to the native-federation package. Do not mix imports from both packages in the same application.</p>
+
+      <h2>Side-by-Side Usage</h2>
+      <p>In some architectures, you might need to run both technologies simultaneously — for example, during a gradual migration or when integrating with legacy systems that still use webpack.</p>
+      <p>For a detailed guide on running both technologies side-by-side, read:</p>
+
+      <div class="workshop-cta">
+        <h3>Combining Native Federation and Module Federation</h3>
+        <p>A practical guide to using both technologies in a single architecture, with configuration examples and common patterns.</p>
+        <a href="https://www.angulararchitects.io/en/blog/combining-native-federation-and-module-federation/" target="_blank" rel="noopener" class="btn btn-primary">Read the Guide</a>
+      </div>
+
+      <h2>Migration from Module Federation</h2>
+      <p>If you're currently using Angular with webpack Module Federation and want to migrate to Native Federation (and Angular's esbuild-based build system), follow the official migration guide:</p>
+      <ul>
+        <li><a href="https://github.com/angular-architects/module-federation-plugin/blob/main/libs/native-federation/docs/migrate.md" target="_blank" rel="noopener">Migration Guide</a> — step-by-step instructions for switching from Module Federation to Native Federation.</li>
+      </ul>
+
+      <h2>Key Differences</h2>
+      <table class="version-table">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th>Module Federation</th>
+            <th>Native Federation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Build Tool</td>
+            <td>webpack</td>
+            <td>esbuild (via Angular CLI)</td>
+          </tr>
+          <tr>
+            <td>Module Format</td>
+            <td>webpack modules</td>
+            <td>ESM + Import Maps</td>
+          </tr>
+          <tr>
+            <td>Configuration API</td>
+            <td colspan="2" style="text-align:center;">Identical</td>
+          </tr>
+          <tr>
+            <td>Build Speed</td>
+            <td>Standard webpack</td>
+            <td>Fast esbuild + caching</td>
+          </tr>
+          <tr>
+            <td>Future-Proof</td>
+            <td>Tied to webpack</td>
+            <td>Web standards-based</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Updates</h2>
+      <p>You can use <code>ng update</code> to update Native Federation to the latest version. For notes specific to upgrading to version 18, see the <a href="https://github.com/angular-architects/module-federation-plugin/blob/main/libs/native-federation/docs/update18.md" target="_blank" rel="noopener">Version 18 Update Guide</a>.</p>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../components.js"></script>
+</body>
+</html>
