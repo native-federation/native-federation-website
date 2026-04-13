@@ -129,6 +129,7 @@
         { href: 'documentation.html', label: 'Blog Series', id: 'documentation' },
       ]},
       { section: 'More', items: [
+        { href: 'component-libs.html', label: 'Component Libs', id: 'component-libs' },
         { href: 'workshop.html', label: 'Architecture Workshop', id: 'workshop' },
       ]},
     ];
