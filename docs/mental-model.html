@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mental Model — Native Federation Docs</title>
+  <meta name="description" content="Understand the core mental model behind Native Federation — hosts, remotes, shared dependencies, and version mismatch handling for Micro Frontend architectures.">
+  <link rel="canonical" href="https://native-federation.dev/docs/mental-model.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Mental Model — Native Federation Docs">
+  <meta property="og:description" content="The core mental model behind Native Federation — hosts, remotes, shared dependencies, and version mismatch handling.">
+  <meta property="og:url" content="https://native-federation.dev/docs/mental-model.html">
+  <meta property="og:image" content="https://native-federation.dev/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../images/logo.png">
+  <link rel="apple-touch-icon" href="../images/logo.png">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>The Mental Model</h1>
+      <p class="doc-lead">Native Federation is built on the proven mental model of Module Federation — a set of concepts that enable runtime integration of separately built and deployed applications.</p>
+
+      <h2>Runtime Integration</h2>
+      <p>The core idea is simple: load a part of a separately built and deployed application into yours at runtime. This is the foundation for both Micro Frontend architectures and plugin-based solutions.</p>
+      <p>Unlike traditional lazy loading where everything is known at build time, federation allows loading code that the host application has never seen during compilation. This enables truly independent development and deployment cycles across teams.</p>
+
+      <h2>Key Concepts</h2>
+
+      <h3>Remote</h3>
+      <p>A remote is a separately built and deployed application that <strong>exposes EcmaScript modules</strong> for other applications to consume. A remote can expose anything — a single component, a full routing configuration, or any other TypeScript/JavaScript construct.</p>
+      <p>Each remote publishes a <code>remoteEntry.json</code> metadata file that describes what it exposes and which shared dependencies it uses.</p>
+
+      <h3>Host</h3>
+      <p>The host (or shell) loads one or more remotes on demand. From your framework's perspective, this looks exactly like traditional lazy loading — the crucial difference is that the host doesn't know about the remotes at compile time.</p>
+      <p>A host reads a <strong>federation manifest</strong> at runtime that maps remote names to their entry point URLs. This manifest can be swapped during deployment, allowing you to adapt the build to different environments.</p>
+
+      <h3>Shared Dependencies</h3>
+      <p>When multiple remotes and the host use the same library (e.g., Angular, RxJS), you don't want to download it multiple times. Shared dependencies are downloaded once and reused at runtime across all federated applications.</p>
+      <p>Native Federation places shared libraries into their own standards-compliant EcmaScript bundles and uses <strong>Import Maps</strong> to tell the browser where to load each one from.</p>
+
+      <h3>Version Mismatch Handling</h3>
+      <p>When two or more applications require different versions of the same shared library, Native Federation provides several strategies:</p>
+      <ul>
+        <li><strong>Compatible fallback:</strong> Use a different version that satisfies semantic versioning constraints.</li>
+        <li><strong>Strict mode:</strong> Throw an error if no compatible version is found, preventing subtle runtime bugs.</li>
+        <li><strong>Singleton enforcement:</strong> Guarantee that only one instance of a library exists, crucial for stateful libraries like Angular.</li>
+      </ul>
+
+      <h2>How It Works Under the Hood</h2>
+      <p>At runtime, Native Federation uses <strong>Import Maps</strong> — a web standard for mapping module specifiers to URLs. During the build, Native Federation:</p>
+      <ol>
+        <li>Analyzes shared dependencies and creates individual ESM bundles for each.</li>
+        <li>Generates metadata files (<code>remoteEntry.json</code>) describing exposed modules and required shared dependencies.</li>
+        <li>At runtime, reads the federation manifest and remote metadata to construct an Import Map.</li>
+        <li>The browser uses this Import Map to resolve and load modules on demand.</li>
+      </ol>
+
+      <div class="callout">
+        <p>Because Import Maps are a browser-native standard, Native Federation is not tied to any specific build tool. It works with esbuild, webpack, or any future bundler.</p>
+      </div>
+
+      <h2>Further Reading</h2>
+      <ul>
+        <li><a href="tutorial.html">Tutorial</a> — see the mental model in action</li>
+        <li><a href="documentation.html">Blog Series</a> — the in-depth article series covering all aspects</li>
+        <li><a href="native-and-module-federation.html">Native &amp; Module Federation</a> — how the two implementations relate</li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../components.js"></script>
+</body>
+</html>
