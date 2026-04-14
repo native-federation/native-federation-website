@@ -34,7 +34,7 @@
     header.innerHTML = `
       <div class="header-inner">
         <a href="${pathPrefix}index.html" class="header-logo" aria-label="Native Federation Home">
-          <img src="${pathPrefix}images/logo.png" alt="" width="36" height="36">
+          <img src="${pathPrefix}images/logo-neu3.png" alt="" width="36" height="36">
           <span>Native Federation</span>
         </a>
         <nav class="header-nav" aria-label="Main navigation">
@@ -88,7 +88,7 @@
     footer.innerHTML = `
       <div class="footer-inner">
         <div class="footer-brand">
-          <img src="${pathPrefix}images/logo.png" alt="" width="28" height="28">
+          <img src="${pathPrefix}images/logo-neu3.png" alt="" width="28" height="28">
           <span>Native Federation</span>
         </div>
         <div class="footer-links">

@@ -147,7 +147,7 @@ p, li {
 .header-logo img {
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-sm);
+  object-fit: contain;
 }
 
 .header-logo:hover {
@@ -297,7 +297,7 @@ p, li {
   width: 120px;
   height: 120px;
   margin: 0 auto 32px;
-  border-radius: var(--radius-lg);
+  object-fit: contain;
 }
 
 .hero h1 {
@@ -1032,7 +1032,7 @@ li code {
 .footer-brand img {
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-sm);
+  object-fit: contain;
 }
 
 .footer-links {
