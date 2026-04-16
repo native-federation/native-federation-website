@@ -405,6 +405,16 @@ p, li {
   font-size: 1.0625rem;
 }
 
+.advisory-header {
+  max-width: 1120px;
+}
+
+.advisory-companies {
+  display: inline-block;
+  font-size: calc(1.0625rem + 2pt);
+  line-height: 1.8;
+}
+
 .section-label {
   display: inline-block;
   font-family: var(--font-display);
@@ -788,8 +798,8 @@ li code {
 /* Advisory board */
 .advisory-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
   max-width: var(--content-max);
   margin: 0 auto;
 }
@@ -807,41 +817,39 @@ li code {
   border-radius: var(--radius-lg);
   padding: 28px;
   text-align: center;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .advisory-card:hover {
   border-color: var(--color-primary-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .advisory-avatar {
-  width: 72px;
-  height: 72px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: var(--color-border-light);
   margin: 0 auto 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  font-size: 1.5rem;
+  display: block;
+  object-fit: cover;
+  object-position: top center;
+  border: 3px solid var(--color-border-light);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .advisory-card h4 {
-  color: var(--color-text-muted);
+  color: var(--color-text);
+  font-size: 1.05rem;
+  margin-bottom: 10px;
+}
+
+.advisory-summary {
   font-size: 0.9375rem;
-  margin-bottom: 2px;
-}
-
-.advisory-card .advisory-role {
-  font-size: 0.8125rem;
+  line-height: 1.6;
   color: var(--color-text-muted);
-}
-
-.advisory-card .advisory-company {
-  font-size: 0.8125rem;
-  color: var(--color-primary);
-  font-weight: 500;
+  margin: 0;
 }
 
 /* --- Resources Grid --- */
