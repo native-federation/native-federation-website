@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caching — Native Federation Core Docs</title>
+  <meta name="description" content="How Native Federation caches bundled shared externals between builds — the checksum, the cache layout, and how to control or invalidate it.">
+  <link rel="canonical" href="https://native-federation.io/docs/core/caching.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Caching — Native Federation Core Docs">
+  <meta property="og:description" content="Content-addressed caching of bundled shared externals in Native Federation.">
+  <meta property="og:url" content="https://native-federation.io/docs/core/caching.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Caching</h1>
+      <p class="doc-lead">Bundling every shared external on every build — all of Angular, every time you hit save — would make Native Federation unusable. The core ships a content-addressed cache for shared externals that is on by default and does most of the heavy lifting behind the scenes. This page explains exactly what is cached, how cache hits are decided, and how to control or invalidate the cache.</p>
+
+      <nav class="page-toc" aria-label="On this page">
+        <strong>On this page</strong>
+        <ul>
+          <li><a href="#what">What is cached</a></li>
+          <li><a href="#where">Cache location</a></li>
+          <li><a href="#checksum">The checksum</a></li>
+          <li><a href="#meta">The cache meta file</a></li>
+          <li><a href="#hit-miss">Cache hit vs. miss</a></li>
+          <li><a href="#dev-prod">Dev and prod caches</a></li>
+          <li><a href="#control">Controlling the cache</a></li>
+          <li><a href="#invalidation">Invalidation &amp; recovery</a></li>
+          <li><a href="#observability">Observability</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="what">What is cached</h2>
+      <p>Only <strong>shared externals</strong> are cached — never your exposed modules, never your app entry points. That's on purpose: shared externals are stable (one npm version stays put for weeks), while your own source changes on every keystroke. Scoping the cache to externals keeps it simple and safe.</p>
+      <p>Caching happens per <em>bundle</em>, not per package. A bundle is a group of externals that the core hands to the build adapter in one pass:</p>
+      <ul>
+        <li><code>browser-shared</code> — every <code>build: 'default'</code> browser external.</li>
+        <li><code>node-shared</code> — every <code>build: 'default'</code> node external.</li>
+        <li><code>browser-&lt;package&gt;</code> / <code>node-&lt;package&gt;</code> — one bundle per package declared with <code>build: 'separate'</code> or <code>build: 'package'</code>.</li>
+      </ul>
+      <p>Each bundle owns its own cache key, so bumping one isolated package doesn't invalidate the others.</p>
+
+      <h2 id="where">Cache location</h2>
+      <p>By default the cache lives under the workspace's <code>node_modules</code> folder, isolated per project (by the <code>name</code> field in <code>federation.config.js</code>):</p>
+      <pre><code>node_modules/.cache/native-federation/&lt;projectName&gt;/</code></pre>
+      <p>Inside you'll find the bundle's emitted <code>.js</code> files plus one <code>.meta.json</code> per bundle:</p>
+      <pre><code>node_modules/.cache/native-federation/mfe1/
+├── browser-shared.meta.json
+├── browser-shared-dev.meta.json        # dev cache lives side-by-side
+├── node-shared.meta.json
+├── _angular_core.CH1f-PL9lh.js
+├── _angular_core_primitives_di.63DUUDHkzv.js
+├── _angular_core_primitives_signals.5PqDyOp3np.js
+├── chunk-IXOA6WTM.js
+├── chunk-WDE5IQ2F.js
+└── chunk-2VMXMS7J.js</code></pre>
+      <p>Because the cache is scoped by project name, two remotes in the same monorepo don't stomp on each other. If <code>name</code> is missing, the core falls back to <code>'shell'</code> and logs a warning — with multiple nameless projects that fallback <em>will</em> cause collisions.</p>
+
+      <h2 id="checksum">The checksum</h2>
+      <p>A cache hit is decided by a SHA-256 checksum of everything that affects the bundle's output. Per bundle, the core builds a deterministic key by:</p>
+      <ol>
+        <li>sorting the package names in the bundle alphabetically,</li>
+        <li>concatenating each <code>&lt;packageName&gt;@&lt;version&gt;</code> pair,</li>
+        <li>appending a <code>dev=0</code> or <code>dev=1</code> flag,</li>
+        <li>hashing the result with SHA-256.</li>
+      </ol>
+      <p>A concrete example, before hashing:</p>
+      <pre><code>deps:@angular/core@21.0.6:@angular/core/primitives/di@21.0.6:@angular/core/primitives/signals@21.0.6:dev=0</code></pre>
+      <p>As long as every package in the bundle keeps the same version, the checksum is stable and the cache is reused. Bumping any package, adding a new one, or flipping between dev and prod invalidates only the bundles that actually contain that change.</p>
+
+      <h2 id="meta">The cache meta file</h2>
+      <p>Each bundle produces one meta file, e.g. <code>browser-shared.meta.json</code>. It's the record the core consults on the next build:</p>
+      <pre><code>{
+  "checksum": "071b3e8776554ee81b8266b5ae574e2e4f6db39f253ee7bb680a1a25c79ae237",
+  "externals": [
+    {
+      "packageName": "@angular/core",
+      "outFileName": "_angular_core.CH1f-PL9lh.js",
+      "requiredVersion": "^21.0.6",
+      "singleton": true,
+      "strictVersion": true,
+      "version": "21.0.6"
+    },
+    {
+      "packageName": "@angular/core/primitives/di",
+      "outFileName": "_angular_core_primitives_di.63DUUDHkzv.js",
+      "requiredVersion": "^21.0.6",
+      "singleton": true,
+      "strictVersion": true,
+      "version": "21.0.6"
+    },
+    {
+      "packageName": "@nf-internal/chunk-IXOA6WTM",
+      "outFileName": "chunk-IXOA6WTM.js",
+      "singleton": false,
+      "strictVersion": false,
+      "requiredVersion": "0.0.0",
+      "version": "0.0.0"
+    }
+  ],
+  "files": [
+    "_angular_core.CH1f-PL9lh.js",
+    "_angular_core_primitives_di.63DUUDHkzv.js",
+    "chunk-IXOA6WTM.js"
+  ]
+}</code></pre>
+      <p>Three fields matter:</p>
+      <ul>
+        <li><strong><code>checksum</code></strong> — compared against a freshly computed one on the next build.</li>
+        <li><strong><code>externals</code></strong> — inlined into <code>remoteEntry.json</code> on a cache hit, so the manifest is identical to what a cold build would have produced.</li>
+        <li><strong><code>files</code></strong> — the list the core copies out of the cache folder into <code>outputPath/</code>.</li>
+      </ul>
+
+      <h2 id="hit-miss">Cache hit vs. miss</h2>
+      <p>At the start of each bundle phase, the core:</p>
+      <ol>
+        <li>Computes the fresh checksum for the bundle.</li>
+        <li>Reads the stored meta file, if any, and compares its <code>checksum</code>.</li>
+        <li><strong>If they match</strong> — cache hit. The build adapter is never invoked. The cached <code>files</code> are copied straight into the output directory, and the cached <code>externals</code> are added to the in-memory <code>FederationCache</code>.</li>
+        <li><strong>If they differ</strong> — cache miss. The core clears the stale entries, calls the adapter to rebuild the bundle, and persists a new meta file.</li>
+      </ol>
+      <p>A first-ever build, a version bump, a new shared package, or a dev/prod flip all look like a miss on the affected bundle. Everything else is a hit.</p>
+
+      <h2 id="dev-prod">Dev and prod caches</h2>
+      <p>The <code>dev</code> flag is folded into the checksum and the filename (<code>browser-shared-dev.meta.json</code> vs. <code>browser-shared.meta.json</code>), so development and production artifacts are kept in parallel. Switching modes doesn't invalidate the other half of the cache — a prod build right after a dev run is still warm.</p>
+
+      <h2 id="control">Controlling the cache</h2>
+      <p>Caching is on by default. Toggle it on <code>FederationOptions</code>:</p>
+      <pre><code>await federationBuilder.init({
+  options: {
+    workspaceRoot: __dirname,
+    outputPath: 'dist/mfe1',
+    federationConfig: 'mfe1/federation.config.js',
+    cacheExternalArtifacts: true,   // default; set to false to opt out
+  },
+  adapter: esBuildAdapter,
+});</code></pre>
+      <p>For tighter control — e.g. sharing cache state across multiple builds in the same process — construct a cache yourself and thread it through the low-level API:</p>
+      <pre><code>import {
+  createFederationCache,
+  normalizeFederationOptions,
+  getExternals,
+  buildForFederation,
+} from '@softarc/native-federation';
+
+const cache = createFederationCache('.nf-cache');
+
+const { config, options } = await normalizeFederationOptions(fedOptions, cache);
+const externals = getExternals(config);
+await buildForFederation(config, options, externals);</code></pre>
+      <p>Adapters use the <code>bundlerCache</code> slot on <code>FederationCache</code> to persist bundler-specific state (e.g. an esbuild <code>context</code>) across rebuilds — one more layer of warm-start work on top of the file-level cache described here.</p>
+
+      <h2 id="invalidation">Invalidation &amp; recovery</h2>
+      <p>Versions change far more often than the skip list or build modes, so the checksum is deliberately narrow: it folds in <em>only</em> the packages and their versions. That means a few edits that you'd expect to invalidate the cache don't, on their own — for example changing <code>singleton</code> on an already-bundled external, or tweaking <code>includeSecondaries</code> filters in a way that doesn't add or remove packages from the bundle.</p>
+      <p>If a build ever produces surprising output and you suspect a stale entry, wipe the cache folder and let the next build recreate it:</p>
+      <pre><code>rm -rf node_modules/.cache/native-federation</code></pre>
+      <p>For a single project, delete only that project's subfolder:</p>
+      <pre><code>rm -rf node_modules/.cache/native-federation/mfe1</code></pre>
+      <p>There is no built-in "force rebuild one bundle" flag — deleting the corresponding <code>.meta.json</code> is the manual way.</p>
+
+      <h2 id="observability">Observability</h2>
+      <p>Run with <code>verbose: true</code> on <code>FederationOptions</code> to see the cache decisions inline with the build:</p>
+      <pre><code>DBG! 00:00:387.914ms - To load the federation config.
+INFO Building federation artefacts
+DBG! 00:00:779.642ms - [build artifacts] - To bundle all mappings and exposed.
+DBG! Checksum of browser-shared matched, Skipped artifact bundling
+DBG! 00:00:008.745ms - [build artifacts] - To bundle all shared browser externals
+DBG! 00:00:788.998ms - To build the artifacts.</code></pre>
+      <p>The <code>Checksum of &lt;bundle&gt; matched, Skipped artifact bundling</code> line is the signal that the cache did its job. When it's missing, the build went through the adapter.</p>
+
+      <h2>See also</h2>
+      <ul>
+        <li><a href="build-process.html">Build Process</a> — where caching fits in the <code>federationBuilder</code> lifecycle.</li>
+        <li><a href="artifacts.html">Build Artifacts</a> — the shape of the files the cache produces.</li>
+        <li><a href="configuration.html#build-modes">Build modes</a> — how <code>build: 'default' | 'separate' | 'package'</code> decides which cache bundle a package lands in.</li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>

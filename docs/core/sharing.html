@@ -177,20 +177,27 @@ setInferVersion(true);</code></pre>
 })</code></pre>
 
       <h3><code>{ resolveGlob: true }</code> — expand glob exports</h3>
-      <p>Since v21, glob patterns in <code>package.json</code> <code>exports</code> can be expanded into individual shared entries:</p>
+      <p>Some packages declare wildcard exports in their <code>package.json</code> — for example RxJS exposes <code>./internal/*</code>. By default, the <code>share</code> helper only emits a bundle for <em>exact</em> entry points, so an import like <code>rxjs/internal/observable/of</code> crashes at runtime (the import map only resolves exact matches, never glob paths). Since v21 you can opt in to glob resolution:</p>
       <pre><code>shared: share({
-  'package-a': {
+  'rxjs': {
     singleton: true,
     strictVersion: true,
     requiredVersion: 'auto',
     includeSecondaries: { resolveGlob: true },
   },
 })</code></pre>
-      <p>This creates a bundle for every valid export it finds, which can balloon the output. <strong>Only use <code>resolveGlob</code> together with the <code>ignoreUnusedDeps</code> feature flag.</strong> You can narrow the scope with <code>skip</code>, including wildcards:</p>
-      <pre><code>includeSecondaries: { skip: 'package-a/themes/xyz/*', resolveGlob: true }</code></pre>
+      <p>The helper walks the glob and produces a shared bundle for every file it matches — that's <em>every</em> valid file under the glob, recursively. For RxJS this can easily add 300+ entries to <code>remoteEntry.json</code>. <strong>Only use <code>resolveGlob</code> together with the <code>ignoreUnusedDeps</code> feature flag</strong> so the builder prunes anything the entry points don't actually import. You can also narrow the scope yourself with <code>skip</code>, which accepts wildcards:</p>
+      <pre><code>includeSecondaries: {
+  resolveGlob: true,
+  skip: ['rxjs/internal/testing/*'],
+}</code></pre>
+
+      <div class="callout">
+        <p><strong>Why this happens.</strong> Native Federation treats a shared package as an opaque external for your app bundler. The app bundler sees <code>rxjs/internal/observable/of</code>, marks it external, and hands the exact specifier to the import map at runtime. The import map has no wildcard semantics, so unless the exact specifier is listed, the browser throws a module-not-found error. <code>resolveGlob</code> fixes this by pre-materializing every match into <code>remoteEntry.json</code>.</p>
+      </div>
 
       <h3><code>{ keepAll: true }</code> — opt out of unused-dep removal</h3>
-      <p>When <code>ignoreUnusedDeps</code> is active and you want <em>all</em> secondaries of a package to survive (to guarantee a single consistent version across MFEs), use <code>keepAll</code>:</p>
+      <p>When <code>ignoreUnusedDeps</code> is active and you want <em>all</em> secondaries of a package to survive — to guarantee a single, consistent version across every remote — use <code>keepAll</code>:</p>
       <pre><code>shared: share({
   '@angular/core': {
     singleton: true,
@@ -200,12 +207,55 @@ setInferVersion(true);</code></pre>
   },
 })</code></pre>
 
-      <h2>Skipping Dependencies</h2>
+      <p>See <a href="#treeshaking-downside">Downsides of treeshaking shared packages</a> below for the scenario this protects against.</p>
+
+      <h2 id="skip">Skipping Dependencies</h2>
+
+      <div class="callout">
+        <p><strong>"Skip" is not the same as "don't load".</strong> A skipped package is <em>not</em> excluded from the micro-frontend — otherwise the app couldn't run on its own. Skip only prevents the package from being <em>extracted into a shared bundle</em>. The package itself is still inlined into the micro-frontend or its shared externals.</p>
+      </div>
       <p>Use the top-level <code>skip</code> option to opt out of sharing specific entries — including mapped paths from your <code>tsconfig</code>:</p>
       <pre><code>export default withNativeFederation({
-  skip: ['my-lib', 'rxjs/testing'],
+  skip: [
+    'rxjs/ajax',
+    'rxjs/fetch',
+    'rxjs/testing',
+    'rxjs/webSocket',
+    (pkg) =&gt; pkg.startsWith('vanilla-native-federation'),
+    /^@org\/internal-/,
+  ],
   shared: { ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }) },
 });</code></pre>
+
+      <p>Entries accept three forms — matched against the full package name including any secondary entry point:</p>
+      <ul>
+        <li><code>string</code> — exact match (e.g. <code>'rxjs/testing'</code> skips only that secondary; to skip an entire package and its secondaries use a function or regexp).</li>
+        <li><code>RegExp</code> — tested with <code>.test(name)</code>.</li>
+        <li><code>(name: string) =&gt; boolean</code> — a predicate, useful for prefix matches like <code>(pkg) =&gt; pkg.startsWith('@angular/cdk')</code>.</li>
+      </ul>
+
+      <p>The skip list you provide is merged with <a href="configuration.html#default-skip-list"><code>DEFAULT_SKIP_LIST</code></a>, which already excludes the Native Federation packages themselves, <code>es-module-shims</code>, <code>tslib/</code> and everything under <code>@types/</code>.</p>
+
+      <h2 id="pseudo-treeshaking">Pseudo-treeshaking via deep imports</h2>
+      <p>Once a dependency is <em>shared</em>, the bundler can no longer tree-shake it: the shared bundle has to contain every symbol that <em>any</em> consumer might ever import at runtime. For a library like RxJS that's a lot of bytes when all you actually use is <code>of</code>.</p>
+      <p>A pragmatic workaround is to share only the specific deep entry point you use — the rest of the library never enters a shared bundle and stays local to the micro-frontend, where it <em>can</em> be tree-shaken:</p>
+      <pre><code>// app code
+import { of } from 'rxjs/internal/observable/of';</code></pre>
+      <p>Pair this with <code>includeSecondaries: { resolveGlob: true }</code> and <code>ignoreUnusedDeps: true</code> so only the deep entries you actually touch make it into <code>remoteEntry.json</code>. The rule of thumb: measure before committing. If only one remote imports a couple of symbols, sharing the package at all may cost more than it saves.</p>
+
+      <h2 id="treeshaking-downside">Downsides of treeshaking shared packages</h2>
+      <p><code>ignoreUnusedDeps</code> is enabled by default and almost always the right choice — but there is a failure mode to be aware of, especially for core framework libraries.</p>
+      <p>Imagine two remotes, each sharing <code>@angular/core</code>: <code>mfe1</code> on <code>21.0.2</code> and <code>mfe2</code> on <code>21.0.1</code>. The orchestrator picks <code>21.0.2</code> as the winning version. But if <code>mfe1</code> never imports <code>@angular/core/rxjs-interop</code>, that secondary is pruned from its <code>remoteEntry.json</code>. The orchestrator then falls back to <code>mfe2</code>'s copy of <code>rxjs-interop</code> — at version <code>21.0.1</code>. Now Angular is split across two versions, which is exactly the class of bug shared dependencies are supposed to prevent.</p>
+      <p>Use <code>keepAll: true</code> on such packages to force <em>all</em> secondaries to be shared regardless of what the entry points touch:</p>
+      <pre><code>shared: share({
+  '@angular/core': {
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+    includeSecondaries: { keepAll: true },
+  },
+})</code></pre>
+      <p>As a rule of thumb, opt into <code>keepAll</code> for tightly-coupled framework packages (Angular, React ecosystems, your own design system) and leave it off for utility libraries where secondaries are genuinely independent.</p>
 
       <h2>Code-Splitting</h2>
       <p>By default, large shared libraries are split into chunks that load on demand. Control this at two levels:</p>

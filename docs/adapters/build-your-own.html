@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Build Your Own Adapter — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="How to build a custom Native Federation adapter for a new bundler or framework — implement the NFBuildAdapter contract and wire it into federationBuilder."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/adapters/build-your-own.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:title"
+      content="Build Your Own Adapter — Native Federation Docs"
+    />
+    <meta
+      property="og:description"
+      content="Implement the NFBuildAdapter contract to support a new bundler."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/adapters/build-your-own.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+      <main class="docs-content">
+        <h1>Build Your Own Adapter</h1>
+
+        <div class="callout">
+          <p>
+            <strong>Status: TODO / work in progress.</strong> This page is a
+            skeleton aimed at people who want to wire Native Federation into a
+            bundler the project doesn't ship an adapter for. Expect sharp edges
+            and missing detail — contributions welcome on
+            <a
+              href="https://github.com/native-federation"
+              target="_blank"
+              rel="noopener"
+              >GitHub</a
+            >.
+          </p>
+        </div>
+
+        <p class="doc-lead">
+          Native Federation Core doesn't ship a bundler. Every adapter —
+          esbuild, Angular, Vite — is a thin shim that implements a three-method
+          contract (<code>NFBuildAdapter</code>) and hands its bundler's result
+          back to the core. If you want to support Rspack, Rolldown, swc, or
+          anything else, you write one of those shims.
+        </p>
+
+        <h2>Before you start</h2>
+        <ul>
+          <li>
+            Read <a href="../core/build-process.html">Build Process</a> to
+            understand the lifecycle (<code>init</code> → bundle →
+            <code>build</code>).
+          </li>
+          <li>
+            Read <a href="../core/build-adapters.html">Build Adapters</a> for
+            the contract itself.
+          </li>
+          <li>
+            Read <a href="../core/artifacts.html">Build Artifacts</a> so you
+            know exactly what the core produces from your adapter's output.
+          </li>
+          <li>
+            Keep the
+            <a
+              href="https://github.com/angular-architects/module-federation-plugin/tree/main/libs/native-federation-esbuild"
+              target="_blank"
+              rel="noopener"
+              >esbuild adapter source</a
+            >
+            open in another tab as a reference implementation.
+          </li>
+        </ul>
+
+        <h2>1. The contract</h2>
+        <p>An adapter is any object that implements:</p>
+        <pre><code>interface NFBuildAdapter {
+  setup(name: string, options: NFBuildAdapterOptions): Promise&lt;void&gt;;
+
+  build(
+    name: string,
+    opts?: { modifiedFiles?: string[]; signal?: AbortSignal }
+  ): Promise&lt;NFBuildAdapterResult[]&gt;;
+
+  dispose(name?: string): Promise&lt;void&gt;;
+}</code></pre>
+        <p>
+          The core calls these in phases. Each phase has a unique
+          <code>name</code> such as <code>'browser-shared'</code>,
+          <code>'node-shared'</code>, <code>'browser-&lt;pkg&gt;'</code>, or
+          <code>'mapping-or-exposed'</code>. One persistent bundler context per
+          <code>name</code> is the pattern you want — it's what makes watch-mode
+          rebuilds cheap.
+        </p>
+
+        <h2>2. Phase cheat-sheet</h2>
+        <ul>
+          <li>
+            <code>browser-shared</code> / <code>node-shared</code> — all
+            <code>build: 'default'</code> externals for that platform in one go.
+          </li>
+          <li>
+            <code>browser-&lt;pkg&gt;</code> / <code>node-&lt;pkg&gt;</code> —
+            externals declared with <code>build: 'separate'</code> or
+            <code>build: 'package'</code>, one phase per package group.
+          </li>
+          <li>
+            <code>mapping-or-exposed</code> — every <code>exposes</code> entry
+            plus every shared <code>tsconfig</code> path.
+          </li>
+        </ul>
+        <p>
+          The <code>options.isMappingOrExposed</code> flag tells you which
+          family you're in. Shared externals and exposed modules usually need
+          different bundler settings (format, platform, resolve.extensions, …).
+        </p>
+
+        <h2>3. The setup checklist</h2>
+        <ol>
+          <li>
+            Create a bundler context (esbuild <code>context</code>, Rspack
+            <code>Compiler</code>, Vite dev server, …). Store it keyed by
+            <code>name</code>.
+          </li>
+          <li>
+            Map <code>options.entryPoints</code> to your bundler's entry syntax.
+            Each entry has <code>fileName</code> (source),
+            <code>outName</code> (desired output) and an optional
+            <code>key</code>.
+          </li>
+          <li>
+            Mark <code>options.external</code> as external — never inline them.
+          </li>
+          <li>
+            Respect <code>options.outdir</code>, <code>options.platform</code>,
+            <code>options.dev</code>, <code>options.hash</code>,
+            <code>options.chunks</code>.
+          </li>
+          <li>
+            Wire <code>options.tsConfigPath</code> into your bundler's
+            TypeScript pipeline.
+          </li>
+          <li>
+            Honor <code>options.mappedPaths</code> so shared
+            <code>tsconfig</code> paths resolve correctly.
+          </li>
+        </ol>
+
+        <h2>4. The build checklist</h2>
+        <ol>
+          <li>
+            Run the stored context. If <code>opts.modifiedFiles</code> is
+            present, you're being asked for an incremental rebuild.
+          </li>
+          <li>
+            Thread <code>opts.signal</code> through to anything cancellable —
+            the core uses it to abort stale builds when a newer change lands.
+          </li>
+          <li>
+            Return <em>every</em> emitted file as an
+            <code>NFBuildAdapterResult</code> with an absolute
+            <code>fileName</code>. Include chunks and sourcemaps — the core
+            filters them itself.
+          </li>
+        </ol>
+
+        <h2>5. The dispose checklist</h2>
+        <ul>
+          <li><code>dispose(name)</code> — close a single phase's context.</li>
+          <li>
+            <code>dispose()</code> with no argument — shut everything down. The
+            core calls this from <code>federationBuilder.close()</code>.
+          </li>
+        </ul>
+
+        <h2>6. Incremental &amp; watch mode</h2>
+        <p>
+          <em
+            >TODO: document the file-watcher contract, rebuild queue, and
+            build-notifications endpoint.</em
+          >
+          For now, study how the esbuild adapter uses
+          <code>options.cache.bundlerCache</code> to persist its esbuild
+          <code>context</code> between rebuilds, and how it cooperates with
+          <code>createNfWatcher</code> from
+          <code>@softarc/native-federation/internal</code>.
+        </p>
+
+        <h2>7. Handling CommonJS / UMD libraries</h2>
+        <p>
+          <em>TODO.</em> Some ecosystems (React especially) still ship CommonJS
+          bundles with dynamic <code>exports</code> tricks. You'll likely need a
+          file-replacement layer (mirroring what the esbuild adapter exposes as
+          <code>fileReplacements</code> / <code>compensateExports</code>) before
+          handing these to your bundler.
+        </p>
+
+        <h2>8. Minimal skeleton</h2>
+        <pre><code>import type { NFBuildAdapter } from '@softarc/native-federation/domain';
+
+export function createMyAdapter(): NFBuildAdapter {
+  const contexts = new Map&lt;string, MyBundlerContext&gt;();
+
+  return {
+    async setup(name, options) {
+      const ctx = await myBundler.createContext({
+        entries: options.entryPoints,
+        external: options.external,
+        outdir: options.outdir,
+        platform: options.platform ?? 'browser',
+        sourcemap: options.dev,
+        tsconfig: options.tsConfigPath,
+        paths: options.mappedPaths,
+      });
+      contexts.set(name, ctx);
+    },
+
+    async build(name, opts) {
+      const ctx = contexts.get(name)!;
+      const result = await ctx.rebuild({
+        modifiedFiles: opts?.modifiedFiles,
+        signal: opts?.signal,
+      });
+      return result.outputs.map(o =&gt; ({ fileName: o.path }));
+    },
+
+    async dispose(name) {
+      if (name) {
+        await contexts.get(name)?.dispose();
+        contexts.delete(name);
+      } else {
+        for (const ctx of contexts.values()) await ctx.dispose();
+        contexts.clear();
+      }
+    },
+  };
+}</code></pre>
+
+        <h2>9. Wiring it up</h2>
+        <pre><code>import { federationBuilder } from '@softarc/native-federation';
+import { createMyAdapter } from './my-adapter';
+
+await federationBuilder.init({
+  options: {
+    workspaceRoot: process.cwd(),
+    outputPath: 'dist/mfe1',
+    federationConfig: 'mfe1/federation.config.js',
+    tsConfig: 'tsconfig.json',
+  },
+  adapter: createMyAdapter(),
+});
+
+await myAppBundler.build({ external: federationBuilder.externals });
+
+await federationBuilder.build();
+await federationBuilder.close();</code></pre>
+
+        <h2>Open questions &amp; TODO</h2>
+        <ul>
+          <li>
+            Document the <code>FederationCache.bundlerCache</code> contract for
+            long-lived state.
+          </li>
+          <li>
+            Write a reference checklist for wiring a dev server / HMR proxy into
+            the build-notifications endpoint.
+          </li>
+          <li>
+            Add a conformance test suite adapter authors can run against their
+            implementation.
+          </li>
+          <li>Publish a <code>create-nf-adapter</code> starter template.</li>
+        </ul>
+
+        <div class="callout">
+          <p>
+            Building an adapter and want to share it? Open a PR against the
+            <a
+              href="https://github.com/native-federation"
+              target="_blank"
+              rel="noopener"
+              >native-federation GitHub org</a
+            >
+            or drop a link on the
+            <a href="../resources.html">Resources</a> page.
+          </p>
+        </div>
+      </main>
+    </div>
+
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../../components.js"></script>
+  </body>
+</html>

@@ -86,26 +86,37 @@ type SharedInfo = {
       <h2><code>importmap.json</code></h2>
       <p>A standards-compliant <a href="https://html.spec.whatwg.org/multipage/webappapis.html#import-maps" target="_blank" rel="noopener">import map</a> built from every shared external. The runtime merges import maps from host and remotes at startup and injects the result into the page.</p>
 
-      <h2>Chunks</h2>
-      <p>With code-splitting enabled (the default), large shared packages are split into chunks. In <code>remoteEntry.json</code> they appear on the <code>chunks</code> field:</p>
+      <h2>Chunks and internal splits</h2>
+      <p>With code-splitting enabled (the default), the bundler may split a shared package into multiple files — a primary entry plus one or more chunks. In classic mode, each chunk appears in <code>remoteEntry.json</code>'s <code>shared</code> array with a synthetic package name of the form <code>@nf-internal/chunk-XXXX</code>:</p>
       <pre><code>{
+  "packageName": "@nf-internal/chunk-IXOA6WTM",
+  "outFileName": "chunk-IXOA6WTM.js",
+  "singleton": false,
+  "strictVersion": false,
+  "version": "0.0.0",
+  "requiredVersion": "0.0.0"
+}</code></pre>
+      <p>Version and singleton fields are placeholders — a chunk isn't versioned on its own; a content hash in its filename keeps it unique across builds.</p>
+      <p>When <code>features.denseChunking</code> is enabled, chunks move off the <code>shared</code> array and onto a dedicated <code>chunks</code> object:</p>
+      <pre><code>{
+  "shared": [
+    { "packageName": "@angular/core", "bundle": "browser-shared", "outFileName": "..." }
+  ],
   "chunks": {
-    "browser-shared-VFK9A2LE.js": ["chunk-AB12.js", "chunk-CD34.js"]
+    "browser-shared": ["chunk-AB12.js", "chunk-CD34.js"]
   }
 }</code></pre>
-      <p>When <code>features.denseChunking</code> is enabled, each shared entry references its chunk bundle through a <code>bundle</code> property, which results in a smaller <code>remoteEntry.json</code> and lets the runtime skip chunks whose dependency isn't part of the final import map.</p>
+      <p>Each shared entry gets a <code>bundle</code> property pointing at its chunk bundle by name. The result is a smaller, more cache-friendly <code>remoteEntry.json</code> — and the runtime can skip entire chunk groups whose dependencies aren't part of the final import map.</p>
 
       <h2>Federation Cache</h2>
-      <p>Already-bundled shared externals are cached under <code>node_modules/.cache/native-federation/&lt;projectName&gt;</code>. Entries are keyed by a content checksum that folds in the package version, requested options and the input source. On a subsequent build the core logs:</p>
-      <pre><code>Checksum matched, re-using cached externals.</code></pre>
-      <p>The cache lives in memory as a <code>FederationCache</code>:</p>
+      <p>The in-memory counterpart to the on-disk cache is a <code>FederationCache</code>, passed through the whole build pipeline:</p>
       <pre><code>type FederationCache&lt;TBundlerCache = unknown&gt; = {
   externals: SharedInfo[];
   chunks?: Record&lt;string, string[]&gt;;
   bundlerCache: TBundlerCache;
   cachePath: string;
 };</code></pre>
-      <p>Construct one yourself with <code>createFederationCache(path)</code> if you need full control, or pass <code>cacheExternalArtifacts: false</code> on <code>FederationOptions</code> to opt out.</p>
+      <p>Construct one with <code>createFederationCache(path)</code> when you need full control over the lifecycle. Adapters use the <code>bundlerCache</code> slot to thread their own state (esbuild <code>context</code>, compile graphs, …) across rebuilds. For the checksum, the on-disk layout and how cache hits are decided, see <a href="caching.html">Caching</a>.</p>
     </main>
   </div>
 

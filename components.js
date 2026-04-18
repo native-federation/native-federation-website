@@ -129,6 +129,7 @@
       { section: 'Getting Started', items: [
         { href: 'architecture.html', label: 'Architecture Overview', id: 'architecture' },
         { href: 'mental-model.html', label: 'The Mental Model', id: 'mental-model' },
+        { href: 'terminology.html', label: 'Terminology', id: 'terminology' },
         { href: 'example.html', label: 'Example', id: 'example' },
         { href: 'tutorial.html', label: 'Tutorial', id: 'tutorial' },
       ]},
@@ -138,9 +139,10 @@
       { section: 'Core', items: [
         { href: 'core/index.html', label: 'Overview', id: 'core' },
         { href: 'core/getting-started.html', label: 'Getting Started', id: 'core/getting-started' },
-        { href: 'core/configuration.html', label: 'Configuration', id: 'core/configuration' },
+        { href: 'core/configuration.html', label: 'federation.config.js', id: 'core/configuration' },
         { href: 'core/sharing.html', label: 'Sharing Dependencies', id: 'core/sharing' },
         { href: 'core/build-process.html', label: 'Build Process', id: 'core/build-process' },
+        { href: 'core/caching.html', label: 'Caching', id: 'core/caching' },
         { href: 'core/build-adapters.html', label: 'Build Adapters', id: 'core/build-adapters' },
         { href: 'core/artifacts.html', label: 'Build Artifacts', id: 'core/artifacts' },
         { href: 'core/api-reference.html', label: 'API Reference', id: 'core/api-reference' },
@@ -154,6 +156,7 @@
         { href: 'adapters/angular/i18n.html', label: '— I18N', id: 'adapters/angular/i18n' },
         { href: 'adapters/angular/localization.html', label: '— Localization', id: 'adapters/angular/localization' },
         { href: 'adapters/esbuild/index.html', label: 'esbuild (React)', id: 'adapters/esbuild' },
+        { href: 'adapters/build-your-own.html', label: 'Build Your Own', id: 'adapters/build-your-own' },
       ]},
       { section: 'Guides', items: [
         { href: 'ssr-hydration.html', label: 'SSR & Hydration', id: 'ssr-hydration' },

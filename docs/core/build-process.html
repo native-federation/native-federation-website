@@ -98,12 +98,13 @@ await federationBuilder.build({
 });</code></pre>
       <p>Rebuilds reuse the federation cache — already-bundled shared externals are skipped unless their checksum changes. Pass an <code>AbortSignal</code> to cancel a build mid-flight (e.g. when a newer file change arrives).</p>
 
-      <h2>Caching</h2>
-      <p>Shared externals are the slowest part of a federation build, so they are cached by default. The cache lives under <code>node_modules/.cache/native-federation/&lt;projectName&gt;</code> and keys entries by a content checksum. You rarely need to touch it, but you can:</p>
+      <h2 id="caching">Caching Shared Externals</h2>
+      <p>Shared externals are the slowest part of a federation build, so the core caches them by default under <code>node_modules/.cache/native-federation/&lt;projectName&gt;</code>. On a cache hit the build adapter is never invoked for that bundle — the outputs are copied from the cache and their metadata is merged into <code>remoteEntry.json</code>.</p>
       <ul>
-        <li>Disable caching with <code>cacheExternalArtifacts: false</code>.</li>
-        <li>Supply your own cache via <code>normalizeFederationOptions(options, cache)</code> or by constructing one with <code>createFederationCache(path)</code>.</li>
+        <li>Disable it with <code>cacheExternalArtifacts: false</code> on <code>FederationOptions</code>.</li>
+        <li>Supply your own cache via <code>normalizeFederationOptions(options, cache)</code> or <code>createFederationCache(path, bundlerCache?)</code>.</li>
       </ul>
+      <p>For the full mechanics — what counts as a cache hit, the checksum format, the cache layout, how to invalidate it — see <a href="caching.html">Caching</a>.</p>
 
       <h2>Accessors on <code>federationBuilder</code></h2>
       <div class="table-wrap">
