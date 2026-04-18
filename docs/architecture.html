@@ -94,7 +94,7 @@
       <p>Adapters are the bridge between the Core and a specific build tool or framework. Each adapter is an object implementing <code>NFBuildAdapter</code> — three methods (<code>setup</code>, <code>build</code>, <code>dispose</code>) that the Core calls to bundle a group of entry points.</p>
       <p>Most adapters also layer framework-specific ergonomics on top: the Angular adapter adds an Angular CLI builder and schematics; the esbuild adapter adds React-friendly <code>fileReplacements</code> for CommonJS interop.</p>
       <ul>
-        <li><a href="adapters/angular/index.html"><strong>Angular</strong></a> — first-class Angular CLI integration.</li>
+        <li><a href="angular-adapter/index.html"><strong>Angular</strong></a> — first-class Angular CLI integration.</li>
         <li><a href="adapters/esbuild/index.html"><strong>esbuild</strong></a> — framework-agnostic; powers the React reference example.</li>
         <li><a href="https://www.npmjs.com/package/@gioboa/vite-module-federation" target="_blank" rel="noopener"><strong>Vite</strong></a> — community plugin.</li>
         <li>Your own — any bundler that can accept an <code>external</code> list and emit ESM can be wrapped in an adapter.</li>

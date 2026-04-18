@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schematics — Angular Adapter</title>
+  <meta name="description" content="The Angular adapter's schematics: init/ng-add, appbuilder, update-v4, update18 and remove — plus the Nx generator.">
+  <link rel="canonical" href="https://native-federation.io/docs/angular-adapter/schematics.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Schematics — Angular Adapter">
+  <meta property="og:description" content="Reference for every schematic shipped with the Angular adapter.">
+  <meta property="og:url" content="https://native-federation.io/docs/angular-adapter/schematics.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Schematics</h1>
+      <p class="doc-lead">The adapter ships a small collection of schematics for the Angular CLI (and an Nx generator). They scaffold projects, migrate older setups forward, and tear federation back out cleanly when you no longer need it.</p>
+
+      <nav class="page-toc" aria-label="On this page">
+        <strong>On this page</strong>
+        <ul>
+          <li><a href="#init">init / ng-add</a></li>
+          <li><a href="#appbuilder">appbuilder</a></li>
+          <li><a href="#update-v4">update-v4</a></li>
+          <li><a href="#update18">update18 (auto migration)</a></li>
+          <li><a href="#remove">remove</a></li>
+          <li><a href="#nx">Nx generator</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="init">init / ng-add</h2>
+      <pre><code>ng add @angular-architects/native-federation \
+  --project &lt;name&gt; --port &lt;port&gt; --type &lt;remote|host|dynamic-host&gt;</code></pre>
+      <p>Initializes a project for Native Federation. <code>ng add</code> and <code>ng g …:init</code> both run the same factory.</p>
+
+      <h3>Inputs</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Option</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>--project</code></td><td><code>string</code></td><td>Project name from <code>angular.json</code>. Falls back to the workspace's <code>defaultProject</code>, then to the first project.</td></tr>
+            <tr><td><code>--port</code></td><td><code>number</code></td><td>Dev server port. Defaults to <code>4200</code>. Also used as the SSR port for hosts.</td></tr>
+            <tr><td><code>--type</code></td><td><code>'host' | 'dynamic-host' | 'remote'</code></td><td>Defaults to <code>remote</code>. Determines the shape of the generated <code>main.ts</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>What it changes</h3>
+      <ol>
+        <li><strong>Polyfills.</strong> Adds <code>es-module-shims</code> to the polyfills array (or to a <code>polyfills.ts</code> file).</li>
+        <li><strong>Federation config.</strong> Generates <code>projects/&lt;name&gt;/federation.config.js</code> from a template — for remotes, the project's <code>app.component.ts</code> is auto-detected and exposed as <code>./Component</code>. Skipped if a config already exists.</li>
+        <li><strong>tsconfig.</strong> Generates <code>projects/&lt;name&gt;/tsconfig.federation.json</code> — extends the project's <code>tsconfig.json</code>, narrows <code>types</code> to <code>[]</code>, and only includes <code>src/**/*.ts</code> minus specs.</li>
+        <li><strong>angular.json.</strong> Switches the existing build to <code>@angular/build:application</code> (if it isn't already), renames it to <code>esbuild</code>, renames the existing serve to <code>serve-original</code>, and slots the federation builder into <code>build</code> + <code>serve</code>. See <a href="builder.html#angular-json">the angular.json layout</a>.</li>
+        <li><strong>main.ts split.</strong> Moves your existing <code>main.ts</code> to <code>bootstrap.ts</code> and rewrites <code>main.ts</code> to call <code>initFederation(...)</code> first, then dynamically <code>import('./bootstrap')</code>. The first argument depends on <code>--type</code>:
+          <ul>
+            <li><code>remote</code> → <code>{ '&lt;project&gt;': './remoteEntry.json' }</code></li>
+            <li><code>host</code> → an inline remote map derived from the workspace's other projects</li>
+            <li><code>dynamic-host</code> → the path to a generated <code>federation.manifest.json</code></li>
+          </ul>
+          On v4 the schematic emits the <strong>orchestrator</strong> bootstrap (<code>@softarc/native-federation-orchestrator</code>) by default. See <a href="runtime.html">Runtime</a>.
+        </li>
+        <li><strong>SSR.</strong> If the project has SSR enabled (<code>build.options.ssr.entry</code> is set), the schematic also rewrites <code>main.server.ts</code> to <code>bootstrap-server.ts</code> + a federation-aware <code>main.server.ts</code> that calls <code>initNodeFederation</code>, and adds <code>cors</code> + <code>@softarc/native-federation-node</code> to dependencies.</li>
+        <li><strong>federation.manifest.json.</strong> For dynamic hosts, generates a manifest file. It lives in <code>public/federation.manifest.json</code> if the project has a <code>public/</code> folder, else <code>src/assets/federation.manifest.json</code>.</li>
+        <li><strong>Dependencies.</strong> Adds <code>es-module-shims</code>, <code>@angular-devkit/build-angular</code> and (v4) <code>@softarc/native-federation-orchestrator</code>. Triggers <code>npm install</code> at the end.</li>
+      </ol>
+
+      <h3>What it does NOT do</h3>
+      <ul>
+        <li>It does not add lazy routes to your shell — wire <code>loadRemoteModule</code> in your <code>app.routes.ts</code> manually (see <a href="getting-started.html#step-4">Getting Started → step 4</a>).</li>
+        <li>It does not change your application code; only the bootstrap files (<code>main.ts</code>, optionally <code>main.server.ts</code>) are touched.</li>
+      </ul>
+
+      <h2 id="appbuilder">appbuilder</h2>
+      <pre><code>ng g @angular-architects/native-federation:appbuilder --project &lt;name&gt;</code></pre>
+      <p>Migrates a project from the legacy <code>@angular-devkit/build-angular:browser-esbuild</code> to the modern <code>@angular/build:application</code> Application Builder. Required to use any version of the adapter from 17.1 onward.</p>
+      <p>It only touches <code>angular.json</code>:</p>
+      <ul>
+        <li>Switches the <code>esbuild</code> target's builder to <code>@angular/build:application</code>.</li>
+        <li>Renames the <code>main</code> option to <code>browser</code> (the new builder's spelling).</li>
+        <li>Rewrites the <code>serve-original</code> target's <code>buildTarget</code> values from <code>:build:</code> to <code>:esbuild:</code>, and the federation <code>serve</code> target from <code>:esbuild:</code> back to <code>:serve-original:</code>.</li>
+      </ul>
+
+      <h2 id="update-v4">update-v4</h2>
+      <pre><code>ng g @angular-architects/native-federation:update-v4 --project &lt;name&gt;</code></pre>
+      <p>Migrates a v3 project (CommonJS, legacy runtime) to v4 (full ESM, optional orchestrator). The schematic is also wired into <code>ng update</code>'s migration collection — you'll get prompted for it automatically when you bump to a v4 release.</p>
+      <p>It performs:</p>
+      <ol>
+        <li>Adds <code>"type": "module"</code> to the root <code>package.json</code>.</li>
+        <li>Renames every <code>@angular-architects/native-federation:build</code> reference in <code>angular.json</code> to <code>@angular-architects/native-federation-v4:build</code>; ensures every federation target has <code>entryPoints</code> and <code>projectName</code> set.</li>
+        <li>Rewrites every <code>federation.config.js</code> from CommonJS to ESM: <code>require()</code> → <code>import</code>, <code>module.exports = ...</code> → <code>export default ...</code>, <code>@angular-architects/native-federation/config</code> → <code>@angular-architects/native-federation-v4/config</code>.</li>
+        <li>Updates <code>main.ts</code> imports from <code>@angular-architects/native-federation</code> to <code>@softarc/native-federation-runtime</code>.</li>
+      </ol>
+      <p>If you pass <code>--orchestrator</code> (or accept the prompt) it additionally:</p>
+      <ol start="5">
+        <li>Adds <code>@softarc/native-federation-orchestrator</code> to dependencies.</li>
+        <li>Surgically rewrites <code>initFederation(...)</code> to import from the orchestrator and pass the orchestrator's options block (<code>useShimImportMap</code>, <code>consoleLogger</code>, <code>globalThisStorageEntry</code>, …).</li>
+      </ol>
+      <p>See <a href="migration-v4.html">Migration to v4</a> for the full walkthrough.</p>
+
+      <h2 id="update18">update18 (auto migration)</h2>
+      <p>Triggered automatically by <code>ng update @angular-architects/native-federation</code> when crossing version 18. It:</p>
+      <ul>
+        <li>Removes the obsolete <code>postinstall</code> hook that earlier versions injected into <code>package.json</code>.</li>
+        <li>Patches <code>node_modules/@angular/build/package.json</code> to expose the <code>private</code> entry point the adapter needs.</li>
+      </ul>
+      <p>You don't run this one by hand — it's listed here for completeness.</p>
+
+      <h2 id="remove">remove</h2>
+      <pre><code>ng g @angular-architects/native-federation:remove --project &lt;name&gt;</code></pre>
+      <p>Reverts a project back to a plain Angular setup:</p>
+      <ul>
+        <li>Removes <code>es-module-shims</code> from polyfills.</li>
+        <li>Restores the original <code>build</code> from the <code>esbuild</code> target and the original <code>serve</code> from <code>serve-original</code>.</li>
+        <li>Rewrites <code>buildTarget</code> references back from <code>:esbuild:</code> to <code>:build:</code>.</li>
+        <li>Removes <code>main.ts</code> and renames <code>bootstrap.ts</code> back to <code>main.ts</code>.</li>
+      </ul>
+      <p>The schematic does <em>not</em> delete <code>federation.config.js</code> or <code>tsconfig.federation.json</code> — clean those up by hand.</p>
+
+      <h2 id="nx">Nx Generator</h2>
+      <pre><code>nx g @angular-architects/native-federation:native-federation --name=&lt;name&gt;</code></pre>
+      <p>Adds a new Nx <em>library</em> project pre-wired to the federation builder. It registers the project, scaffolds a starter <code>src/index.ts</code>, and creates a <code>build</code> target executor pointing at the same <code>@angular-architects/native-federation:build</code>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Option</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>--name</code></td><td>Library name. Required.</td></tr>
+            <tr><td><code>--directory</code></td><td>Optional sub-directory under <code>libs/</code>.</td></tr>
+            <tr><td><code>--tags</code></td><td>Comma-separated Nx project tags.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>For application-shaped Nx projects, prefer <code>ng add</code> / <code>nx g @angular-architects/native-federation:init</code> — the library generator is for shared, federation-aware code.</p>
+
+      <h2>Related</h2>
+      <ul>
+        <li><a href="getting-started.html">Getting Started</a> — the happy path that uses these schematics.</li>
+        <li><a href="builder.html">Builder</a> — what the <code>angular.json</code> the schematic generates actually does.</li>
+        <li><a href="migration-v4.html">Migration to v4</a> — manual migration walkthrough complementing <code>update-v4</code>.</li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>
