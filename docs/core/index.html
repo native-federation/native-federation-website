@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Core — Native Federation Docs</title>
+  <meta name="description" content="Native Federation Core — the language-agnostic builder library that powers hosts, remotes and adapters across any framework or bundler.">
+  <link rel="canonical" href="https://native-federation.io/docs/core/index.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Core — Native Federation Docs">
+  <meta property="og:description" content="The language-agnostic builder library at the heart of Native Federation.">
+  <meta property="og:url" content="https://native-federation.io/docs/core/index.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Core</h1>
+      <p class="doc-lead">The core package — <code>@softarc/native-federation</code> — is the bundler- and framework-agnostic builder library that sits at the heart of Native Federation. Every adapter (Angular, esbuild, Vite, …) is built on top of it.</p>
+
+      <h2>What the Core Does</h2>
+      <p>Given a federation config and a pluggable bundler adapter, the core library:</p>
+      <ul>
+        <li>Resolves and normalizes your <code>federation.config.js</code> — including shared dependencies, mapped paths, and skip lists.</li>
+        <li>Bundles every <strong>shared</strong> external (and, optionally, its secondary entry points) into standalone EcmaScript modules.</li>
+        <li>Bundles every <strong>exposed</strong> module and every <strong>shared mapped path</strong> from your <code>tsconfig</code>.</li>
+        <li>Writes a <code>remoteEntry.json</code> describing exposes, shared packages and chunks — the contract between host and remote.</li>
+        <li>Writes a local <code>importmap.json</code> that the runtime hands to the browser to wire everything together.</li>
+        <li>Caches already-built shared dependencies (keyed by checksum) so subsequent builds are fast.</li>
+      </ul>
+
+      <h2>Where It Fits</h2>
+      <p>The core is deliberately narrow. It doesn't know about Angular, React, Vite, or the browser runtime. Instead, it defines two contracts and lets everything else plug in:</p>
+      <ul>
+        <li><strong><a href="configuration.html">Federation config</a></strong> — what you want to share and expose.</li>
+        <li><strong><a href="build-adapters.html">Build adapter</a></strong> — how to actually invoke the bundler.</li>
+      </ul>
+      <p>Adapters like <code>@angular-architects/native-federation</code> or <code>@softarc/native-federation-esbuild</code> supply the build adapter; the browser <a href="../runtime/index.html">runtime</a> consumes the artifacts the core produces.</p>
+
+      <h2>In this section</h2>
+      <ul>
+        <li><a href="getting-started.html">Getting Started</a> — install the package and wire it into a build script.</li>
+        <li><a href="configuration.html">Configuration</a> — <code>withNativeFederation</code>, exposes, skip, features.</li>
+        <li><a href="sharing.html">Sharing Dependencies</a> — <code>share</code>, <code>shareAll</code>, secondary entry points, code-splitting.</li>
+        <li><a href="build-process.html">Build Process</a> — the <code>federationBuilder</code> lifecycle (<code>init</code> / <code>build</code> / <code>close</code>).</li>
+        <li><a href="build-adapters.html">Build Adapters</a> — the <code>NFBuildAdapter</code> contract and how to implement one.</li>
+        <li><a href="artifacts.html">Build Artifacts</a> — <code>remoteEntry.json</code>, the import map and the cache layout.</li>
+        <li><a href="api-reference.html">API Reference</a> — the public exports of <code>@softarc/native-federation</code>.</li>
+      </ul>
+
+      <div class="callout">
+        <p>If you are building an application (rather than an adapter) you'll usually consume the core through an adapter. The <a href="../adapters/angular/index.html">Angular adapter</a> and <a href="../adapters/esbuild/index.html">esbuild adapter</a> both hide the core entirely behind higher-level APIs.</p>
+      </div>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>

@@ -6,22 +6,35 @@
 (function () {
   'use strict';
 
-  const isDocsPage = window.location.pathname.includes('/docs');
-  const pathPrefix = isDocsPage ? '../' : '';
+  const docsMatch = window.location.pathname.match(/\/docs\/(.*)$/);
+  const isDocsPage = !!docsMatch;
+
+  function getDocsRelativePath() {
+    if (!docsMatch) return '';
+    return docsMatch[1].replace(/index\.html$/, '').replace(/\.html$/, '').replace(/\/$/, '');
+  }
+
+  function getDocsDepth() {
+    if (!docsMatch) return 0;
+    const parts = docsMatch[1].split('/').filter(Boolean);
+    return Math.max(parts.length - 1, 0);
+  }
+
+  const docsDepth = getDocsDepth();
+  const docsPrefix = '../'.repeat(docsDepth);
+  const pathPrefix = isDocsPage ? '../'.repeat(docsDepth + 1) : '';
 
   function getActivePage() {
     const path = window.location.pathname;
-    if (path.endsWith('/') || path.endsWith('index.html') || path.match(/\/nf-website\/?$/)) return 'home';
     if (path.includes('/docs')) return 'docs';
+    if (path.endsWith('/') || path.endsWith('index.html') || path.match(/\/nf-website\/?$/)) return 'home';
     if (path.includes('team')) return 'team';
     if (path.includes('resources')) return 'resources';
     return '';
   }
 
   function getActiveDoc() {
-    const path = window.location.pathname;
-    const file = path.split('/').pop().replace('.html', '');
-    return file || '';
+    return getDocsRelativePath();
   }
 
   const activePage = getActivePage();
@@ -39,7 +52,7 @@
         </a>
         <nav class="header-nav" aria-label="Main navigation">
           <a href="${pathPrefix}index.html" class="${activePage === 'home' ? 'active' : ''}">Home</a>
-          <a href="${pathPrefix}docs/tutorial.html" class="${activePage === 'docs' ? 'active' : ''}">Docs</a>
+          <a href="${pathPrefix}docs/example.html" class="${activePage === 'docs' ? 'active' : ''}">Docs</a>
           <a href="${pathPrefix}team.html" class="${activePage === 'team' ? 'active' : ''}">Team</a>
           <a href="${pathPrefix}resources.html" class="${activePage === 'resources' ? 'active' : ''}">Resources</a>
         </nav>
@@ -59,7 +72,7 @@
     mobileNav.setAttribute('aria-label', 'Mobile navigation');
     mobileNav.innerHTML = `
       <a href="${pathPrefix}index.html" class="${activePage === 'home' ? 'active' : ''}">Home</a>
-      <a href="${pathPrefix}docs/tutorial.html" class="${activePage === 'docs' ? 'active' : ''}">Docs</a>
+      <a href="${pathPrefix}docs/example.html" class="${activePage === 'docs' ? 'active' : ''}">Docs</a>
       <a href="${pathPrefix}team.html" class="${activePage === 'team' ? 'active' : ''}">Team</a>
       <a href="${pathPrefix}resources.html" class="${activePage === 'resources' ? 'active' : ''}">Resources</a>
       <a href="https://github.com/native-federation" target="_blank" rel="noopener">GitHub</a>
@@ -93,7 +106,7 @@
         </div>
         <div class="footer-links">
           <a href="${pathPrefix}index.html">Home</a>
-          <a href="${pathPrefix}docs/tutorial.html">Docs</a>
+          <a href="${pathPrefix}docs/example.html">Docs</a>
           <a href="${pathPrefix}team.html">Team</a>
           <a href="${pathPrefix}resources.html">Resources</a>
           <a href="https://github.com/native-federation" target="_blank" rel="noopener">GitHub</a>
@@ -114,22 +127,42 @@
 
     const docs = [
       { section: 'Getting Started', items: [
+        { href: 'architecture.html', label: 'Architecture Overview', id: 'architecture' },
+        { href: 'mental-model.html', label: 'The Mental Model', id: 'mental-model' },
         { href: 'example.html', label: 'Example', id: 'example' },
         { href: 'tutorial.html', label: 'Tutorial', id: 'tutorial' },
       ]},
+      { section: 'Orchestrator', items: [
+        { href: 'orchestrator/index.html', label: 'Overview', id: 'orchestrator' },
+      ]},
+      { section: 'Core', items: [
+        { href: 'core/index.html', label: 'Overview', id: 'core' },
+        { href: 'core/getting-started.html', label: 'Getting Started', id: 'core/getting-started' },
+        { href: 'core/configuration.html', label: 'Configuration', id: 'core/configuration' },
+        { href: 'core/sharing.html', label: 'Sharing Dependencies', id: 'core/sharing' },
+        { href: 'core/build-process.html', label: 'Build Process', id: 'core/build-process' },
+        { href: 'core/build-adapters.html', label: 'Build Adapters', id: 'core/build-adapters' },
+        { href: 'core/artifacts.html', label: 'Build Artifacts', id: 'core/artifacts' },
+        { href: 'core/api-reference.html', label: 'API Reference', id: 'core/api-reference' },
+      ]},
+      { section: 'Runtime', items: [
+        { href: 'runtime/index.html', label: 'Overview', id: 'runtime' },
+      ]},
+      { section: 'Adapters', items: [
+        { href: 'adapters/index.html', label: 'Overview', id: 'adapters' },
+        { href: 'adapters/angular/index.html', label: 'Angular', id: 'adapters/angular' },
+        { href: 'adapters/angular/i18n.html', label: '— I18N', id: 'adapters/angular/i18n' },
+        { href: 'adapters/angular/localization.html', label: '— Localization', id: 'adapters/angular/localization' },
+        { href: 'adapters/esbuild/index.html', label: 'esbuild (React)', id: 'adapters/esbuild' },
+      ]},
       { section: 'Guides', items: [
-        { href: 'mental-model.html', label: 'The Mental Model', id: 'mental-model' },
         { href: 'ssr-hydration.html', label: 'SSR & Hydration', id: 'ssr-hydration' },
         { href: 'native-and-module-federation.html', label: 'Native & Module Federation', id: 'native-and-module-federation' },
-        { href: 'angular-i18n.html', label: 'Angular I18N', id: 'angular-i18n' },
-        { href: 'angular-localization.html', label: 'Angular Localization', id: 'angular-localization' },
+        { href: 'component-libs.html', label: 'Component Libs', id: 'component-libs' },
       ]},
       { section: 'Reference', items: [
         { href: 'faq.html', label: 'FAQ', id: 'faq' },
         { href: 'documentation.html', label: 'Blog Series', id: 'documentation' },
-      ]},
-      { section: 'More', items: [
-        { href: 'component-libs.html', label: 'Component Libs', id: 'component-libs' },
         { href: 'workshop.html', label: 'Architecture Workshop', id: 'workshop' },
       ]},
     ];
@@ -140,7 +173,7 @@
           <div class="sidebar-label">${group.section}</div>
           <nav class="sidebar-nav">
             ${group.items.map(function (item) {
-              return `<a href="${item.href}" class="${activeDoc === item.id ? 'active' : ''}">${item.label}</a>`;
+              return `<a href="${docsPrefix}${item.href}" class="${activeDoc === item.id ? 'active' : ''}">${item.label}</a>`;
             }).join('')}
           </nav>
         </div>

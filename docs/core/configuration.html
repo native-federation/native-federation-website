@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration — Native Federation Core Docs</title>
+  <meta name="description" content="The withNativeFederation configuration reference — name, exposes, shared, sharedMappings, skip, chunks, features and more.">
+  <link rel="canonical" href="https://native-federation.io/docs/core/configuration.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Configuration — Native Federation Core Docs">
+  <meta property="og:description" content="Every option supported by withNativeFederation.">
+  <meta property="og:url" content="https://native-federation.io/docs/core/configuration.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Configuration</h1>
+      <p class="doc-lead">Every host and remote declares a <code>federation.config.js</code> that is passed to <code>withNativeFederation</code>. This page is the reference for every field on that config object.</p>
+
+      <h2>The <code>withNativeFederation</code> Helper</h2>
+      <p>The helper normalizes your config — it applies defaults, resolves the skip list, reads mapped paths from your <code>tsconfig</code>, and returns a <code>NormalizedFederationConfig</code> for the builder to consume:</p>
+      <pre><code>import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+
+export default withNativeFederation({
+  name: 'shell',
+  exposes: { /* ... */ },
+  shared: { ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }) },
+});</code></pre>
+
+      <h2>Top-level Options</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>name</code></td>
+              <td><code>string</code></td>
+              <td><code>''</code></td>
+              <td>The remote's name. Used as the key in the host manifest and in the generated <code>remoteEntry.json</code>.</td>
+            </tr>
+            <tr>
+              <td><code>exposes</code></td>
+              <td><code>Record&lt;string, string&gt;</code></td>
+              <td><code>{}</code></td>
+              <td>Map of public keys (e.g. <code>'./component'</code>) to file paths. Every entry becomes a module a host can load via <code>loadRemoteModule</code>.</td>
+            </tr>
+            <tr>
+              <td><code>shared</code></td>
+              <td><code>SharedExternalsConfig</code></td>
+              <td><em>all deps</em></td>
+              <td>Packages to share between host and remotes. If omitted, the core shares every dependency found in <code>package.json</code> with sensible defaults. See <a href="sharing.html">Sharing Dependencies</a>.</td>
+            </tr>
+            <tr>
+              <td><code>sharedMappings</code></td>
+              <td><code>string[]</code></td>
+              <td>all <code>tsconfig</code> paths</td>
+              <td>Paths mapped in your <code>tsconfig</code> that should be treated as shared (monorepo-internal libraries).</td>
+            </tr>
+            <tr>
+              <td><code>platform</code></td>
+              <td><code>'browser' | 'node'</code></td>
+              <td><code>'browser'</code></td>
+              <td>Default platform for shared externals that don't set their own.</td>
+            </tr>
+            <tr>
+              <td><code>chunks</code></td>
+              <td><code>boolean</code></td>
+              <td><code>true</code></td>
+              <td>Default code-splitting behavior for shared dependencies. Set to <code>false</code> to bundle each shared package as a single file.</td>
+            </tr>
+            <tr>
+              <td><code>skip</code></td>
+              <td><code>string[]</code></td>
+              <td><em>see skip list</em></td>
+              <td>Packages (or mapped paths) to exclude from sharing. Merged with the built-in skip list.</td>
+            </tr>
+            <tr>
+              <td><code>externals</code></td>
+              <td><code>string[]</code></td>
+              <td><code>[]</code></td>
+              <td>Extra externals to expose to your bundler via <code>federationBuilder.externals</code> on top of the shared ones.</td>
+            </tr>
+            <tr>
+              <td><code>shareScope</code></td>
+              <td><code>string</code></td>
+              <td><em>undefined</em></td>
+              <td>Optional share scope name, propagated to every shared external.</td>
+            </tr>
+            <tr>
+              <td><code>features</code></td>
+              <td><code>{ mappingVersion?, ignoreUnusedDeps?, denseChunking? }</code></td>
+              <td>see below</td>
+              <td>Opt-in feature flags — <a href="#features">details below</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Exposing Modules</h2>
+      <p>A remote's <code>exposes</code> object declares which of its internal modules can be loaded into a host. Keys are the public names that hosts use when calling <code>loadRemoteModule</code>; values are paths relative to the workspace root.</p>
+      <pre><code>exposes: {
+  './component': './mfe1/component',
+  './routes': './mfe1/routes',
+}</code></pre>
+
+      <h2>Shared Mapped Paths</h2>
+      <p>Paths declared in your <code>tsconfig.json</code> (or <code>tsconfig.base.json</code>) are shared by default:</p>
+      <pre><code>{
+  "compilerOptions": {
+    "paths": {
+      "shared-lib": ["libs/shared-lib/index.ts"]
+    }
+  }
+}</code></pre>
+      <p>The core discovers these automatically, treating each mapped path as a shared library. To exclude specific mappings, add them to <code>skip</code>.</p>
+
+      <h2>The Skip List</h2>
+      <p><code>withNativeFederation</code> merges your <code>skip</code> with a built-in default skip list — packages that should almost never be shared (bundler-only, dev-only, tsconfig paths with wildcards, etc.). Entries match exact names and also support a trailing <code>*</code> wildcard:</p>
+      <pre><code>skip: [
+  'rxjs/ajax',
+  'rxjs/fetch',
+  'rxjs/testing',
+  'my-lib/internal/*',
+]</code></pre>
+
+      <h2 id="features">Feature Flags</h2>
+      <p>All feature flags live under <code>features</code> on the config. None of them change behavior unless explicitly set.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Flag</th><th>Default</th><th>Effect</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>ignoreUnusedDeps</code></td>
+              <td><code>true</code></td>
+              <td>Drops shared externals that aren't actually imported by the entry points. Required for wildcard mapped paths.</td>
+            </tr>
+            <tr>
+              <td><code>denseChunking</code></td>
+              <td><code>false</code></td>
+              <td>Groups chunks by bundle name in <code>remoteEntry.json</code> so each shared package references its chunk bundle by name rather than listing chunks individually. Produces a smaller, more cache-friendly <code>remoteEntry.json</code>.</td>
+            </tr>
+            <tr>
+              <td><code>mappingVersion</code></td>
+              <td><code>false</code></td>
+              <td>Emits version information for shared mapped paths (monorepo-internal libraries).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Full Example</h2>
+      <pre><code>import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+
+export default withNativeFederation({
+  name: 'shell',
+
+  exposes: {
+    './header': './shell/header',
+  },
+
+  shared: {
+    ...shareAll({
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: 'auto',
+      includeSecondaries: false,
+    }),
+  },
+
+  skip: [
+    'rxjs/ajax',
+    'rxjs/fetch',
+    'rxjs/testing',
+    'rxjs/webSocket',
+  ],
+
+  features: {
+    ignoreUnusedDeps: true,
+    denseChunking: true,
+  },
+});</code></pre>
+
+      <p>For details on each <code>shared</code> entry's options — <code>singleton</code>, <code>strictVersion</code>, <code>requiredVersion</code>, <code>includeSecondaries</code>, <code>chunks</code>, <code>build</code>, <code>platform</code> — see <a href="sharing.html">Sharing Dependencies</a>.</p>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>

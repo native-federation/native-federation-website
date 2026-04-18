@@ -948,6 +948,54 @@ li code {
   gap: 8px;
 }
 
+/* --- Doc Tables --- */
+.table-wrap {
+  overflow-x: auto;
+  margin-bottom: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.table-wrap th {
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 16px;
+  background: var(--color-border-light);
+  border-bottom: 2px solid var(--color-border);
+  color: var(--color-navy);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.table-wrap td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  vertical-align: top;
+}
+
+.table-wrap tr:last-child td {
+  border-bottom: none;
+}
+
+.table-wrap code {
+  background: var(--color-code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
 /* --- Version Table --- */
 .version-table {
   width: 100%;

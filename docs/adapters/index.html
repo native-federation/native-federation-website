@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adapters — Native Federation Docs</title>
+  <meta name="description" content="Native Federation adapters bridge the language-agnostic core builder to specific bundlers and frameworks.">
+  <link rel="canonical" href="https://native-federation.io/docs/adapters/index.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Adapters — Native Federation Docs">
+  <meta property="og:description" content="Native Federation adapters — Angular, esbuild for React, Vite and more.">
+  <meta property="og:url" content="https://native-federation.io/docs/adapters/index.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Adapters</h1>
+      <p class="doc-lead">Native Federation is bundler-agnostic. Adapters bridge the <a href="../core/index.html">core builder</a> to a specific bundler or framework by implementing the <code>NFBuildAdapter</code> contract.</p>
+
+      <h2>Available Adapters</h2>
+      <ul>
+        <li><a href="angular/index.html"><strong>Angular</strong></a> — first-class support via <code>@angular-architects/native-federation</code>, including a builder and schematics that hook into the Angular CLI.</li>
+        <li><a href="esbuild/index.html"><strong>esbuild</strong></a> — a thin, framework-agnostic adapter used by the React reference example, published as <code>@softarc/native-federation-esbuild</code>.</li>
+      </ul>
+
+      <h2>Community Adapters</h2>
+      <ul>
+        <li><a href="https://www.npmjs.com/package/@gioboa/vite-module-federation" target="_blank" rel="noopener">Vite plugin</a> — community-maintained Vite integration by Giorgio Boa.</li>
+      </ul>
+
+      <div class="callout">
+        <p>You can also write your own adapter. An adapter is a single object implementing <code>NFBuildAdapter</code> — see <a href="../core/build-adapters.html">Build Adapters</a> for the contract.</p>
+      </div>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build Artifacts — Native Federation Core Docs</title>
+  <meta name="description" content="The files Native Federation Core emits — remoteEntry.json, importmap.json and the federation cache layout.">
+  <link rel="canonical" href="https://native-federation.io/docs/core/artifacts.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Build Artifacts — Native Federation Core Docs">
+  <meta property="og:description" content="remoteEntry.json, importmap.json, federation cache.">
+  <meta property="og:url" content="https://native-federation.io/docs/core/artifacts.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Build Artifacts</h1>
+      <p class="doc-lead">After <code>federationBuilder.build()</code> finishes, the <code>outputPath</code> contains a handful of files that together form the contract between host, remote and runtime.</p>
+
+      <h2>Output Layout</h2>
+      <pre><code>dist/&lt;project&gt;/
+├── remoteEntry.json        # metadata consumed by the runtime
+├── importmap.json          # import map used to wire modules together
+├── &lt;exposes&gt;.js            # one file per exposed module
+├── &lt;mapped-path&gt;.js        # one file per shared tsconfig path
+├── browser-shared-&lt;hash&gt;.js         # shared npm externals (browser)
+├── node-shared-&lt;hash&gt;.js            # shared npm externals (node)
+└── browser-&lt;package&gt;-&lt;hash&gt;.js      # packages built with build: 'package'</code></pre>
+
+      <h2><code>remoteEntry.json</code></h2>
+      <p>The remote's public manifest. Hosts fetch it when loading a remote:</p>
+      <pre><code>interface FederationInfo {
+  name: string;
+  exposes: ExposesInfo[];
+  shared: SharedInfo[];
+  chunks?: Record&lt;string, string[]&gt;;
+  buildNotificationsEndpoint?: string;
+}
+
+interface ExposesInfo {
+  key: string;              // e.g. './component'
+  outFileName: string;      // path relative to remoteEntry.json
+  dev?: { entryPoint: string };
+}
+
+type SharedInfo = {
+  packageName: string;
+  requiredVersion: string;
+  version?: string;
+  singleton: boolean;
+  strictVersion: boolean;
+  outFileName: string;
+  bundle?: string;          // present when denseChunking is enabled
+  shareScope?: string;
+  dev?: { entryPoint: string };
+};</code></pre>
+
+      <h3>Example</h3>
+      <pre><code>{
+  "name": "mfe1",
+  "exposes": [
+    { "key": "./component", "outFileName": "component-Q4XS7K1T.js" }
+  ],
+  "shared": [
+    {
+      "packageName": "@angular/core",
+      "requiredVersion": "^18.0.0",
+      "version": "18.1.2",
+      "singleton": true,
+      "strictVersion": true,
+      "outFileName": "angular-core-VFK9A2LE.js"
+    }
+  ]
+}</code></pre>
+
+      <h2><code>importmap.json</code></h2>
+      <p>A standards-compliant <a href="https://html.spec.whatwg.org/multipage/webappapis.html#import-maps" target="_blank" rel="noopener">import map</a> built from every shared external. The runtime merges import maps from host and remotes at startup and injects the result into the page.</p>
+
+      <h2>Chunks</h2>
+      <p>With code-splitting enabled (the default), large shared packages are split into chunks. In <code>remoteEntry.json</code> they appear on the <code>chunks</code> field:</p>
+      <pre><code>{
+  "chunks": {
+    "browser-shared-VFK9A2LE.js": ["chunk-AB12.js", "chunk-CD34.js"]
+  }
+}</code></pre>
+      <p>When <code>features.denseChunking</code> is enabled, each shared entry references its chunk bundle through a <code>bundle</code> property, which results in a smaller <code>remoteEntry.json</code> and lets the runtime skip chunks whose dependency isn't part of the final import map.</p>
+
+      <h2>Federation Cache</h2>
+      <p>Already-bundled shared externals are cached under <code>node_modules/.cache/native-federation/&lt;projectName&gt;</code>. Entries are keyed by a content checksum that folds in the package version, requested options and the input source. On a subsequent build the core logs:</p>
+      <pre><code>Checksum matched, re-using cached externals.</code></pre>
+      <p>The cache lives in memory as a <code>FederationCache</code>:</p>
+      <pre><code>type FederationCache&lt;TBundlerCache = unknown&gt; = {
+  externals: SharedInfo[];
+  chunks?: Record&lt;string, string[]&gt;;
+  bundlerCache: TBundlerCache;
+  cachePath: string;
+};</code></pre>
+      <p>Construct one yourself with <code>createFederationCache(path)</code> if you need full control, or pass <code>cacheExternalArtifacts: false</code> on <code>FederationOptions</code> to opt out.</p>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>

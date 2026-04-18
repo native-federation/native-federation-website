@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sharing Dependencies — Native Federation Core Docs</title>
+  <meta name="description" content="How to share dependencies with Native Federation — share, shareAll, secondary entry points, code-splitting and the build mode.">
+  <link rel="canonical" href="https://native-federation.io/docs/core/sharing.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Sharing Dependencies — Native Federation Core Docs">
+  <meta property="og:description" content="share, shareAll, secondary entry points, code-splitting.">
+  <meta property="og:url" content="https://native-federation.io/docs/core/sharing.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Sharing Dependencies</h1>
+      <p class="doc-lead">Shared dependencies are the mechanism that lets hosts and remotes load the same library once and reuse it at runtime. This page covers the <code>share</code> and <code>shareAll</code> helpers and the options that govern each shared entry.</p>
+
+      <h2><code>shareAll</code></h2>
+      <p>The <code>shareAll</code> helper shares <em>every</em> production dependency declared in your <code>package.json</code>. Pass a single options object — these options are applied to every discovered dependency:</p>
+      <pre><code>import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+
+export default withNativeFederation({
+  name: 'host',
+  shared: {
+    ...shareAll({
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: 'auto',
+      includeSecondaries: false,
+    }),
+  },
+});</code></pre>
+
+      <h3>Per-Package Overrides</h3>
+      <p>Since v21.1, <code>shareAll</code> accepts an <code>overrides</code> option to deviate from the defaults for specific packages:</p>
+      <pre><code>...shareAll(
+  { singleton: true, strictVersion: true, requiredVersion: 'auto' },
+  {
+    overrides: {
+      'package-a/themes/xyz': {
+        singleton: true,
+        strictVersion: true,
+        requiredVersion: 'auto',
+        includeSecondaries: { skip: '@package-a/themes/xyz/*' },
+        build: 'package',
+      },
+      'package-b': {
+        singleton: false,
+        strictVersion: true,
+        requiredVersion: 'auto',
+        includeSecondaries: { skip: 'package-b/icons/*' },
+        build: 'package',
+      },
+    },
+  }
+)</code></pre>
+
+      <h2><code>share</code></h2>
+      <p>Use <code>share</code> when you want to hand-pick which dependencies are shared and configure each one individually:</p>
+      <pre><code>import { share } from '@softarc/native-federation/config';
+
+shared: share({
+  'package-a': {
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+    includeSecondaries: true,
+  },
+})</code></pre>
+
+      <h2>Per-Package Options</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>singleton</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>Only one instance of this package is ever loaded at runtime. Required for libraries with internal state (Angular, React, zone.js, …).</td>
+            </tr>
+            <tr>
+              <td><code>strictVersion</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>Throw at runtime instead of falling back when a version mismatch is detected.</td>
+            </tr>
+            <tr>
+              <td><code>requiredVersion</code></td>
+              <td><code>string | 'auto'</code></td>
+              <td><code>'auto'</code></td>
+              <td>The required semver range. <code>'auto'</code> reads the actual version from the closest <code>package.json</code>.</td>
+            </tr>
+            <tr>
+              <td><code>version</code></td>
+              <td><code>string</code></td>
+              <td>inferred</td>
+              <td>The version that is being shared. Usually inferred from <code>package.json</code>.</td>
+            </tr>
+            <tr>
+              <td><code>includeSecondaries</code></td>
+              <td><code>boolean | { skip?, resolveGlob?, keepAll? }</code></td>
+              <td><code>true</code></td>
+              <td>Also share the package's secondary entry points. See below.</td>
+            </tr>
+            <tr>
+              <td><code>platform</code></td>
+              <td><code>'browser' | 'node'</code></td>
+              <td>config default</td>
+              <td>Target platform for this shared bundle.</td>
+            </tr>
+            <tr>
+              <td><code>build</code></td>
+              <td><code>'default' | 'separate' | 'package'</code></td>
+              <td><code>'default'</code></td>
+              <td>How the shared external is bundled. <code>'default'</code> groups all <code>default</code> shared externals into one build step. <code>'separate'</code> builds the entry on its own. <code>'package'</code> builds the entry plus its secondaries as an isolated package bundle — required when you want per-package <code>chunks</code> settings to take effect.</td>
+            </tr>
+            <tr>
+              <td><code>chunks</code></td>
+              <td><code>boolean</code></td>
+              <td>config default</td>
+              <td>Enable or disable code-splitting for this specific package.</td>
+            </tr>
+            <tr>
+              <td><code>shareScope</code></td>
+              <td><code>string</code></td>
+              <td>config default</td>
+              <td>Optional share-scope override for this package.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><code>requiredVersion: 'auto'</code></h3>
+      <p>With <code>'auto'</code>, the helper looks up the version in the closest <code>package.json</code>. This helps resolve unmet peer dependencies and is the recommended default. You can also flip it on globally with <code>setInferVersion(true)</code>:</p>
+      <pre><code>import { setInferVersion } from '@softarc/native-federation/config';
+setInferVersion(true);</code></pre>
+
+      <h2>Secondary Entry Points</h2>
+      <p>Many packages expose more than one entry point (e.g. <code>@angular/common</code> also ships <code>@angular/common/http</code>, <code>@angular/common/testing</code>, …). <code>includeSecondaries</code> controls how they are handled.</p>
+
+      <h3><code>true</code> — include all secondaries</h3>
+      <p>Every directory under the package that contains a <code>package.json</code> or that is listed in <code>exports</code> becomes its own shared entry:</p>
+      <pre><code>shared: share({
+  '@angular/common': {
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+    includeSecondaries: true,
+  },
+})</code></pre>
+
+      <h3><code>{ skip: ... }</code> — include but filter</h3>
+      <pre><code>shared: share({
+  '@angular/common': {
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+    includeSecondaries: {
+      skip: ['@angular/common/http/testing'],
+    },
+  },
+})</code></pre>
+
+      <h3><code>{ resolveGlob: true }</code> — expand glob exports</h3>
+      <p>Since v21, glob patterns in <code>package.json</code> <code>exports</code> can be expanded into individual shared entries:</p>
+      <pre><code>shared: share({
+  'package-a': {
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+    includeSecondaries: { resolveGlob: true },
+  },
+})</code></pre>
+      <p>This creates a bundle for every valid export it finds, which can balloon the output. <strong>Only use <code>resolveGlob</code> together with the <code>ignoreUnusedDeps</code> feature flag.</strong> You can narrow the scope with <code>skip</code>, including wildcards:</p>
+      <pre><code>includeSecondaries: { skip: 'package-a/themes/xyz/*', resolveGlob: true }</code></pre>
+
+      <h3><code>{ keepAll: true }</code> — opt out of unused-dep removal</h3>
+      <p>When <code>ignoreUnusedDeps</code> is active and you want <em>all</em> secondaries of a package to survive (to guarantee a single consistent version across MFEs), use <code>keepAll</code>:</p>
+      <pre><code>shared: share({
+  '@angular/core': {
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+    includeSecondaries: { keepAll: true },
+  },
+})</code></pre>
+
+      <h2>Skipping Dependencies</h2>
+      <p>Use the top-level <code>skip</code> option to opt out of sharing specific entries — including mapped paths from your <code>tsconfig</code>:</p>
+      <pre><code>export default withNativeFederation({
+  skip: ['my-lib', 'rxjs/testing'],
+  shared: { ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }) },
+});</code></pre>
+
+      <h2>Code-Splitting</h2>
+      <p>By default, large shared libraries are split into chunks that load on demand. Control this at two levels:</p>
+
+      <h3>Global</h3>
+      <pre><code>export default withNativeFederation({
+  chunks: false,   // disable code-splitting for every shared entry
+  shared: { ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }) },
+});</code></pre>
+
+      <h3>Per-Package</h3>
+      <pre><code>export default withNativeFederation({
+  shared: {
+    ...shareAll(
+      { singleton: true, strictVersion: true, requiredVersion: 'auto' },
+      {
+        overrides: {
+          'large-lib': {
+            singleton: true,
+            strictVersion: true,
+            requiredVersion: 'auto',
+            chunks: false,
+            build: 'package',  // required for per-package chunk settings to take effect
+          },
+        },
+      }
+    ),
+  },
+});</code></pre>
+      <div class="callout">
+        <p>Per-package <code>chunks</code> settings are only honored when <code>build</code> is set to <code>'package'</code> (or <code>'separate'</code>). <code>'default'</code> externals share one build step, so their <code>chunks</code> value is overridden by the top-level config.</p>
+      </div>
+
+      <h3>Dense Chunking</h3>
+      <p>Enable <code>features.denseChunking</code> to group chunks by bundle name in <code>remoteEntry.json</code>. Each shared entry then references its chunk bundle by name rather than listing every chunk individually, producing a smaller and more cache-friendly manifest:</p>
+      <pre><code>features: { denseChunking: true }</code></pre>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>
