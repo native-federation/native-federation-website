@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started with Core — Native Federation Docs</title>
+  <meta name="description" content="Install @softarc/native-federation and wire the core builder into your build script with a bundler adapter.">
+  <link rel="canonical" href="https://native-federation.io/docs/core/getting-started.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Getting Started with Core — Native Federation Docs">
+  <meta property="og:description" content="Install and wire up the @softarc/native-federation core library.">
+  <meta property="og:url" content="https://native-federation.io/docs/core/getting-started.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Getting Started with Core</h1>
+      <p class="doc-lead">This page walks through the minimum setup needed to use the core builder directly — install the package, add a bundler adapter, and call the three methods that augment your build process.</p>
+
+      <div class="callout">
+        <p>If you're using Angular, React-with-esbuild, or Vite, prefer the matching <a href="../adapters/index.html">adapter</a>. This page is for people wiring the core into a custom stack or authoring a new adapter.</p>
+      </div>
+
+      <h2>1. Install the Core Package</h2>
+      <pre><code>npm i @softarc/native-federation</code></pre>
+      <p>The core is tooling-agnostic. To actually run a bundle, you also need a build adapter. For most stacks the esbuild adapter is a good starting point:</p>
+      <pre><code>npm i @softarc/native-federation-esbuild</code></pre>
+      <p>For Angular, use <a href="../angular-adapter/index.html">the Angular adapter</a> instead, which brings its own builder.</p>
+
+      <h2>2. Create a Federation Config</h2>
+      <p>Every host and every remote declares a <code>federation.config.js</code>. This is the single place where you describe what to share and what to expose. A minimal host config:</p>
+      <pre><code>// shell/federation.config.js
+import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+
+export default withNativeFederation({
+  name: 'shell',
+  shared: {
+    ...shareAll({
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: 'auto',
+    }),
+  },
+});</code></pre>
+      <p>A minimal remote config additionally declares <code>exposes</code>:</p>
+      <pre><code>// mfe1/federation.config.js
+import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+
+export default withNativeFederation({
+  name: 'mfe1',
+  exposes: {
+    './component': './mfe1/component',
+  },
+  shared: {
+    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
+  },
+});</code></pre>
+      <p>See <a href="configuration.html">Configuration</a> for every available option.</p>
+
+      <h2>3. Augment Your Build Script</h2>
+      <p>The <code>federationBuilder</code> exposes three calls that wrap around your existing build. The pattern is always the same:</p>
+      <ol>
+        <li><code>init(...)</code> — normalize the config, register a bundler adapter, compute the externals list.</li>
+        <li><em>Your build</em> — run your own bundler with <code>federationBuilder.externals</code> passed as externals.</li>
+        <li><code>build()</code> — bundle the shared dependencies and exposed modules, then write <code>remoteEntry.json</code> and the import map.</li>
+      </ol>
+      <pre><code>import * as esbuild from 'esbuild';
+import * as path from 'path';
+import { esBuildAdapter } from '@softarc/native-federation-esbuild';
+import { federationBuilder } from '@softarc/native-federation';
+
+const projectName = 'shell';
+const outputPath = `dist/${projectName}`;
+
+// 1. Initialize Native Federation
+await federationBuilder.init({
+  options: {
+    workspaceRoot: path.join(__dirname, '..'),
+    outputPath,
+    tsConfig: 'tsconfig.json',
+    federationConfig: `${projectName}/federation.config.js`,
+    verbose: false,
+  },
+  adapter: esBuildAdapter,
+});
+
+// 2. Run your own build, respecting the computed externals
+await esbuild.build({
+  entryPoints: [`${projectName}/main.ts`],
+  outdir: outputPath,
+  bundle: true,
+  format: 'esm',
+  external: federationBuilder.externals,
+});
+
+// 3. Let the core bundle shared + exposed modules and write artifacts
+await federationBuilder.build();</code></pre>
+
+      <h2>4. Serve the Output</h2>
+      <p>After a successful build you'll find a <code>remoteEntry.json</code> alongside the bundled shared and exposed modules in your <code>outputPath</code>. Serve that directory — the runtime picks it up.</p>
+
+      <h2>Next Steps</h2>
+      <ul>
+        <li><a href="configuration.html">Configuration</a> — every option on <code>withNativeFederation</code>.</li>
+        <li><a href="sharing.html">Sharing Dependencies</a> — <code>share</code>, <code>shareAll</code>, secondary entry points.</li>
+        <li><a href="build-process.html">Build Process</a> — the full <code>federationBuilder</code> lifecycle, including watch-mode rebuilds.</li>
+        <li><a href="build-adapters.html">Build Adapters</a> — implement <code>NFBuildAdapter</code> to support a new bundler.</li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>

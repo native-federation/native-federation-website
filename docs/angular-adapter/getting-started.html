@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started — Angular Adapter</title>
+  <meta name="description" content="Install the Angular adapter and scaffold your first host and remote with ng add.">
+  <link rel="canonical" href="https://native-federation.io/docs/angular-adapter/getting-started.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Getting Started — Angular Adapter">
+  <meta property="og:description" content="Install and scaffold a Native Federation host and remote with the Angular adapter.">
+  <meta property="og:url" content="https://native-federation.io/docs/angular-adapter/getting-started.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Getting Started</h1>
+      <p class="doc-lead">Install the adapter, run <code>ng add</code> on every project that should participate in the federation, and you have a working host + remote pair within minutes. This page walks the happy path; the <a href="../tutorial.html">Tutorial</a> goes through a complete example.</p>
+
+      <h2>1. Install</h2>
+      <pre><code>npm i @angular-architects/native-federation -D</code></pre>
+      <p>The package brings <code>@softarc/native-federation</code> and <code>@softarc/native-federation-runtime</code> as transitive dependencies — there is nothing else to install up front.</p>
+
+      <h2>2. Scaffold a Remote (Micro Frontend)</h2>
+      <pre><code>ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote</code></pre>
+      <p>This runs the <code>init</code> schematic against <code>mfe1</code>. See <a href="schematics.html#init">Schematics → init</a> for the full list of changes; in summary it:</p>
+      <ul>
+        <li>Adds <code>es-module-shims</code> to the polyfills.</li>
+        <li>Generates <code>projects/mfe1/federation.config.js</code> with one entry exposed (<code>./Component</code> → the project's <code>app.component.ts</code>).</li>
+        <li>Generates <code>projects/mfe1/tsconfig.federation.json</code>.</li>
+        <li>Renames the existing <code>build</code>/<code>serve</code> targets in <code>angular.json</code> to <code>esbuild</code> / <code>serve-original</code> and points <code>build</code>/<code>serve</code> at <code>@angular-architects/native-federation:build</code>.</li>
+        <li>Splits <code>main.ts</code> in two: a federation bootstrap, and the original Angular bootstrap moved to <code>bootstrap.ts</code>.</li>
+      </ul>
+
+      <h2>3. Scaffold a Host (Shell)</h2>
+      <pre><code>ng g @angular-architects/native-federation:init --project shell --port 4200 --type dynamic-host</code></pre>
+      <p>The same schematic runs in <code>dynamic-host</code> mode for the shell. In addition to the changes above, it creates a <code>federation.manifest.json</code> in the project's <code>public/</code> (or <code>src/assets/</code>) folder listing the remotes it knows about:</p>
+      <pre><code>{
+  "mfe1": "http://localhost:4201/remoteEntry.json"
+}</code></pre>
+      <p>Pick the type that fits the role of the project:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th><code>--type</code></th><th>What you get</th><th>When to use it</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>remote</code></td>
+              <td><code>main.ts</code> calls <code>initFederation({ '&lt;name&gt;': './remoteEntry.json' })</code> — exposes its own <code>remoteEntry.json</code>.</td>
+              <td>Every Micro Frontend.</td>
+            </tr>
+            <tr>
+              <td><code>host</code></td>
+              <td>Remote map is inlined in <code>main.ts</code>.</td>
+              <td>Single-environment shells where remote URLs never change.</td>
+            </tr>
+            <tr>
+              <td><code>dynamic-host</code></td>
+              <td><code>main.ts</code> reads from <code>federation.manifest.json</code>.</td>
+              <td>The default for shells — swap the manifest per environment without rebuilding.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>4. Wire a Lazy Route in the Host</h2>
+      <p>Loading a remote module is plain Angular lazy-loading with <code>loadRemoteModule</code> in place of a dynamic <code>import()</code>:</p>
+      <pre><code>// projects/shell/src/app/app.routes.ts
+import { Routes } from '@angular/router';
+import { loadRemoteModule } from '@angular-architects/native-federation';
+
+export const APP_ROUTES: Routes = [
+  {
+    path: 'flights',
+    loadComponent: () =&gt;
+      loadRemoteModule('mfe1', './Component').then(m =&gt; m.AppComponent),
+  },
+];</code></pre>
+      <p>See <a href="runtime.html">Runtime</a> for the full <code>loadRemoteModule</code> reference, including share-scope selection and the orchestrator runtime.</p>
+
+      <h2>5. Run It</h2>
+      <pre><code>ng serve mfe1 -o   # in one terminal
+ng serve shell -o  # in another</code></pre>
+      <p>The shell's dev server proxies <code>http://localhost:4201/remoteEntry.json</code> at request time and lazy-loads the remote when the route is hit. The Angular adapter's dev server also serves the federation artifacts (shared bundles, exposed modules) directly from <code>dist/&lt;project&gt;/browser</code>, so you don't need a separate static server.</p>
+
+      <h2>What Got Generated</h2>
+      <p>After running <code>ng add</code> against a project, expect the following layout:</p>
+      <pre><code>projects/mfe1/
+├── federation.config.js          ← shared/exposes config (see Angular Config)
+├── tsconfig.federation.json      ← extends tsconfig.json, used only by the federation builder
+└── src/
+    ├── main.ts                   ← initFederation(...) bootstrap
+    └── bootstrap.ts              ← the *original* Angular bootstrap (bootstrapApplication etc.)</code></pre>
+      <p>And in the workspace root:</p>
+      <pre><code>angular.json    ← build → @angular-architects/native-federation:build
+                ← serve → @angular-architects/native-federation:build
+                ← esbuild → @angular/build:application (the original build)
+                ← serve-original → @angular/build:dev-server (the original serve)
+package.json    ← + es-module-shims, + @softarc/native-federation-orchestrator (v4)</code></pre>
+
+      <h2>Production Builds</h2>
+      <pre><code>ng build mfe1
+ng build shell --configuration production</code></pre>
+      <p>Each project's output (<code>dist/&lt;project&gt;/browser/</code>) contains a <code>remoteEntry.json</code> alongside the Angular bundle. Deploy the whole folder as a static site; the host's manifest only needs to point at the matching <code>remoteEntry.json</code> URL.</p>
+
+      <div class="callout">
+        <p>The shape of <code>remoteEntry.json</code>, the import map and the artifact cache are all produced by the core. See <a href="../core/artifacts.html">Build Artifacts</a> for the full layout.</p>
+      </div>
+
+      <h2>Next Steps</h2>
+      <ul>
+        <li><a href="builder.html">Builder</a> — every option in the <code>angular.json</code> targets the schematic created.</li>
+        <li><a href="configuration.html">Angular Config</a> — what <code>withNativeFederation</code> changes for Angular projects.</li>
+        <li><a href="runtime.html">Runtime</a> — <code>initFederation</code>, <code>loadRemoteModule</code> and the orchestrator.</li>
+        <li><a href="../tutorial.html">Tutorial</a> — full host + remote walkthrough on a real example repo.</li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>

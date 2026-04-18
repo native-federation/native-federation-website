@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orchestrator — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="The Native Federation Orchestrator — a runtime micro-frontend orchestrator that loads Native Federation remotes into any web page, with advanced dependency resolution and cross-reload caching."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/orchestrator/index.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Orchestrator — Native Federation Docs" />
+    <meta
+      property="og:description"
+      content="A runtime micro-frontend orchestrator that loads Native Federation remotes into any web page."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/orchestrator/index.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+      <main class="docs-content">
+        <h1>Orchestrator</h1>
+        <p class="doc-lead">
+          The Orchestrator —
+          <code>@softarc/native-federation-orchestrator</code> — is the
+          next-generation browser runtime for Native Federation. It is intended
+          to replace the default
+          <a href="../runtime/index.html">Runtime</a>
+          (<code>@softarc/native-federation-runtime</code>) as the recommended
+          way to load remotes on the host, regardless of whether the host is a
+          SPA, a plain HTML page, or a server-rendered application.
+        </p>
+
+        <p>
+          Compared to the default runtime it adds semver-range resolution when
+          remotes disagree on a shared dependency version, persistent caching of
+          <code>remoteEntry.json</code> in <code>localStorage</code> or
+          <code>sessionStorage</code>, and a drop-in quickstart bundle for
+          HTML-only hosts. It stays fully compatible with the Native Federation
+          ecosystem — any remote built with
+          <code>@softarc/native-federation</code> (v3 or v4) that emits a
+          standard <code>remoteEntry.json</code> can be loaded by it.
+        </p>
+
+        <p>
+          The one caveat today is SSR: the Orchestrator runs in the browser and
+          does not yet have direct server-side rendering support. A
+          server-rendered host works fine — the Orchestrator loads the remotes
+          client-side after the page arrives — but if you need the remote
+          modules to execute during SSR itself, stick with the default Runtime
+          for now.
+        </p>
+
+        <div class="callout callout-warning">
+          <p>
+            <strong>Documentation in progress.</strong> A full API and
+            configuration reference is still being written for this site. Until
+            it is published, please refer to the project repository for setup
+            instructions, configuration options and examples:
+            <a
+              href="https://github.com/native-federation/orchestrator/tree/main/docs"
+              target="_blank"
+              rel="noopener"
+              >github.com/native-federation/orchestrator</a
+            >.
+          </p>
+        </div>
+      </main>
+    </div>
+
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../../components.js"></script>
+  </body>
+</html>

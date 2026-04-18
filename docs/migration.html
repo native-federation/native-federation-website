@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Migration to v4 — Native Federation Docs</title>
+  <meta name="description" content="Migrate a Native Federation project from v3 to v4 — switch federation.config.js to ESM, enable ESM in package.json, and opt in to the stable Orchestrator runtime.">
+  <link rel="canonical" href="https://native-federation.io/docs/migration.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Migration to v4 — Native Federation Docs">
+  <meta property="og:description" content="The framework-agnostic migration path from Native Federation v3 to v4.">
+  <meta property="og:url" content="https://native-federation.io/docs/migration.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../images/favicon.png">
+  <link rel="apple-touch-icon" href="../images/favicon.png">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Migration to v4</h1>
+      <p class="doc-lead">The steps below cover the framework-agnostic parts of the v3 → v4 upgrade — the two files every Native Federation project owns, regardless of whether it is built with Angular, React, Vite or a custom stack. For Angular-specific changes (builder, schematics, <code>main.ts</code>), see <a href="angular-adapter/migration-v4.html">Angular Adapter → Migration to v4</a>.</p>
+
+      <div class="callout">
+        <p><strong>What changes at this layer:</strong> <code>federation.config.js</code> switches from CommonJS to ESM, and <code>package.json</code> opts the project into ESM with <code>"type": "module"</code>. That's it — the file layout is unchanged.</p>
+      </div>
+
+      <nav class="page-toc" aria-label="On this page">
+        <strong>On this page</strong>
+        <ul>
+          <li><a href="#clear-caches">1. Clear stale caches</a></li>
+          <li><a href="#package-json">2. Enable ESM in <code>package.json</code></a></li>
+          <li><a href="#federation-config">3. Convert <code>federation.config.js</code> to ESM</a></li>
+          <li><a href="#orchestrator">4. Adopt the Orchestrator (recommended)</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="clear-caches">1. Clear stale caches</h2>
+      <p>Before the first v4 build, wipe the caches your old build produced. Mixing v3 artifacts with v4 output is the most common source of "it runs but the browser can't find a chunk" errors.</p>
+      <pre><code>📁 project-root/
+├── 📁 dist/                   ← previously bundled artifacts
+└── 📁 node_modules/
+    └── 📁 .cache/             ← native federation cache</code></pre>
+      <p>If you use Angular, also remove <code>.angular/</code>.</p>
+
+      <h2 id="package-json">2. Enable ESM in <code>package.json</code></h2>
+      <p>Native Federation 4 is fully ESM — both the config file and the emitted artifacts. Set <code>"type": "module"</code> on every project that owns a <code>federation.config.js</code>:</p>
+      <pre><code>{
+  "name": "mfe1",
+  "version": "1.2.3",
+  "type": "module",
+  "dependencies": {
+    "@softarc/native-federation-runtime": "~4.0.0"
+  },
+  "devDependencies": {
+    "@softarc/native-federation": "~4.0.0",
+    "@softarc/native-federation-orchestrator": "^4.0.0"
+  }
+}</code></pre>
+      <div class="callout callout-warning">
+        <p>If <code>"type": "module"</code> breaks a legacy CommonJS script you still need, rename that script to <code>.cjs</code> — Node falls back to CommonJS for that extension regardless of the package-wide setting.</p>
+      </div>
+
+      <h2 id="federation-config">3. Convert <code>federation.config.js</code> to ESM</h2>
+      <p>The config shape is the same as in v3. Only the module syntax changes: <code>require(...)</code> becomes <code>import</code>, and <code>module.exports</code> becomes <code>export default</code>.</p>
+
+      <h3>Before (v3, CommonJS)</h3>
+      <pre><code>const { withNativeFederation, share, shareAll } = require('@softarc/native-federation/config');
+
+module.exports = withNativeFederation({
+  name: 'mfe1',
+
+  exposes: {
+    './Component': './src/bootstrap.ts',
+  },
+
+  shared: {
+    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
+    ...share({ '@angular/core': { singleton: true, strictVersion: true, requiredVersion: 'auto' } }),
+  },
+
+  skip: [
+    'rxjs/ajax',
+    'rxjs/fetch',
+    'rxjs/testing',
+    'rxjs/webSocket',
+  ],
+});</code></pre>
+
+      <h3>After (v4, ESM)</h3>
+      <pre><code>import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+
+export default withNativeFederation({
+  name: 'team/mfe1',
+
+  exposes: {
+    './Component': './src/bootstrap.ts',
+  },
+
+  shared: {
+    // shareAll still works. In v4 you can also merge per-package overrides
+    // straight into the shareAll call — no need for a trailing share(...).
+    ...shareAll(
+      { singleton: true, strictVersion: true, requiredVersion: 'auto' },
+      {
+        overrides: {
+          '@angular/core': {
+            singleton: true,
+            strictVersion: true,
+            requiredVersion: 'auto',
+            includeSecondaries: { keepAll: true },
+          },
+        },
+      },
+    ),
+  },
+
+  skip: ['rxjs/ajax', 'rxjs/fetch', 'rxjs/testing', 'rxjs/webSocket'],
+
+  features: {
+    ignoreUnusedDeps: true, // on by default in v4
+    denseChunking: true,    // opt-in: groups chunks in remoteEntry.json for smaller payloads
+  },
+});</code></pre>
+
+      <div class="callout">
+        <p>The <code>features</code> block is new in v4. See <a href="core/configuration.html#features">Configuration → Feature Flags</a> for the full list.</p>
+      </div>
+
+      <h2 id="orchestrator">4. Adopt the Orchestrator (recommended)</h2>
+      <p>The <a href="orchestrator/index.html">Orchestrator</a> — <code>@softarc/native-federation-orchestrator</code> — is now <strong>stable</strong> and is the recommended browser runtime for v4 hosts. It speaks the same <code>remoteEntry.json</code> contract as the default <code>@softarc/native-federation-runtime</code>, so remotes built by the Core work unchanged. On top of that it adds:</p>
+      <ul>
+        <li>Semver-range resolution when remotes disagree on a shared version.</li>
+        <li>Persistent caching of <code>remoteEntry.json</code> in <code>localStorage</code> or <code>sessionStorage</code>.</li>
+        <li>A pluggable logger, storage backend and import-map shim configuration.</li>
+      </ul>
+      <p>Switching is an install + import change on the host; the emitted artifacts stay the same. The exact host bootstrap code depends on your framework — see the <a href="orchestrator/index.html">Orchestrator overview</a> for configuration options, or <a href="angular-adapter/runtime.html">Angular Adapter → Runtime</a> for the Angular-specific bootstrap.</p>
+
+      <div class="callout callout-warning">
+        <p><strong>SSR note.</strong> The Orchestrator is client-side only today. If you need remote modules to execute during server-side rendering, keep using the default Runtime on the SSR path.</p>
+      </div>
+
+      <h2>That's it</h2>
+      <p>With the two files above updated and caches cleared, your project builds and runs on Native Federation 4. If something broke along the way, please <a href="https://github.com/native-federation" target="_blank" rel="noopener">open an issue</a> — we want to hear about it.</p>
+
+      <h2>Where to Go Next</h2>
+      <ul>
+        <li><a href="core/configuration.html"><code>federation.config.js</code> reference</a> — every field, every feature flag.</li>
+        <li><a href="orchestrator/index.html">Orchestrator overview</a> — why it's worth switching.</li>
+        <li><a href="angular-adapter/migration-v4.html">Angular Adapter → Migration to v4</a> — the <code>angular.json</code> builder, schematics and <code>main.ts</code> changes.</li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../components.js"></script>
+</body>
+</html>

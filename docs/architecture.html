@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture Overview — Native Federation Docs</title>
+  <meta name="description" content="A bird's-eye view of Native Federation — how the Core, Adapters, Runtime and Orchestrator fit together to enable framework-agnostic Micro Frontends.">
+  <link rel="canonical" href="https://native-federation.io/docs/architecture.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Architecture Overview — Native Federation Docs">
+  <meta property="og:description" content="How Core, Adapters, Runtime and Orchestrator fit together.">
+  <meta property="og:url" content="https://native-federation.io/docs/architecture.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../images/favicon.png">
+  <link rel="apple-touch-icon" href="../images/favicon.png">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Architecture Overview</h1>
+      <p class="doc-lead">Native Federation is organized into four cooperating layers. Each has a single responsibility and a narrow contract with its neighbors — so you can replace any one of them (your framework, your bundler, or your runtime) without touching the others.</p>
+
+      <h2>The Four Layers</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Layer</th><th>Lives at</th><th>Runs</th><th>Responsibility</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="core/index.html"><strong>Core</strong></a></td>
+              <td><code>@softarc/native-federation</code></td>
+              <td>build time</td>
+              <td>Normalizes the federation config, bundles shared dependencies and exposed modules, and emits <code>remoteEntry.json</code> + the import map. Bundler-agnostic.</td>
+            </tr>
+            <tr>
+              <td><a href="adapters/index.html"><strong>Adapters</strong></a></td>
+              <td>Angular / esbuild / Vite …</td>
+              <td>build time</td>
+              <td>Plug a specific bundler or framework into the Core via the <code>NFBuildAdapter</code> contract. Often ship a higher-level API, schematics or CLI integration on top.</td>
+            </tr>
+            <tr>
+              <td><a href="runtime/index.html"><strong>Runtime</strong></a></td>
+              <td>in the browser</td>
+              <td>run time</td>
+              <td>Reads <code>remoteEntry.json</code> files, constructs a combined import map, and loads remote modules on demand. Small, framework-agnostic.</td>
+            </tr>
+            <tr>
+              <td><a href="orchestrator/index.html"><strong>Orchestrator</strong></a></td>
+              <td>in the browser</td>
+              <td>run time</td>
+              <td>The next-generation runtime, intended to replace the default Runtime. Same <code>remoteEntry.json</code> contract, plus semver-range resolution for shared dependencies and persistent caching in browser storage. Client-side only — no direct SSR support yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>How They Fit Together</h2>
+      <pre><code>                 ┌─────────────────────┐      plugs in      ┌────────────┐
+                 │         Core        │ ◄───────────────── │  Adapter   │
+                 │ (federationBuilder) │                    │  (esbuild, │
+                 │                     │ ──────────────────► │   Angular) │
+                 └──────────┬──────────┘   delegates build   └────────────┘
+                            │ emits
+              remoteEntry.json + importmap.json + bundles
+                            │
+                            ▼
+          ┌──────────────────────────────────────┐
+          │   Runtime   ─or─   Orchestrator      │
+          │ (initFederation, loadRemoteModule)   │
+          └──────────────────────────────────────┘
+                         in the browser</code></pre>
+
+      <p>Each layer gets its own section elsewhere in these docs. The short version:</p>
+      <ul>
+        <li><strong><a href="core/index.html">Core</a></strong> — bundler-agnostic builder. Normalizes the federation config, computes the externals your own bundler must leave unresolved, bundles shared dependencies and exposed modules, and writes <code>remoteEntry.json</code> + <code>importmap.json</code>.</li>
+        <li><strong><a href="adapters/index.html">Adapters</a></strong> — framework-/bundler-specific glue implementing the <code>NFBuildAdapter</code> contract. First-party adapters exist for <a href="angular-adapter/index.html">Angular</a> and <a href="adapters/esbuild/index.html">esbuild</a>; there is a community <a href="https://www.npmjs.com/package/@gioboa/vite-module-federation" target="_blank" rel="noopener">Vite plugin</a>, and <a href="adapters/build-your-own.html">you can build your own</a>.</li>
+        <li><strong><a href="runtime/index.html">Runtime</a></strong> — the small default browser library. Exposes <code>initFederation</code> and <code>loadRemoteModule</code>.</li>
+        <li><strong><a href="orchestrator/index.html">Orchestrator</a></strong> — the recommended browser runtime for v4. Same API as the Runtime, plus semver-range resolution and persistent <code>remoteEntry.json</code> caching. Client-side only today; keep the default Runtime for SSR.</li>
+      </ul>
+
+      <h2>A Full Build-to-Runtime Trace</h2>
+      <ol>
+        <li>Your build pipeline invokes the Native Federation build for <code>shell</code> and <code>mfe1</code>, each with their own <code>FederationOptions</code>.</li>
+        <li>For each project, the <strong>Core</strong> reads <code>federation.config.js</code>, normalizes it, and asks the <strong>Adapter</strong> to bundle shared externals, mapped paths, and exposed modules.</li>
+        <li>The Core writes <code>dist/&lt;project&gt;/remoteEntry.json</code> and <code>dist/&lt;project&gt;/importmap.json</code>.</li>
+        <li>The <code>dist</code> folders are published behind stable URLs.</li>
+        <li>At startup, the <strong>Runtime</strong> (or the <strong>Orchestrator</strong>) in <code>shell</code> fetches <code>mfe1</code>'s <code>remoteEntry.json</code>, merges shared-dependency metadata, resolves version mismatches, and injects a combined import map into the document.</li>
+        <li>When the user navigates to a route backed by a remote, <code>loadRemoteModule</code> dynamically imports the exposed module — the browser resolves it through the injected import map.</li>
+      </ol>
+
+      <div class="callout">
+        <p>If you only remember one thing: the Core and Runtime speak a simple contract — <code>remoteEntry.json</code> plus an import map. Everything else (which bundler, which framework, which runtime) is swappable.</p>
+      </div>
+
+      <h2>Where to Go Next</h2>
+      <ul>
+        <li><a href="mental-model.html">The Mental Model</a> — why the pieces are shaped this way.</li>
+        <li><a href="terminology.html">Terminology</a> — canonical glossary for the terms used above.</li>
+        <li><a href="tutorial.html">Tutorial</a> — build a working host + remote end-to-end.</li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../components.js"></script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build Adapters — Native Federation Core Docs</title>
+  <meta name="description" content="The NFBuildAdapter contract — how Native Federation Core delegates the actual bundling step to a pluggable, bundler-specific adapter.">
+  <link rel="canonical" href="https://native-federation.io/docs/core/build-adapters.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Build Adapters — Native Federation Core Docs">
+  <meta property="og:description" content="Implement NFBuildAdapter to support a new bundler.">
+  <meta property="og:url" content="https://native-federation.io/docs/core/build-adapters.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Build Adapters</h1>
+      <p class="doc-lead">The core library doesn't ship a bundler. Instead, it defines a contract — <code>NFBuildAdapter</code> — and delegates the actual compilation to an adapter. That's what makes Native Federation bundler-agnostic.</p>
+
+      <h2>The Contract</h2>
+      <p>A build adapter is an object implementing three methods:</p>
+      <pre><code>export interface NFBuildAdapter {
+  setup(name: string, options: NFBuildAdapterOptions): Promise&lt;void&gt;;
+
+  build(
+    name: string,
+    opts?: { modifiedFiles?: string[]; signal?: AbortSignal }
+  ): Promise&lt;NFBuildAdapterResult[]&gt;;
+
+  dispose(name?: string): Promise&lt;void&gt;;
+}</code></pre>
+      <p>The core calls these in phases. Each phase uses a unique <code>name</code> — for example <code>'browser-shared'</code>, <code>'node-shared'</code>, <code>'browser-&lt;pkg&gt;'</code>, or <code>'exposed'</code> — so an adapter can maintain one persistent context per phase (useful for watch mode and incremental compile).</p>
+
+      <h2><code>NFBuildAdapterOptions</code></h2>
+      <p>The options object tells the adapter exactly what to compile in a given phase:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>entryPoints</code></td><td><code>EntryPoint[]</code></td><td>Entries to compile. Each entry has a <code>fileName</code>, an <code>outName</code> and an optional <code>key</code>.</td></tr>
+            <tr><td><code>external</code></td><td><code>string[]</code></td><td>Packages that must be left as external imports.</td></tr>
+            <tr><td><code>outdir</code></td><td><code>string</code></td><td>Absolute output directory.</td></tr>
+            <tr><td><code>mappedPaths</code></td><td><code>PathToImport</code></td><td>Resolved tsconfig path mappings relevant to this build.</td></tr>
+            <tr><td><code>isMappingOrExposed</code></td><td><code>boolean</code></td><td><code>true</code> when compiling exposed modules or shared mapped paths; <code>false</code> when bundling shared npm externals.</td></tr>
+            <tr><td><code>platform</code></td><td><code>'browser' | 'node'</code></td><td>Target platform.</td></tr>
+            <tr><td><code>tsConfigPath</code></td><td><code>string</code></td><td>Path to the <code>tsconfig.json</code> to use.</td></tr>
+            <tr><td><code>dev</code></td><td><code>boolean</code></td><td>Development build (source maps, no minify).</td></tr>
+            <tr><td><code>watch</code></td><td><code>boolean</code></td><td>Opt in to watch-mode behavior.</td></tr>
+            <tr><td><code>chunks</code></td><td><code>boolean</code></td><td>Enable code-splitting.</td></tr>
+            <tr><td><code>optimizedMappings</code></td><td><code>boolean</code></td><td>Hint for incremental compile of mapped paths.</td></tr>
+            <tr><td><code>hash</code></td><td><code>boolean</code></td><td>Append a content hash to output filenames.</td></tr>
+            <tr><td><code>cache</code></td><td><code>FederationCache</code></td><td>Shared federation cache — adapters may store bundler-specific state on its <code>bundlerCache</code> slot.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2><code>NFBuildAdapterResult</code></h2>
+      <p><code>build()</code> returns one result per entry point:</p>
+      <pre><code>export interface NFBuildAdapterResult {
+  fileName: string;  // absolute path to the emitted file
+}</code></pre>
+
+      <h2>Registering an Adapter</h2>
+      <p>Adapters are registered either by passing them to <code>federationBuilder.init</code>:</p>
+      <pre><code>await federationBuilder.init({
+  options: { /* ... */ },
+  adapter: esBuildAdapter,
+});</code></pre>
+      <p>… or imperatively via <code>setBuildAdapter</code>, when you drive the lower-level API directly:</p>
+      <pre><code>import { setBuildAdapter, buildForFederation, normalizeFederationOptions, getExternals } from '@softarc/native-federation';
+
+setBuildAdapter(myAdapter);
+
+const { config, options } = await normalizeFederationOptions(fedOptions);
+const externals = getExternals(config);
+await buildForFederation(config, options, externals);</code></pre>
+
+      <h2>Adapter Anatomy</h2>
+      <p>Every production adapter tends to follow the same shape:</p>
+      <ul>
+        <li><code>setup(name, options)</code> — create a bundler context (esbuild <code>context</code>, Angular builder handle, Vite dev server, …) and remember it keyed by <code>name</code>.</li>
+        <li><code>build(name, opts?)</code> — run the context. Use <code>opts.modifiedFiles</code> to drive incremental rebuilds; honor <code>opts.signal</code> to abort in-flight work.</li>
+        <li><code>dispose(name?)</code> — close a specific context or all of them.</li>
+      </ul>
+
+      <h2>Reference Adapters</h2>
+      <ul>
+        <li><a href="../adapters/esbuild/index.html"><code>@softarc/native-federation-esbuild</code></a> — the reference adapter, a thin wrapper over esbuild with a rollup fallback for features esbuild doesn't (yet) cover.</li>
+        <li><a href="../angular-adapter/index.html"><code>@angular-architects/native-federation</code></a> — the Angular adapter, which plugs into the Angular CLI builders.</li>
+      </ul>
+
+      <h2>Writing Your Own Adapter</h2>
+      <p>A minimal custom adapter for a hypothetical bundler looks like this:</p>
+      <pre><code>import type { NFBuildAdapter } from '@softarc/native-federation/domain';
+
+const myAdapter: NFBuildAdapter = {
+  contexts: new Map(),
+
+  async setup(name, options) {
+    const ctx = await myBundler.createContext({
+      entries: options.entryPoints,
+      external: options.external,
+      outdir: options.outdir,
+      platform: options.platform ?? 'browser',
+      sourcemap: options.dev,
+    });
+    this.contexts.set(name, ctx);
+  },
+
+  async build(name, opts) {
+    const ctx = this.contexts.get(name);
+    const result = await ctx.rebuild({
+      modifiedFiles: opts?.modifiedFiles,
+      signal: opts?.signal,
+    });
+    return result.outputs.map(o =&gt; ({ fileName: o.path }));
+  },
+
+  async dispose(name) {
+    if (name) {
+      await this.contexts.get(name)?.dispose();
+      this.contexts.delete(name);
+    } else {
+      for (const ctx of this.contexts.values()) await ctx.dispose();
+      this.contexts.clear();
+    }
+  },
+};</code></pre>
+
+      <div class="callout">
+        <p>When implementing an adapter, look carefully at the <code>platform</code> and <code>isMappingOrExposed</code> flags — shared npm externals and exposed modules often need different bundler settings (e.g. different <code>format</code> or <code>resolve.extensions</code>).</p>
+      </div>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>
