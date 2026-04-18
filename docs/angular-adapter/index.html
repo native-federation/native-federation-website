@@ -1,117 +1,309 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Angular Adapter — Native Federation Docs</title>
-  <meta name="description" content="The Angular adapter for Native Federation — a builder, schematics and runtime helpers that integrate Angular's esbuild-based ApplicationBuilder with the Native Federation core.">
-  <link rel="canonical" href="https://native-federation.io/docs/angular-adapter/index.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Angular Adapter — Native Federation Docs">
-  <meta property="og:description" content="First-class Angular support for Native Federation.">
-  <meta property="og:url" content="https://native-federation.io/docs/angular-adapter/index.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../images/favicon.png">
-  <link rel="stylesheet" href="../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Angular Adapter — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="The Angular adapter for Native Federation — a builder, schematics and runtime helpers that integrate Angular's esbuild-based ApplicationBuilder with the Native Federation core."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/angular-adapter/index.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:title"
+      content="Angular Adapter — Native Federation Docs"
+    />
+    <meta
+      property="og:description"
+      content="First-class Angular support for Native Federation."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/angular-adapter/index.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>Angular Adapter</h1>
+        <p class="doc-lead">
+          The Angular adapter — published as
+          <code>@angular-architects/native-federation</code> — is the
+          first-class integration between Angular's esbuild-based
+          <code>@angular/build:application</code> and the
+          <a href="../core/index.html">Native Federation core</a>. It ships a
+          builder that wraps the Angular CLI, schematics that scaffold hosts and
+          remotes, an Nx generator, and a small set of Angular-aware config and
+          runtime helpers.
+        </p>
 
-    <main class="docs-content">
-      <h1>Angular Adapter</h1>
-      <p class="doc-lead">The Angular adapter — published as <code>@angular-architects/native-federation</code> — is the first-class integration between Angular's esbuild-based <code>@angular/build:application</code> and the <a href="../core/index.html">Native Federation core</a>. It ships a builder that wraps the Angular CLI, schematics that scaffold hosts and remotes, an Nx generator, and a small set of Angular-aware config and runtime helpers.</p>
+        <div class="callout callout-warning">
+          <p>
+            <strong>v4 supports Angular v20+.</strong> <br />
+            The Angular adapter which is documented in this section, is fully
+            based on native-federation v4. It is currently in beta published
+            under
+            <code>@angular-architects/native-federation-v4</code>. <br />
+            It will be released to stable in May together with NG22. This
+            adapter is fully ESM and will support Angular >20 versions. (one
+            backwards compatible major)
+            <br /><br />
+            Find the repository here:
+            <a
+              href="https://github.com/native-federation/angular-adapter"
+              target="_blank"
+              >https://github.com/native-federation/angular-adapter</a
+            >
+          </p>
+        </div>
 
-      <h2>What's in the Box</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Piece</th><th>Entry point</th><th>Purpose</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Builder</strong></td>
-              <td><code>@angular-architects/native-federation:build</code></td>
-              <td>Replaces the default Angular build/serve target. Wraps <code>@angular/build:application</code>, runs the federation build, and proxies federation artifacts through the dev-server.</td>
-            </tr>
-            <tr>
-              <td><strong>Schematics</strong></td>
-              <td><code>ng add @angular-architects/native-federation</code></td>
-              <td>Initializes a project as a host, dynamic-host or remote — patches <code>angular.json</code>, polyfills, <code>main.ts</code> and creates <code>federation.config.js</code>.</td>
-            </tr>
-            <tr>
-              <td><strong>Config helpers</strong></td>
-              <td><code>@angular-architects/native-federation/config</code></td>
-              <td><code>withNativeFederation</code>, <code>share</code>, <code>shareAll</code>, <code>shareAngularLocales</code>, <code>NG_SKIP_LIST</code> — Angular-aware wrappers around the core config helpers.</td>
-            </tr>
-            <tr>
-              <td><strong>Runtime re-exports</strong></td>
-              <td><code>@angular-architects/native-federation</code></td>
-              <td>Re-exports <code>initFederation</code> and <code>loadRemoteModule</code> from <code>@softarc/native-federation-runtime</code> for ergonomic import.</td>
-            </tr>
-            <tr>
-              <td><strong>Nx generator</strong></td>
-              <td><code>@angular-architects/native-federation:native-federation</code></td>
-              <td>Adds a Nx library project pre-wired to the federation builder.</td>
-            </tr>
-            <tr>
-              <td><strong>Internal API</strong></td>
-              <td><code>@angular-architects/native-federation/internal</code></td>
-              <td>Exposes <code>runBuilder</code> for users who need to inject custom esbuild plugins. See <a href="custom-builder.html">Custom Builder</a>.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <h2>What's in the Box</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Piece</th>
+                <th>Entry point</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Builder</strong></td>
+                <td>
+                  <code>@angular-architects/native-federation:build</code>
+                </td>
+                <td>
+                  Replaces the default Angular build/serve target. Wraps
+                  <code>@angular/build:application</code>, runs the federation
+                  build, and proxies federation artifacts through the
+                  dev-server.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Schematics</strong></td>
+                <td>
+                  <code>ng add @angular-architects/native-federation</code>
+                </td>
+                <td>
+                  Initializes a project as a host, dynamic-host or remote —
+                  patches <code>angular.json</code>, polyfills,
+                  <code>main.ts</code> and creates
+                  <code>federation.config.js</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Config helpers</strong></td>
+                <td>
+                  <code>@angular-architects/native-federation/config</code>
+                </td>
+                <td>
+                  <code>withNativeFederation</code>, <code>share</code>,
+                  <code>shareAll</code>, <code>shareAngularLocales</code>,
+                  <code>NG_SKIP_LIST</code> — Angular-aware wrappers around the
+                  core config helpers.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Runtime re-exports</strong></td>
+                <td><code>@angular-architects/native-federation</code></td>
+                <td>
+                  Re-exports <code>initFederation</code> and
+                  <code>loadRemoteModule</code> from
+                  <code>@softarc/native-federation-runtime</code> for ergonomic
+                  import.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Nx generator</strong></td>
+                <td>
+                  <code
+                    >@angular-architects/native-federation:native-federation</code
+                  >
+                </td>
+                <td>
+                  Adds a Nx library project pre-wired to the federation builder.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Internal API</strong></td>
+                <td>
+                  <code>@angular-architects/native-federation/internal</code>
+                </td>
+                <td>
+                  Exposes <code>runBuilder</code> for users who need to inject
+                  custom esbuild plugins. See
+                  <a href="custom-builder.html">Custom Builder</a>.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <h2>Why an Adapter?</h2>
-      <p>The <a href="../core/index.html">core builder</a> is intentionally framework- and bundler-agnostic. The Angular adapter adds the glue that an Angular project needs:</p>
-      <ul>
-        <li><strong>Delegates to the Application Builder</strong> — Angular's <code>@angular/build:application</code> does the actual app compile, so every CLI optimisation (esbuild, Vite dev server, Incremental Hydration, prerender, …) is preserved.</li>
-        <li><strong>Drives the dev server</strong> — patches <code>serveWithVite</code> with federation middleware so <code>ng serve</code> serves the federated artifacts alongside the Angular bundle, with hot-reload via Server-Sent Events.</li>
-        <li><strong>Sane Angular defaults</strong> — ships an Angular-aware <code>NG_SKIP_LIST</code>, infers the <code>browser</code>/<code>node</code> platform from your dependencies, and special-cases <code>@angular/common/locales</code> so locale data stays correct under <code>ignoreUnusedDeps</code>.</li>
-        <li><strong>Angular I18N</strong> — runs <code>localize-translate</code> over the federation artifacts so a single build produces one bundle per locale.</li>
-        <li><strong>SSR + Hydration</strong> — handles the Angular SSR entry point (<code>main.server.ts</code>) and writes a tiny <code>fstart.mjs</code> bootstrap so <code>@softarc/native-federation-node</code> can take over on the server.</li>
-      </ul>
+        <h2>Why an Adapter?</h2>
+        <p>
+          The <a href="../core/index.html">core builder</a> is intentionally
+          framework- and bundler-agnostic. The Angular adapter adds the glue
+          that an Angular project needs:
+        </p>
+        <ul>
+          <li>
+            <strong>Delegates to the Application Builder</strong> — Angular's
+            <code>@angular/build:application</code> does the actual app compile,
+            so every CLI optimisation (esbuild, Vite dev server, Incremental
+            Hydration, prerender, …) is preserved.
+          </li>
+          <li>
+            <strong>Drives the dev server</strong> — patches
+            <code>serveWithVite</code> with federation middleware so
+            <code>ng serve</code> serves the federated artifacts alongside the
+            Angular bundle, with hot-reload via Server-Sent Events.
+          </li>
+          <li>
+            <strong>Sane Angular defaults</strong> — ships an Angular-aware
+            <code>NG_SKIP_LIST</code>, infers the <code>browser</code>/<code
+              >node</code
+            >
+            platform from your dependencies, and special-cases
+            <code>@angular/common/locales</code> so locale data stays correct
+            under <code>ignoreUnusedDeps</code>.
+          </li>
+          <li>
+            <strong>Angular I18N</strong> — runs
+            <code>localize-translate</code> over the federation artifacts so a
+            single build produces one bundle per locale.
+          </li>
+          <li>
+            <strong>SSR + Hydration</strong> — handles the Angular SSR entry
+            point (<code>main.server.ts</code>) and writes a tiny
+            <code>fstart.mjs</code> bootstrap so
+            <code>@softarc/native-federation-node</code> can take over on the
+            server.
+          </li>
+        </ul>
 
-      <h2>In this Section</h2>
-      <ul>
-        <li><a href="getting-started.html">Getting Started</a> — install the package and scaffold your first host and remote with <code>ng add</code>.</li>
-        <li><a href="builder.html">Builder</a> — the <code>@angular-architects/native-federation:build</code> target, what it puts in your <code>angular.json</code>, and every option it accepts.</li>
-        <li><a href="schematics.html">Schematics</a> — <code>init</code>, <code>appbuilder</code>, <code>update-v4</code>, <code>remove</code>, plus the Nx generator.</li>
-        <li><a href="configuration.html">Angular Config</a> — what <code>withNativeFederation</code> changes for Angular projects (skip list, platform inference, locale handling). Refer back to <a href="../core/configuration.html">core configuration</a> for the full schema.</li>
-        <li><a href="runtime.html">Runtime</a> — <code>initFederation</code>, <code>loadRemoteModule</code> and the optional orchestrator runtime.</li>
-        <li><a href="ssr.html">SSR &amp; Hydration</a> — Angular SSR, Incremental Hydration and the Node bootstrap.</li>
-        <li><a href="i18n.html">I18N</a> — Angular's built-in I18N with federated remotes.</li>
-        <li><a href="localization.html">Localization</a> — <code>@angular/common/locales</code>, <code>ignoreUnusedDeps</code>, and the <code>shareAngularLocales</code> helper.</li>
-        <li><a href="custom-builder.html">Custom Builder</a> — inject extra esbuild plugins via <code>runBuilder</code>.</li>
-        <li><a href="migration-v4.html">Migration to v4</a> — moving from v3 to the v4 (ESM, orchestrator-ready) generation.</li>
-      </ul>
+        <h2>In this Section</h2>
+        <ul>
+          <li>
+            <a href="getting-started.html">Getting Started</a> — install the
+            package and scaffold your first host and remote with
+            <code>ng add</code>.
+          </li>
+          <li>
+            <a href="builder.html">Builder</a> — the
+            <code>@angular-architects/native-federation:build</code> target,
+            what it puts in your <code>angular.json</code>, and every option it
+            accepts.
+          </li>
+          <li>
+            <a href="schematics.html">Schematics</a> — <code>init</code>,
+            <code>appbuilder</code>, <code>update-v4</code>,
+            <code>remove</code>, plus the Nx generator.
+          </li>
+          <li>
+            <a href="configuration.html">Angular Config</a> — what
+            <code>withNativeFederation</code> changes for Angular projects (skip
+            list, platform inference, locale handling). Refer back to
+            <a href="../core/configuration.html">core configuration</a> for the
+            full schema.
+          </li>
+          <li>
+            <a href="runtime.html">Runtime</a> — <code>initFederation</code>,
+            <code>loadRemoteModule</code> and the optional orchestrator runtime.
+          </li>
+          <li>
+            <a href="ssr.html">SSR &amp; Hydration</a> — Angular SSR,
+            Incremental Hydration and the Node bootstrap.
+          </li>
+          <li>
+            <a href="i18n.html">I18N</a> — Angular's built-in I18N with
+            federated remotes.
+          </li>
+          <li>
+            <a href="localization.html">Localization</a> —
+            <code>@angular/common/locales</code>, <code>ignoreUnusedDeps</code>,
+            and the <code>shareAngularLocales</code> helper.
+          </li>
+          <li>
+            <a href="custom-builder.html">Custom Builder</a> — inject extra
+            esbuild plugins via <code>runBuilder</code>.
+          </li>
+          <li>
+            <a href="migration-v4.html">Migration to v4</a> — moving from v3 to
+            the v4 (ESM, orchestrator-ready) generation.
+          </li>
+        </ul>
 
-      <h2>Versioning</h2>
-      <p>The adapter follows Angular's major versions: <code>21.x</code> targets Angular 21.x, <code>20.1.x</code> targets Angular 20.1, and so on. Pin the same major as your Angular CLI.</p>
+        <h2>Versioning</h2>
+        <p>
+          The adapter follows Angular's major versions:
+          <code>21.x</code> targets Angular 21.x, <code>20.1.x</code> targets
+          Angular 20.1, and so on. Pin the same major as your Angular CLI.
+        </p>
 
-      <div class="callout">
-        <p>The v4 generation is published under <code>@angular-architects/native-federation-v4</code> while it stabilises. Once it lands as the new default, the package name will revert to <code>@angular-architects/native-federation</code>. The runtime semantics, config and builder API are identical.</p>
-      </div>
+        <div class="callout">
+          <p>
+            The v4 generation is published under
+            <code>@angular-architects/native-federation-v4</code> while it
+            stabilises. Once it lands as the new default, the package name will
+            revert to <code>@angular-architects/native-federation</code>. The
+            runtime semantics, config and builder API are identical.
+          </p>
+        </div>
 
-      <h2>Prerequisites</h2>
-      <ul>
-        <li><strong>Angular CLI 16.1+</strong> — the adapter targets the modern <code>@angular/build:application</code> builder. Older <code>browser-esbuild</code> projects must run the <code>appbuilder</code> migration first (see <a href="schematics.html">Schematics</a>).</li>
-        <li><strong>Nx</strong> — works out of the box; tested with both Angular CLI workspaces and Nx.</li>
-        <li><strong>ESM</strong> — v4 requires <code>"type": "module"</code> in the root <code>package.json</code>. The migration schematic adds it for you.</li>
-      </ul>
-    </main>
-  </div>
+        <h2>Prerequisites</h2>
+        <ul>
+          <li>
+            <strong>Angular CLI 16.1+</strong> — the adapter targets the modern
+            <code>@angular/build:application</code> builder. Older
+            <code>browser-esbuild</code> projects must run the
+            <code>appbuilder</code> migration first (see
+            <a href="schematics.html">Schematics</a>).
+          </li>
+          <li>
+            <strong>Nx</strong> — works out of the box; tested with both Angular
+            CLI workspaces and Nx.
+          </li>
+          <li>
+            <strong>ESM</strong> — v4 requires <code>"type": "module"</code> in
+            the root <code>package.json</code>. The migration schematic adds it
+            for you.
+          </li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../../components.js"></script>
-</body>
+    <script src="../../components.js"></script>
+  </body>
 </html>

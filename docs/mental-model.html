@@ -1,73 +1,200 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mental Model — Native Federation Docs</title>
-  <meta name="description" content="Understand the core mental model behind Native Federation — hosts, remotes, shared dependencies, and version mismatch handling for Micro Frontend architectures.">
-  <link rel="canonical" href="https://native-federation.io/docs/mental-model.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Mental Model — Native Federation Docs">
-  <meta property="og:description" content="The core mental model behind Native Federation — hosts, remotes, shared dependencies, and version mismatch handling.">
-  <meta property="og:url" content="https://native-federation.io/docs/mental-model.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../images/favicon.png">
-  <link rel="apple-touch-icon" href="../images/favicon.png">
-  <link rel="stylesheet" href="../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mental Model — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="Understand the core mental model behind Native Federation — hosts, remotes, shared dependencies, and version mismatch handling for Micro Frontend architectures."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/mental-model.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Mental Model — Native Federation Docs" />
+    <meta
+      property="og:description"
+      content="The core mental model behind Native Federation — hosts, remotes, shared dependencies, and version mismatch handling."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/mental-model.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../images/favicon.png" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>The Mental Model</h1>
+        <p class="doc-lead">
+          Native Federation inherits the proven Module Federation model — host,
+          remote, shared — and re-expresses it on top of plain ESM and Import
+          Maps. This page is about the <em>why</em>: what problem each concept
+          solves and how the pieces fit together at runtime. For precise
+          definitions of every term used below, see
+          <a href="terminology.html">Terminology</a>.
+        </p>
 
-    <main class="docs-content">
-      <h1>The Mental Model</h1>
-      <p class="doc-lead">Native Federation inherits the proven Module Federation model — host, remote, shared — and re-expresses it on top of plain ESM and Import Maps. This page is about the <em>why</em>: what problem each concept solves and how the pieces fit together at runtime. For precise definitions of every term used below, see <a href="terminology.html">Terminology</a>.</p>
+        <h2>Runtime Integration, Not Build-Time Coupling</h2>
+        <p>
+          Traditional lazy loading stitches every async boundary at build time —
+          the bundler needs to know, up front, which chunks might show up later.
+          Federation flips that: the host loads code it has never seen during
+          compilation. A separately built, separately deployed remote can be
+          wired in at runtime, so teams keep their own release cadence without
+          needing to rebuild anyone else's bundle.
+        </p>
+        <p>
+          That single shift is what enables Micro Frontends
+          <em>and</em> plugin-style extensions. Everything else in the mental
+          model follows from it.
+        </p>
 
-      <h2>Runtime Integration, Not Build-Time Coupling</h2>
-      <p>Traditional lazy loading stitches every async boundary at build time — the bundler needs to know, up front, which chunks might show up later. Federation flips that: the host loads code it has never seen during compilation. A separately built, separately deployed remote can be wired in at runtime, so teams keep their own release cadence without needing to rebuild anyone else's bundle.</p>
-      <p>That single shift is what enables Micro Frontends <em>and</em> plugin-style extensions. Everything else in the mental model follows from it.</p>
+        <h2>Why Import Maps Are the Natural Fit</h2>
+        <p>
+          If the host must resolve a remote's
+          <code>import '@angular/core'</code> at runtime — with no help from the
+          bundler — the browser needs a standard way to be told "when you see
+          this specifier, fetch from this URL." That's exactly what an
+          <a
+            href="https://html.spec.whatwg.org/multipage/webappapis.html#import-maps"
+            target="_blank"
+            rel="noopener"
+            >Import Map</a
+          >
+          does.
+        </p>
+        <p>
+          So the build step collects, per project, two artifacts: an
+          <code>importmap.json</code> (this project's view of where its
+          externals live) and a <code>remoteEntry.json</code> (what this project
+          publishes and expects). At startup the runtime reads each listed
+          remote's <code>remoteEntry.json</code>, merges the maps, resolves
+          version conflicts, and injects a single import map into the document.
+          From that point on the browser itself resolves every subsequent
+          <code>import</code> — no bundler, no custom module loader.
+        </p>
+        <p>
+          That's also why Native Federation is not tied to a specific bundler:
+          Import Maps are a browser feature, not a webpack feature.
+        </p>
 
-      <h2>Why Import Maps Are the Natural Fit</h2>
-      <p>If the host must resolve a remote's <code>import '@angular/core'</code> at runtime — with no help from the bundler — the browser needs a standard way to be told "when you see this specifier, fetch from this URL." That's exactly what an <a href="https://html.spec.whatwg.org/multipage/webappapis.html#import-maps" target="_blank" rel="noopener">Import Map</a> does.</p>
-      <p>So the build step collects, per project, two artifacts: an <code>importmap.json</code> (this project's view of where its externals live) and a <code>remoteEntry.json</code> (what this project publishes and expects). At startup the runtime reads each listed remote's <code>remoteEntry.json</code>, merges the maps, resolves version conflicts, and injects a single import map into the document. From that point on the browser itself resolves every subsequent <code>import</code> — no bundler, no custom module loader.</p>
-      <p>That's also why Native Federation is not tied to a specific bundler: Import Maps are a browser feature, not a webpack feature.</p>
+        <h2>Sharing Is Always a Negotiation</h2>
+        <p>
+          If the host needs Angular 20.1.4 and a remote says it wants Angular
+          20.1.2, somebody has to decide which copy actually loads. That
+          negotiation — "here is what I expect, here is what I can tolerate" —
+          is what the flags on a shared dependency describe:
+        </p>
+        <ul>
+          <li>
+            <strong><code>version</code></strong> — The exact version that the
+            remote shares.
+          </li>
+          <li>
+            <strong><code>requiredVersion</code></strong> — Define the semver
+            range that satisfies the remote. Good enough for most libraries.
+          </li>
+          <li>
+            <strong><code>strictVersion</code></strong> — fail fast if no
+            compatible version exists, instead of silently running against
+            something slightly incompatible.
+          </li>
+          <li>
+            <strong><code>singleton</code></strong> — guarantee exactly one
+            instance loads. Mandatory for libraries with internal state
+            (Angular, <code>zone.js</code>, state stores).
+          </li>
+        </ul>
+        <p>
+          Version negotiation is the part most people discover the hard way, so
+          it's worth internalizing up front: "shared" doesn't mean "the same
+          version everywhere." It means "the federation runtime picks one copy
+          that everyone agrees to use."
+        </p>
 
-      <h2>Sharing Is Always a Negotiation</h2>
-      <p>If the host needs Angular 20.1.4 and a remote says it wants Angular 20.1.2, somebody has to decide which copy actually loads. That negotiation — "here is what I expect, here is what I can tolerate" — is what the flags on a shared dependency describe:</p>
-      <ul>
-        <li><strong>Compatible fallback</strong> — pick any version that satisfies the declared semver range. Good enough for most libraries.</li>
-        <li><strong><code>strictVersion</code></strong> — fail fast if no compatible version exists, instead of silently running against something slightly incompatible.</li>
-        <li><strong><code>singleton</code></strong> — guarantee exactly one instance loads. Mandatory for libraries with internal state (Angular, <code>zone.js</code>, state stores).</li>
-      </ul>
-      <p>Version negotiation is the part most people discover the hard way, so it's worth internalizing up front: "shared" doesn't mean "the same version everywhere." It means "the federation runtime picks one copy that everyone agrees to use."</p>
+        <h2>How the Pieces Line Up at Runtime</h2>
+        <ol>
+          <li>
+            Each project builds and publishes its
+            <code>remoteEntry.json</code> + shared bundles to a URL.
+          </li>
+          <li>
+            The host's manifest lists those URLs. The
+            <a href="runtime/index.html">runtime</a> (or
+            <a href="orchestrator/index.html">orchestrator</a>) fetches each one
+            at startup.
+          </li>
+          <li>
+            It merges the shared-dependency declarations, resolves version
+            conflicts using the flags above, and injects the combined import
+            map.
+          </li>
+          <li>
+            When the user hits a route backed by a remote,
+            <code>loadRemoteModule</code> triggers a plain dynamic
+            <code>import()</code> — resolved through the injected map.
+          </li>
+        </ol>
+        <p>
+          That's the whole runtime story. The
+          <a href="architecture.html">Architecture Overview</a> maps these steps
+          to the layers that implement them.
+        </p>
 
-      <h2>How the Pieces Line Up at Runtime</h2>
-      <ol>
-        <li>Each project builds and publishes its <code>remoteEntry.json</code> + shared bundles to a URL.</li>
-        <li>The host's manifest lists those URLs. The <a href="runtime/index.html">runtime</a> (or <a href="orchestrator/index.html">orchestrator</a>) fetches each one at startup.</li>
-        <li>It merges the shared-dependency declarations, resolves version conflicts using the flags above, and injects the combined import map.</li>
-        <li>When the user hits a route backed by a remote, <code>loadRemoteModule</code> triggers a plain dynamic <code>import()</code> — resolved through the injected map.</li>
-      </ol>
-      <p>That's the whole runtime story. The <a href="architecture.html">Architecture Overview</a> maps these steps to the layers that implement them.</p>
+        <h2>Further Reading</h2>
+        <ul>
+          <li>
+            <a href="terminology.html">Terminology</a> — precise definitions of
+            host, remote, shared, singleton, <code>remoteEntry.json</code>,
+            manifest, share scope, and more.
+          </li>
+          <li>
+            <a href="tutorial.html">Tutorial</a> — the model in action on a
+            concrete example.
+          </li>
+          <li>
+            <a href="native-and-module-federation.html"
+              >Native &amp; Module Federation</a
+            >
+            — how the two implementations relate.
+          </li>
+          <li>
+            <a href="documentation.html">Blog Series</a> — the in-depth article
+            series.
+          </li>
+        </ul>
+      </main>
+    </div>
 
-      <h2>Further Reading</h2>
-      <ul>
-        <li><a href="terminology.html">Terminology</a> — precise definitions of host, remote, shared, singleton, <code>remoteEntry.json</code>, manifest, share scope, and more.</li>
-        <li><a href="tutorial.html">Tutorial</a> — the model in action on a concrete example.</li>
-        <li><a href="native-and-module-federation.html">Native &amp; Module Federation</a> — how the two implementations relate.</li>
-        <li><a href="documentation.html">Blog Series</a> — the in-depth article series.</li>
-      </ul>
-    </main>
-  </div>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
-
-  <script src="../components.js"></script>
-</body>
+    <script src="../components.js"></script>
+  </body>
 </html>

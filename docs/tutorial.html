@@ -1,66 +1,98 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tutorial — Native Federation Docs</title>
-  <meta name="description" content="Step-by-step tutorial for setting up Native Federation with Angular — configure a host and remote, share dependencies, and load Micro Frontends at runtime.">
-  <link rel="canonical" href="https://native-federation.io/docs/tutorial.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Tutorial — Native Federation Docs">
-  <meta property="og:description" content="Step-by-step tutorial for setting up Native Federation with Angular.">
-  <meta property="og:url" content="https://native-federation.io/docs/tutorial.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../images/favicon.png">
-  <link rel="apple-touch-icon" href="../images/favicon.png">
-  <link rel="stylesheet" href="../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tutorial — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="Step-by-step tutorial for setting up Native Federation with Angular — configure a host and remote, share dependencies, and load Micro Frontends at runtime."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/tutorial.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Tutorial — Native Federation Docs" />
+    <meta
+      property="og:description"
+      content="Step-by-step tutorial for setting up Native Federation with Angular."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/tutorial.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../images/favicon.png" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>Tutorial (v3)</h1>
+        <p class="doc-lead">
+          Set up a complete Micro Frontend architecture with Native Federation
+          from scratch. You'll create a host (shell) and a remote (Micro
+          Frontend) that load shared dependencies at runtime.
+        </p>
 
-    <main class="docs-content">
-      <h1>Tutorial</h1>
-      <p class="doc-lead">Set up a complete Micro Frontend architecture with Native Federation from scratch. You'll create a host (shell) and a remote (Micro Frontend) that load shared dependencies at runtime.</p>
+        <h2>Prerequisites</h2>
+        <ul>
+          <li>Angular CLI 16.1 or higher</li>
+          <li>Node.js (LTS recommended)</li>
+        </ul>
 
-      <h2>Prerequisites</h2>
-      <ul>
-        <li>Angular CLI 16.1 or higher</li>
-        <li>Node.js (LTS recommended)</li>
-      </ul>
-
-      <h2>1. Clone the Starter</h2>
-      <p>Start with the prepared starter branch:</p>
-      <pre><code>git clone https://github.com/manfredsteyer/module-federation-plugin-example.git --branch nf-standalone-starter
+        <h2>1. Clone the Starter</h2>
+        <p>Start with the prepared starter branch:</p>
+        <pre><code>git clone https://github.com/manfredsteyer/module-federation-plugin-example.git --branch nf-standalone-starter
 
 cd module-federation-plugin-example
 
 npm i</code></pre>
 
-      <p>This repository contains two Angular applications: a <code>shell</code> (the host) and a Micro Frontend called <code>mfe1</code> (the remote).</p>
+        <p>
+          This repository contains two Angular applications: a
+          <code>shell</code> (the host) and a Micro Frontend called
+          <code>mfe1</code> (the remote).
+        </p>
 
-      <h2>2. Install Native Federation</h2>
-      <pre><code>npm i @angular-architects/native-federation -D</code></pre>
+        <h2>2. Install Native Federation</h2>
+        <pre><code>npm i @angular-architects/native-federation -D</code></pre>
 
-      <h2>3. Initialize the Remote</h2>
-      <p>Configure <code>mfe1</code> as a remote that exposes components:</p>
-      <pre><code>ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote</code></pre>
+        <h2>3. Initialize the Remote</h2>
+        <p>Configure <code>mfe1</code> as a remote that exposes components:</p>
+        <pre><code>ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote</code></pre>
 
-      <h2>4. Initialize the Host</h2>
-      <p>Configure the <code>shell</code> as a dynamic host that reads remote configuration at runtime:</p>
-      <pre><code>ng g @angular-architects/native-federation:init --project shell --port 4200 --type dynamic-host</code></pre>
+        <h2>4. Initialize the Host</h2>
+        <p>
+          Configure the <code>shell</code> as a dynamic host that reads remote
+          configuration at runtime:
+        </p>
+        <pre><code>ng g @angular-architects/native-federation:init --project shell --port 4200 --type dynamic-host</code></pre>
 
-      <div class="callout">
-        <p>A dynamic host reads configuration from a <code>.json</code> file at runtime. This allows you to change which remotes are loaded without rebuilding the application.</p>
-      </div>
+        <div class="callout">
+          <p>
+            A dynamic host reads configuration from a <code>.json</code> file at
+            runtime. This allows you to change which remotes are loaded without
+            rebuilding the application.
+          </p>
+        </div>
 
-      <h2>5. Host Configuration</h2>
-      <p>The generated host configuration at <code>projects/shell/federation.config.js</code>:</p>
-      <pre><code>const {
+        <h2>5. Host Configuration</h2>
+        <p>
+          The generated host configuration at
+          <code>projects/shell/federation.config.js</code>:
+        </p>
+        <pre><code>const {
   withNativeFederation,
   shareAll,
 } = require("@angular-architects/native-federation/config");
@@ -82,9 +114,12 @@ module.exports = withNativeFederation({
   ],
 });</code></pre>
 
-      <h2>6. Remote Configuration</h2>
-      <p>The generated remote configuration at <code>projects/mfe1/federation.config.js</code>:</p>
-      <pre><code>const {
+        <h2>6. Remote Configuration</h2>
+        <p>
+          The generated remote configuration at
+          <code>projects/mfe1/federation.config.js</code>:
+        </p>
+        <pre><code>const {
   withNativeFederation,
   shareAll,
 } = require("@angular-architects/native-federation/config");
@@ -109,37 +144,54 @@ module.exports = withNativeFederation({
   ],
 });</code></pre>
 
-      <h2>7. Host Bootstrap</h2>
-      <p>The generated <code>projects/shell/src/main.ts</code> initializes Native Federation before loading Angular:</p>
-      <pre><code>import { initFederation } from "@angular-architects/native-federation";
+        <h2>7. Host Bootstrap</h2>
+        <p>
+          The generated <code>projects/shell/src/main.ts</code> initializes
+          Native Federation before loading Angular:
+        </p>
+        <pre><code>import { initFederation } from "@angular-architects/native-federation";
 
 initFederation("/assets/federation.manifest.json")
   .catch((err) => console.error(err))
   .then((_) => import("./bootstrap"))
   .catch((err) => console.error(err));</code></pre>
 
-      <h2>8. Federation Manifest</h2>
-      <p>The manifest at <code>projects/shell/src/assets/federation.manifest.json</code> maps remote names to their entry points:</p>
-      <pre><code>{
+        <h2>8. Federation Manifest</h2>
+        <p>
+          The manifest at
+          <code>projects/shell/src/assets/federation.manifest.json</code> maps
+          remote names to their entry points:
+        </p>
+        <pre><code>{
   "mfe1": "http://localhost:4201/remoteEntry.json"
 }</code></pre>
 
-      <div class="callout callout-warning">
-        <p>Make sure this entry points to port <strong>4201</strong>. Native Federation generates the <code>remoteEntry.json</code> automatically — it contains metadata about the remote.</p>
-      </div>
+        <div class="callout callout-warning">
+          <p>
+            Make sure this entry points to port <strong>4201</strong>. Native
+            Federation generates the <code>remoteEntry.json</code> automatically
+            — it contains metadata about the remote.
+          </p>
+        </div>
 
-      <h2>9. Remote Bootstrap</h2>
-      <p>The remote's <code>projects/mfe1/src/main.ts</code> also initializes federation:</p>
-      <pre><code>import { initFederation } from "@angular-architects/native-federation";
+        <h2>9. Remote Bootstrap</h2>
+        <p>
+          The remote's <code>projects/mfe1/src/main.ts</code> also initializes
+          federation:
+        </p>
+        <pre><code>import { initFederation } from "@angular-architects/native-federation";
 
 initFederation()
   .catch((err) => console.error(err))
   .then((_) => import("./bootstrap"))
   .catch((err) => console.error(err));</code></pre>
 
-      <h2>10. Load the Remote</h2>
-      <p>Add a lazy route to the shell's routing configuration at <code>projects/shell/src/app/app.routes.ts</code>:</p>
-      <pre><code>import { loadRemoteModule } from "@angular-architects/native-federation";
+        <h2>10. Load the Remote</h2>
+        <p>
+          Add a lazy route to the shell's routing configuration at
+          <code>projects/shell/src/app/app.routes.ts</code>:
+        </p>
+        <pre><code>import { loadRemoteModule } from "@angular-architects/native-federation";
 
 export const APP_ROUTES: Routes = [
   {
@@ -160,28 +212,47 @@ export const APP_ROUTES: Routes = [
   },
 ];</code></pre>
 
-      <h2>11. Run the Application</h2>
-      <p>Start the remote first:</p>
-      <pre><code>ng serve mfe1 -o</code></pre>
+        <h2>11. Run the Application</h2>
+        <p>Start the remote first:</p>
+        <pre><code>ng serve mfe1 -o</code></pre>
 
-      <p>Once it's running, start the shell in another terminal:</p>
-      <pre><code>ng serve shell -o</code></pre>
+        <p>Once it's running, start the shell in another terminal:</p>
+        <pre><code>ng serve shell -o</code></pre>
 
-      <p>Click the second menu item to load the remote component into the host. The Micro Frontend is loaded at runtime — the shell had no knowledge of it at build time.</p>
+        <p>
+          Click the second menu item to load the remote component into the host.
+          The Micro Frontend is loaded at runtime — the shell had no knowledge
+          of it at build time.
+        </p>
 
-      <h2>What's Next?</h2>
-      <ul>
-        <li><a href="ssr-hydration.html">Set up SSR &amp; Hydration</a></li>
-        <li><a href="native-and-module-federation.html">Combine with Module Federation</a></li>
-        <li><a href="faq.html">Frequently Asked Questions</a></li>
-      </ul>
-    </main>
-  </div>
+        <h2>What's Next?</h2>
+        <ul>
+          <li><a href="ssr-hydration.html">Set up SSR &amp; Hydration</a></li>
+          <li>
+            <a href="native-and-module-federation.html"
+              >Combine with Module Federation</a
+            >
+          </li>
+          <li><a href="faq.html">Frequently Asked Questions</a></li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../components.js"></script>
-</body>
+    <script src="../components.js"></script>
+  </body>
 </html>

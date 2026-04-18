@@ -130,8 +130,8 @@
         { href: 'architecture.html', label: 'Architecture Overview', id: 'architecture' },
         { href: 'mental-model.html', label: 'The Mental Model', id: 'mental-model' },
         { href: 'terminology.html', label: 'Terminology', id: 'terminology' },
-        { href: 'tutorial.html', label: 'Tutorial', id: 'tutorial' },
-        { href: 'example.html', label: 'Example Repo', id: 'example' },
+        { href: 'tutorial.html', label: 'Tutorial (v3)', id: 'tutorial' },
+        { href: 'example.html', label: 'Example Repo (v3)', id: 'example' },
         { href: 'migration.html', label: 'Migration to v4', id: 'migration' },
       ]},
       { section: 'Orchestrator', items: [
