@@ -78,42 +78,13 @@
           └──────────────────────────────────────┘
                          in the browser</code></pre>
 
-      <h2>Core</h2>
-      <p>The Core — <code>@softarc/native-federation</code> — is the heart of the framework. It is deliberately framework- and bundler-agnostic: it only knows about shared dependencies, exposed modules, import maps and a pluggable build adapter.</p>
-      <p>Given a <code>federation.config.js</code> and an adapter, the Core:</p>
-      <ol>
-        <li>Normalizes your config (defaults, skip list, mapped paths, version inference).</li>
-        <li>Computes the list of externals — the packages your own bundler must leave unresolved.</li>
-        <li>Bundles every shared external, every shared <code>tsconfig</code> path, and every exposed module.</li>
-        <li>Writes <code>remoteEntry.json</code> and <code>importmap.json</code>.</li>
-        <li>Caches work keyed by content checksum so rebuilds stay fast.</li>
-      </ol>
-      <p><a href="core/index.html">→ Core docs</a></p>
-
-      <h2>Adapters</h2>
-      <p>Adapters are the bridge between the Core and a specific build tool or framework. Each adapter is an object implementing <code>NFBuildAdapter</code> — three methods (<code>setup</code>, <code>build</code>, <code>dispose</code>) that the Core calls to bundle a group of entry points.</p>
-      <p>Most adapters also layer framework-specific ergonomics on top: the Angular adapter adds an Angular CLI builder and schematics; the esbuild adapter adds React-friendly <code>fileReplacements</code> for CommonJS interop.</p>
+      <p>Each layer gets its own section elsewhere in these docs. The short version:</p>
       <ul>
-        <li><a href="angular-adapter/index.html"><strong>Angular</strong></a> — first-class Angular CLI integration.</li>
-        <li><a href="adapters/esbuild/index.html"><strong>esbuild</strong></a> — framework-agnostic; powers the React reference example.</li>
-        <li><a href="https://www.npmjs.com/package/@gioboa/vite-module-federation" target="_blank" rel="noopener"><strong>Vite</strong></a> — community plugin.</li>
-        <li>Your own — any bundler that can accept an <code>external</code> list and emit ESM can be wrapped in an adapter.</li>
+        <li><strong><a href="core/index.html">Core</a></strong> — bundler-agnostic builder. Normalizes the federation config, computes the externals your own bundler must leave unresolved, bundles shared dependencies and exposed modules, and writes <code>remoteEntry.json</code> + <code>importmap.json</code>.</li>
+        <li><strong><a href="adapters/index.html">Adapters</a></strong> — framework-/bundler-specific glue implementing the <code>NFBuildAdapter</code> contract. First-party adapters exist for <a href="angular-adapter/index.html">Angular</a> and <a href="adapters/esbuild/index.html">esbuild</a>; there is a community <a href="https://www.npmjs.com/package/@gioboa/vite-module-federation" target="_blank" rel="noopener">Vite plugin</a>, and <a href="adapters/build-your-own.html">you can build your own</a>.</li>
+        <li><strong><a href="runtime/index.html">Runtime</a></strong> — the small default browser library. Exposes <code>initFederation</code> and <code>loadRemoteModule</code>.</li>
+        <li><strong><a href="orchestrator/index.html">Orchestrator</a></strong> — the recommended browser runtime for v4. Same API as the Runtime, plus semver-range resolution and persistent <code>remoteEntry.json</code> caching. Client-side only today; keep the default Runtime for SSR.</li>
       </ul>
-      <p><a href="adapters/index.html">→ Adapters docs</a></p>
-
-      <h2>Runtime</h2>
-      <p>The Runtime is the piece that ships to the browser. It is tiny by design: it fetches the <code>remoteEntry.json</code> of each remote listed in the host manifest, merges their shared-dependency declarations, and constructs a single import map for the page. From that point on the browser itself resolves every <code>import</code> — including those inside lazily-loaded remotes.</p>
-      <p>The Runtime exposes two functions:</p>
-      <ul>
-        <li><code>initFederation(manifestOrMap)</code> — called once at startup in both hosts and remotes.</li>
-        <li><code>loadRemoteModule({ remoteName, exposedModule })</code> — called whenever a host wants to pull in an exposed module.</li>
-      </ul>
-      <p><a href="runtime/index.html">→ Runtime docs</a></p>
-
-      <h2>Orchestrator</h2>
-      <p>The Orchestrator — <code>@softarc/native-federation-orchestrator</code> — is the next-generation browser runtime, intended to replace the default Runtime as the recommended way to load remotes on the host. It speaks the same <code>remoteEntry.json</code> contract and exposes the same <code>initFederation</code> / <code>loadRemoteModule</code> surface, so remotes built by the Core work unchanged. On top of that it adds semver-range resolution when remotes disagree on a shared version, and persistent caching of <code>remoteEntry.json</code> in <code>localStorage</code> or <code>sessionStorage</code>.</p>
-      <p>It works in SPAs, plain HTML pages, and server-rendered hosts alike. The one limitation today is SSR: the Orchestrator runs client-side only and does not yet have direct server-side rendering support — if you need the remote modules to execute during SSR itself, stick with the default Runtime.</p>
-      <p><a href="orchestrator/index.html">→ Orchestrator docs</a></p>
 
       <h2>A Full Build-to-Runtime Trace</h2>
       <ol>
@@ -131,10 +102,9 @@
 
       <h2>Where to Go Next</h2>
       <ul>
-        <li><a href="mental-model.html">The Mental Model</a> — the concepts (host, remote, shared) behind the architecture.</li>
+        <li><a href="mental-model.html">The Mental Model</a> — why the pieces are shaped this way.</li>
+        <li><a href="terminology.html">Terminology</a> — canonical glossary for the terms used above.</li>
         <li><a href="tutorial.html">Tutorial</a> — build a working host + remote end-to-end.</li>
-        <li><a href="example.html">Example</a> — a runnable reference project.</li>
-        <li><a href="core/index.html">Core docs</a> — deep-dive into the bundler-agnostic build layer.</li>
       </ul>
     </main>
   </div>

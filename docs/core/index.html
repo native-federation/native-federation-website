@@ -39,12 +39,7 @@
       </ul>
 
       <h2>Where It Fits</h2>
-      <p>The core is deliberately narrow. It doesn't know about Angular, React, Vite, or the browser runtime. Instead, it defines two contracts and lets everything else plug in:</p>
-      <ul>
-        <li><strong><a href="configuration.html">Federation config</a></strong> — what you want to share and expose.</li>
-        <li><strong><a href="build-adapters.html">Build adapter</a></strong> — how to actually invoke the bundler.</li>
-      </ul>
-      <p>Adapters like <code>@angular-architects/native-federation</code> or <code>@softarc/native-federation-esbuild</code> supply the build adapter; the browser <a href="../runtime/index.html">runtime</a> consumes the artifacts the core produces.</p>
+      <p>The core defines two contracts — a <a href="configuration.html">federation config</a> (what to share and expose) and a <a href="build-adapters.html">build adapter</a> (how to invoke the bundler) — and lets everything else plug in. For how it relates to the Adapter, Runtime and Orchestrator layers, see the <a href="../architecture.html">Architecture Overview</a>.</p>
 
       <h2>In this section</h2>
       <ul>

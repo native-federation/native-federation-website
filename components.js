@@ -130,8 +130,9 @@
         { href: 'architecture.html', label: 'Architecture Overview', id: 'architecture' },
         { href: 'mental-model.html', label: 'The Mental Model', id: 'mental-model' },
         { href: 'terminology.html', label: 'Terminology', id: 'terminology' },
-        { href: 'example.html', label: 'Example', id: 'example' },
         { href: 'tutorial.html', label: 'Tutorial', id: 'tutorial' },
+        { href: 'example.html', label: 'Example Repo', id: 'example' },
+        { href: 'migration.html', label: 'Migration to v4', id: 'migration' },
       ]},
       { section: 'Orchestrator', items: [
         { href: 'orchestrator/index.html', label: 'Overview', id: 'orchestrator' },
@@ -180,7 +181,14 @@
       ]},
     ];
 
-    sidebar.innerHTML = docs.map(function (group) {
+    const versionBadge = `
+      <div class="sidebar-version">
+        <span class="version-pill">v4</span>
+        <span class="version-text">Docs for Native Federation 4.x</span>
+      </div>
+    `;
+
+    sidebar.innerHTML = versionBadge + docs.map(function (group) {
       return `
         <div class="sidebar-section">
           <div class="sidebar-label">${group.section}</div>

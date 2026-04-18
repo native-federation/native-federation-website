@@ -564,6 +564,34 @@ p, li {
   margin-bottom: 24px;
 }
 
+.sidebar-version {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-subtle);
+}
+
+.sidebar-version .version-pill {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 100px;
+  letter-spacing: 0.04em;
+}
+
+.sidebar-version .version-text {
+  font-size: 0.8125rem;
+  color: var(--color-primary-darker);
+  font-weight: 500;
+}
+
 .sidebar-label {
   font-family: var(--font-display);
   font-size: 0.75rem;
