@@ -25,6 +25,11 @@
 
     <main class="docs-content">
       <h1>Build Process</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
       <p class="doc-lead">The <code>federationBuilder</code> object is the entry point for the core build. It wraps the underlying steps (normalize config, compute externals, bundle shared and exposed modules, write artifacts) behind three methods: <code>init</code>, <code>build</code>, <code>close</code>.</p>
 
       <h2>Lifecycle Overview</h2>

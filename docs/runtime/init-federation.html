@@ -25,6 +25,11 @@
 
     <main class="docs-content">
       <h1><code>initFederation</code></h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
       <p class="doc-lead"><code>initFederation</code> is the one call a host needs to make before any remote can be loaded. It fetches the host's own <code>remoteEntry.json</code>, fetches every configured remote's <code>remoteEntry.json</code> in parallel, merges everything into a single import map and injects it into the DOM.</p>
 
       <nav class="page-toc" aria-label="On this page">

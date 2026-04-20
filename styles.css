@@ -1393,3 +1393,77 @@ li code {
   font-size: 0.875rem;
   margin-top: 4px;
 }
+
+/* --- Version support indicators --- */
+.version-support {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 28px;
+  padding: 5px 5px 5px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-display);
+  box-shadow: var(--shadow-xs);
+}
+
+.version-support__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.version-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: default;
+  user-select: none;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.version-check input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border);
+  border-radius: 3px;
+  cursor: default;
+  flex-shrink: 0;
+  position: relative;
+  margin: 0;
+}
+
+.version-check input[type="checkbox"]:checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.version-check input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: -1px;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+.version-check--active {
+  color: var(--color-primary-darker);
+  background: var(--color-primary-subtle);
+}

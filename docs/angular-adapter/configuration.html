@@ -25,6 +25,11 @@
 
     <main class="docs-content">
       <h1>Angular Config</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
       <p class="doc-lead">The Angular adapter re-exports the core's <code>withNativeFederation</code>, <code>share</code> and <code>shareAll</code> from a wrapper at <code>@angular-architects/native-federation/config</code>. The wrappers are thin: same options, same shape, same semantics. They only differ in the Angular-aware defaults they apply. For everything that isn't called out here, refer to the canonical <a href="../core/configuration.html">core configuration reference</a>.</p>
 
       <nav class="page-toc" aria-label="On this page">

@@ -25,6 +25,11 @@
 
     <main class="docs-content">
       <h1>The Import Map</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
       <p class="doc-lead">Everything the runtime does — resolving shared dependencies, loading exposed modules, keeping two remotes' <code>rxjs</code> apart — is implemented as entries in a single browser import map. This page walks through how that map is built, how it ends up in the DOM, and what the scoping rules actually mean at runtime.</p>
 
       <nav class="page-toc" aria-label="On this page">

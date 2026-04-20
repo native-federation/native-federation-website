@@ -25,6 +25,11 @@
 
     <main class="docs-content">
       <h1>Caching</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
       <p class="doc-lead">Bundling every shared external on every build — all of Angular, every time you hit save — would make Native Federation unusable. The core ships a content-addressed cache for shared externals that is on by default and does most of the heavy lifting behind the scenes. This page explains exactly what is cached, how cache hits are decided, and how to control or invalidate the cache.</p>
 
       <nav class="page-toc" aria-label="On this page">

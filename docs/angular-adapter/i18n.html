@@ -1,41 +1,77 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>I18N — Angular Adapter</title>
-  <meta name="description" content="Angular's built-in I18N with Native Federation — how the adapter translates federation artifacts and how to deploy locale-specific remotes.">
-  <link rel="canonical" href="https://native-federation.io/docs/angular-adapter/i18n.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="I18N — Angular Adapter">
-  <meta property="og:description" content="Angular I18N with Native Federation.">
-  <meta property="og:url" content="https://native-federation.io/docs/angular-adapter/i18n.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../images/favicon.png">
-  <link rel="stylesheet" href="../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>I18N — Angular Adapter</title>
+    <meta
+      name="description"
+      content="Angular's built-in I18N with Native Federation — how the adapter translates federation artifacts and how to deploy locale-specific remotes."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/angular-adapter/i18n.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="I18N — Angular Adapter" />
+    <meta
+      property="og:description"
+      content="Angular I18N with Native Federation."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/angular-adapter/i18n.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>I18N</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          From adapter version 19.0.13 onwards, the Angular adapter supports
+          Angular's built-in internationalization. The federation builder reads
+          the project's <code>i18n</code> block from
+          <code>angular.json</code> and runs
+          <code>localize-translate</code> over the federation artifacts so a
+          single build emits one bundle copy per target locale — alongside
+          Angular's own locale outputs.
+        </p>
 
-    <main class="docs-content">
-      <h1>I18N</h1>
-      <p class="doc-lead">From adapter version 19.0.13 onwards, the Angular adapter supports Angular's built-in internationalization. The federation builder reads the project's <code>i18n</code> block from <code>angular.json</code> and runs <code>localize-translate</code> over the federation artifacts so a single build emits one bundle copy per target locale — alongside Angular's own locale outputs.</p>
+        <h2>Setup</h2>
 
-      <h2>Setup</h2>
-
-      <h3>1. Add I18N to every participating project</h3>
-      <pre><code>ng add @angular/localize --project shell
+        <h3>1. Add I18N to every participating project</h3>
+        <pre><code>ng add @angular/localize --project shell
 ng add @angular/localize --project mfe1</code></pre>
-      <p>Both shell and remotes need <code>@angular/localize</code>. Note that <code>@angular/localize</code> is in the adapter's <a href="configuration.html#skip-list">NG_SKIP_LIST</a> — it's deliberately <em>not</em> shared, because it patches globals at boot.</p>
+        <p>
+          Both shell and remotes need <code>@angular/localize</code>. Note that
+          <code>@angular/localize</code> is in the adapter's
+          <a href="configuration.html#skip-list">NG_SKIP_LIST</a> — it's
+          deliberately <em>not</em> shared, because it patches globals at boot.
+        </p>
 
-      <h3>2. Configure I18N in <code>angular.json</code></h3>
-      <pre><code>{
+        <h3>2. Configure I18N in <code>angular.json</code></h3>
+        <pre><code>{
   "projects": {
     "mfe1": {
       "i18n": {
@@ -48,28 +84,59 @@ ng add @angular/localize --project mfe1</code></pre>
     }
   }
 }</code></pre>
-      <p>Configure I18N in <code>angular.json</code>, never via CLI flags. The federation builder does not forward <code>--localize</code> or <code>--i18n-*</code> flags through to the underlying Application Builder — that's intentional, so the configuration stays declarative.</p>
+        <p>
+          Configure I18N in <code>angular.json</code>, never via CLI flags. The
+          federation builder does not forward <code>--localize</code> or
+          <code>--i18n-*</code> flags through to the underlying Application
+          Builder — that's intentional, so the configuration stays declarative.
+        </p>
 
-      <div class="callout callout-warning">
-        <p>I18N must be configured in <code>angular.json</code>. CLI flags are <strong>not</strong> forwarded by design.</p>
-      </div>
+        <div class="callout callout-warning">
+          <p>
+            I18N must be configured in <code>angular.json</code>. CLI flags are
+            <strong>not</strong> forwarded by design.
+          </p>
+        </div>
 
-      <h3>3. Federation manifest per locale</h3>
-      <p>In production, point the host's <code>federation.manifest.json</code> at the locale-specific <code>remoteEntry.json</code>:</p>
-      <pre><code>{
+        <h3>3. Federation manifest per locale</h3>
+        <p>
+          In production, point the host's
+          <code>federation.manifest.json</code> at the locale-specific
+          <code>remoteEntry.json</code>:
+        </p>
+        <pre><code>{
   "mfe1": "https://cdn.example.com/mfe1/de/remoteEntry.json"
 }</code></pre>
-      <p>Each locale's federation output is a self-contained folder — the host serves the right one for the page's language.</p>
+        <p>
+          Each locale's federation output is a self-contained folder — the host
+          serves the right one for the page's language.
+        </p>
 
-      <h2>What the Builder Does</h2>
-      <p>When the underlying Angular target has <code>localize</code> configured, the builder:</p>
-      <ol>
-        <li>Writes the source-locale federation artifacts to <code>&lt;outputPath&gt;/browser/&lt;sourceLocale&gt;/</code>, mirroring Angular's own per-locale layout.</li>
-        <li>For every additional locale: creates the locale folder, copies <code>remoteEntry.json</code> into it, and runs <code>localize-translate</code> over the source-locale federation files using the translation file declared in <code>i18n.locales</code>.</li>
-        <li>Caches the source build so subsequent locales only pay the translation cost.</li>
-      </ol>
-      <p>The output looks like this:</p>
-      <pre><code>dist/mfe1/browser/
+        <h2>What the Builder Does</h2>
+        <p>
+          When the underlying Angular target has
+          <code>localize</code> configured, the builder:
+        </p>
+        <ol>
+          <li>
+            Writes the source-locale federation artifacts to
+            <code>&lt;outputPath&gt;/browser/&lt;sourceLocale&gt;/</code>,
+            mirroring Angular's own per-locale layout.
+          </li>
+          <li>
+            For every additional locale: creates the locale folder, copies
+            <code>remoteEntry.json</code> into it, and runs
+            <code>localize-translate</code> over the source-locale federation
+            files using the translation file declared in
+            <code>i18n.locales</code>.
+          </li>
+          <li>
+            Caches the source build so subsequent locales only pay the
+            translation cost.
+          </li>
+        </ol>
+        <p>The output looks like this:</p>
+        <pre><code>dist/mfe1/browser/
 ├── en/                    ← sourceLocale, raw federation artifacts
 │   ├── remoteEntry.json
 │   ├── _angular_core.&lt;hash&gt;.js
@@ -80,25 +147,60 @@ ng add @angular/localize --project mfe1</code></pre>
 └── fr/
     └── ...</code></pre>
 
-      <h3>Limitations</h3>
-      <ul>
-        <li><strong>Dev server</strong> serves a single locale at a time. If you've configured multiple locales, the dev server picks one (or none if the array isn't narrowed) — production builds emit all of them.</li>
-        <li><strong><code>localize-translate</code> is invoked from <code>node_modules/.bin</code></strong>. Make sure your install script doesn't strip it.</li>
-        <li><strong>Source-locale subPath</strong> is honoured (<code>i18n.sourceLocale</code> can be a string or an object with <code>code</code>/<code>subPath</code>) — locale folders fall back to the locale code when no <code>subPath</code> is set.</li>
-      </ul>
+        <h3>Limitations</h3>
+        <ul>
+          <li>
+            <strong>Dev server</strong> serves a single locale at a time. If
+            you've configured multiple locales, the dev server picks one (or
+            none if the array isn't narrowed) — production builds emit all of
+            them.
+          </li>
+          <li>
+            <strong
+              ><code>localize-translate</code> is invoked from
+              <code>node_modules/.bin</code></strong
+            >. Make sure your install script doesn't strip it.
+          </li>
+          <li>
+            <strong>Source-locale subPath</strong> is honoured (<code
+              >i18n.sourceLocale</code
+            >
+            can be a string or an object with
+            <code>code</code>/<code>subPath</code>) — locale folders fall back
+            to the locale code when no <code>subPath</code> is set.
+          </li>
+        </ul>
 
-      <h2>Related</h2>
-      <ul>
-        <li><a href="localization.html">Localization</a> — locale data files (<code>@angular/common/locales</code>) and the <code>shareAngularLocales</code> helper.</li>
-        <li><a href="builder.html#i18n">Builder → Locale-aware output paths</a> — how the federation builder lays out locale folders.</li>
-      </ul>
-    </main>
-  </div>
+        <h2>Related</h2>
+        <ul>
+          <li>
+            <a href="localization.html">Localization</a> — locale data files
+            (<code>@angular/common/locales</code>) and the
+            <code>shareAngularLocales</code> helper.
+          </li>
+          <li>
+            <a href="builder.html#i18n">Builder → Locale-aware output paths</a>
+            — how the federation builder lays out locale folders.
+          </li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../../components.js"></script>
-</body>
+    <script src="../../components.js"></script>
+  </body>
 </html>

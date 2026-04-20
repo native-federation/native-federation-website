@@ -25,6 +25,11 @@
 
     <main class="docs-content">
       <h1>Runtime</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
       <p class="doc-lead">The runtime — <code>@softarc/native-federation-runtime</code> — is the small browser-side library that reads <code>remoteEntry.json</code> files, constructs an ES&nbsp;module import map, injects it into the DOM, and resolves <code>loadRemoteModule()</code> calls against it. It is the classic Native Federation runtime: one version of each shared dependency, wired up on startup, and loaded on demand.</p>
 
       <div class="callout callout-warning">

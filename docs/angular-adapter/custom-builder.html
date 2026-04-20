@@ -1,40 +1,78 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Custom Builder — Angular Adapter</title>
-  <meta name="description" content="Inject custom esbuild plugins into the Native Federation Angular builder via runBuilder.">
-  <link rel="canonical" href="https://native-federation.io/docs/angular-adapter/custom-builder.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Custom Builder — Angular Adapter">
-  <meta property="og:description" content="Wrap runBuilder to inject custom esbuild plugins into the Angular adapter.">
-  <meta property="og:url" content="https://native-federation.io/docs/angular-adapter/custom-builder.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../images/favicon.png">
-  <link rel="stylesheet" href="../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Custom Builder — Angular Adapter</title>
+    <meta
+      name="description"
+      content="Inject custom esbuild plugins into the Native Federation Angular builder via runBuilder."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/angular-adapter/custom-builder.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Custom Builder — Angular Adapter" />
+    <meta
+      property="og:description"
+      content="Wrap runBuilder to inject custom esbuild plugins into the Angular adapter."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/angular-adapter/custom-builder.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>Custom Builder</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          Sometimes you need an esbuild plugin in the federation build itself —
+          code transformation, bundling tweaks, third-party tooling. Since v4
+          the Angular adapter exposes its builder factory as
+          <code>runBuilder</code> from
+          <code>@angular-architects/native-federation/internal</code>, so you
+          can wrap it in your own Architect builder and pass extra plugins
+          through.
+        </p>
 
-    <main class="docs-content">
-      <h1>Custom Builder</h1>
-      <p class="doc-lead">Sometimes you need an esbuild plugin in the federation build itself — code transformation, bundling tweaks, third-party tooling. Since v4 the Angular adapter exposes its builder factory as <code>runBuilder</code> from <code>@angular-architects/native-federation/internal</code>, so you can wrap it in your own Architect builder and pass extra plugins through.</p>
+        <h2>The Pattern</h2>
+        <ol>
+          <li>
+            Write a tiny builder file that calls <code>runBuilder</code> with an
+            extended options object.
+          </li>
+          <li>
+            Point the relevant <code>angular.json</code> targets at your wrapper
+            instead of the default
+            <code>@angular-architects/native-federation:build</code>.
+          </li>
+        </ol>
 
-      <h2>The Pattern</h2>
-      <ol>
-        <li>Write a tiny builder file that calls <code>runBuilder</code> with an extended options object.</li>
-        <li>Point the relevant <code>angular.json</code> targets at your wrapper instead of the default <code>@angular-architects/native-federation:build</code>.</li>
-      </ol>
-
-      <h3>1. The wrapper</h3>
-      <pre><code>// custom-builder.js
+        <h3>1. The wrapper</h3>
+        <pre><code>// custom-builder.js
 import { runBuilder } from '@angular-architects/native-federation/internal';
 import { createBuilder } from '@angular-devkit/architect';
 import { myEsbuildPlugin } from './my-esbuild-plugin.js';
@@ -52,10 +90,16 @@ async function* customBuilder(options, context) {
 }
 
 export default createBuilder(customBuilder);</code></pre>
-      <p>The <code>plugins</code> array is appended to the adapter's own externals plugin, so the order is: externals plugin first, then yours. Plugins receive the standard esbuild <code>PluginBuild</code> interface and run for both the federation build (shared bundles, exposed modules) and the Angular build path.</p>
+        <p>
+          The <code>plugins</code> array is appended to the adapter's own
+          externals plugin, so the order is: externals plugin first, then yours.
+          Plugins receive the standard esbuild
+          <code>PluginBuild</code> interface and run for both the federation
+          build (shared bundles, exposed modules) and the Angular build path.
+        </p>
 
-      <h3>2. Wire it in <code>angular.json</code></h3>
-      <pre><code>{
+        <h3>2. Wire it in <code>angular.json</code></h3>
+        <pre><code>{
   "projects": {
     "mfe1": {
       "architect": {
@@ -75,27 +119,64 @@ export default createBuilder(customBuilder);</code></pre>
     }
   }
 }</code></pre>
-      <p>You're swapping the <em>builder</em>, not the options schema — every option from <a href="builder.html#options">Builder → Options</a> still applies.</p>
+        <p>
+          You're swapping the <em>builder</em>, not the options schema — every
+          option from <a href="builder.html#options">Builder → Options</a> still
+          applies.
+        </p>
 
-      <h2>Notes</h2>
-      <ul>
-        <li><code>runBuilder</code> is exposed from <code>@angular-architects/native-federation/internal</code>. As the name suggests, it's not part of the public API guarantee — minor bumps may rename or refine the signature. Pin the adapter version when you ship a custom builder.</li>
-        <li>Plugins added this way only run inside the build the adapter drives. They do <em>not</em> see Angular CLI's pipeline outside the federation flow.</li>
-        <li>If you only need a config tweak rather than a plugin (e.g. forcing externals, changing output paths), prefer the existing <a href="builder.html#options">builder options</a> or a <code>federation.config.js</code> change.</li>
-      </ul>
+        <h2>Notes</h2>
+        <ul>
+          <li>
+            <code>runBuilder</code> is exposed from
+            <code>@angular-architects/native-federation/internal</code>. As the
+            name suggests, it's not part of the public API guarantee — minor
+            bumps may rename or refine the signature. Pin the adapter version
+            when you ship a custom builder.
+          </li>
+          <li>
+            Plugins added this way only run inside the build the adapter drives.
+            They do <em>not</em> see Angular CLI's pipeline outside the
+            federation flow.
+          </li>
+          <li>
+            If you only need a config tweak rather than a plugin (e.g. forcing
+            externals, changing output paths), prefer the existing
+            <a href="builder.html#options">builder options</a> or a
+            <code>federation.config.js</code> change.
+          </li>
+        </ul>
 
-      <h2>Related</h2>
-      <ul>
-        <li><a href="builder.html">Builder</a> — the options the wrapper inherits.</li>
-        <li><a href="../core/build-adapters.html">Core: Build Adapters</a> — the contract under the hood (<code>NFBuildAdapter</code>) if you'd rather plug a different bundler in entirely.</li>
-      </ul>
-    </main>
-  </div>
+        <h2>Related</h2>
+        <ul>
+          <li>
+            <a href="builder.html">Builder</a> — the options the wrapper
+            inherits.
+          </li>
+          <li>
+            <a href="../core/build-adapters.html">Core: Build Adapters</a> — the
+            contract under the hood (<code>NFBuildAdapter</code>) if you'd
+            rather plug a different bundler in entirely.
+          </li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../../components.js"></script>
-</body>
+    <script src="../../components.js"></script>
+  </body>
 </html>

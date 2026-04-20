@@ -39,6 +39,11 @@
 
       <main class="docs-content">
         <h1>Core</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+          <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+        </div>
         <p class="doc-lead">
           The core package — <code>@softarc/native-federation</code> — is the
           bundler- and framework-agnostic builder library that sits at the heart
@@ -46,26 +51,8 @@
           built on top of it.
         </p>
 
-        <div class="callout callout-warning">
-          <p>
-            <strong>Native federation v4.</strong> <br />
-            This section is based on the new Native federation v4 core which has
-            migrated to the new Github organization which can be found here:
-            <a
-              href="https://github.com/native-federation/native-federation-core"
-              target="_blank"
-              >https://github.com/native-federation/native-federation-core</a
-            >
-            <br /><br />
-            The older v3 version can be found in the Angular architects plugin
-            repository:
-
-            <a
-              href="https://github.com/angular-architects/module-federation-plugin/"
-              target="_blank"
-              >https://github.com/angular-architects/module-federation-plugin/</a
-            >
-          </p>
+        <div class="callout">
+          <p>This section covers the v4 core. For a full overview of what changed since v3 — packages, ESM, repositories — see <a href="../v3-vs-v4.html">v3 vs v4</a>.</p>
         </div>
 
         <h2>What the Core Does</h2>

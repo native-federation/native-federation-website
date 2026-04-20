@@ -25,6 +25,11 @@
 
     <main class="docs-content">
       <h1>Builder</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
       <p class="doc-lead">The <code>@angular-architects/native-federation:build</code> target is a thin wrapper around <code>@angular/build:application</code>. It runs the Native Federation build (shared bundles, exposed modules, <code>remoteEntry.json</code>), then delegates to Angular's Application Builder for the host/remote app itself. The same builder is used for both <code>build</code> and <code>serve</code>; the difference is configured by options.</p>
 
       <nav class="page-toc" aria-label="On this page">

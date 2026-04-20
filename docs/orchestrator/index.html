@@ -39,6 +39,24 @@
 
       <main class="docs-content">
         <h1>Orchestrator</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <div class="callout callout-info">
+          <p>
+            <strong>Fully compatible with v3 and v4.</strong><br />
+            Although the orchestrator was introduced in native federation v4,
+            version 3 and 4 contain the same runtime spec (remoteEntry.json), so
+            the orchestrator makes can seamlessly load v3 remotes as well as v4
+            remotes.
+          </p>
+        </div>
         <p class="doc-lead">
           The Orchestrator —
           <code>@softarc/native-federation-orchestrator</code> — is the
@@ -69,6 +87,15 @@
           modules to execute during SSR itself, stick with the default Runtime
           for now.
         </p>
+
+        <div class="callout">
+          <p>
+            The Orchestrator is the new recommended runtime introduced in v4.
+            For a full comparison with the v3 Classic Runtime — when to use
+            which, semver resolution, and caching — see
+            <a href="../v3-vs-v4.html">v3 vs v4</a>.
+          </p>
+        </div>
 
         <div class="callout callout-warning">
           <p>

@@ -1,62 +1,129 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SSR &amp; Hydration — Native Federation Docs</title>
-  <meta name="description" content="Learn how to use Angular Server-Side Rendering and Incremental Hydration with Native Federation for better performance and SEO.">
-  <link rel="canonical" href="https://native-federation.io/docs/ssr-hydration.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="SSR & Hydration — Native Federation Docs">
-  <meta property="og:description" content="Use Angular SSR and Incremental Hydration with Native Federation.">
-  <meta property="og:url" content="https://native-federation.io/docs/ssr-hydration.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../images/favicon.png">
-  <link rel="apple-touch-icon" href="../images/favicon.png">
-  <link rel="stylesheet" href="../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSR &amp; Hydration — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="Learn how to use Angular Server-Side Rendering and Incremental Hydration with Native Federation for better performance and SEO."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/ssr-hydration.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:title"
+      content="SSR & Hydration — Native Federation Docs"
+    />
+    <meta
+      property="og:description"
+      content="Use Angular SSR and Incremental Hydration with Native Federation."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/ssr-hydration.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../images/favicon.png" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>SSR &amp; Hydration</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          Native Federation supports Angular's Server-Side Rendering and
+          Incremental Hydration, enabling better performance, faster initial
+          page loads, and improved SEO for your Micro Frontend applications.
+        </p>
 
-    <main class="docs-content">
-      <h1>SSR &amp; Hydration</h1>
-      <p class="doc-lead">Native Federation supports Angular's Server-Side Rendering and Incremental Hydration, enabling better performance, faster initial page loads, and improved SEO for your Micro Frontend applications.</p>
+        <h2>Overview</h2>
+        <p>
+          Since version 18 (<code>18@latest</code>), Native Federation for
+          Angular fully supports:
+        </p>
+        <ul>
+          <li>
+            <strong>Server-Side Rendering (SSR):</strong> Pre-render your
+            application on the server for faster initial paint and improved
+            search engine indexing.
+          </li>
+          <li>
+            <strong>Incremental Hydration:</strong> Progressively hydrate
+            components on the client side, reducing time to interactive while
+            maintaining the full SSR benefits.
+          </li>
+        </ul>
 
-      <h2>Overview</h2>
-      <p>Since version 18 (<code>18@latest</code>), Native Federation for Angular fully supports:</p>
-      <ul>
-        <li><strong>Server-Side Rendering (SSR):</strong> Pre-render your application on the server for faster initial paint and improved search engine indexing.</li>
-        <li><strong>Incremental Hydration:</strong> Progressively hydrate components on the client side, reducing time to interactive while maintaining the full SSR benefits.</li>
-      </ul>
+        <h2>Benefits</h2>
+        <ul class="checklist">
+          <li>Faster First Contentful Paint (FCP)</li>
+          <li>Improved SEO with pre-rendered HTML</li>
+          <li>
+            Progressive hydration reduces JavaScript execution on initial load
+          </li>
+          <li>Works seamlessly with the host/remote architecture</li>
+        </ul>
 
-      <h2>Benefits</h2>
-      <ul class="checklist">
-        <li>Faster First Contentful Paint (FCP)</li>
-        <li>Improved SEO with pre-rendered HTML</li>
-        <li>Progressive hydration reduces JavaScript execution on initial load</li>
-        <li>Works seamlessly with the host/remote architecture</li>
-      </ul>
+        <h2>Learn More</h2>
+        <p>
+          For a comprehensive guide on setting up SSR and Hydration with Native
+          Federation, including configuration examples and best practices, read
+          the detailed article:
+        </p>
 
-      <h2>Learn More</h2>
-      <p>For a comprehensive guide on setting up SSR and Hydration with Native Federation, including configuration examples and best practices, read the detailed article:</p>
+        <div class="workshop-cta">
+          <h3>SSR and Hydration with Native Federation for Angular</h3>
+          <p>
+            A complete walkthrough covering server configuration, hydration
+            strategies, and production deployment considerations.
+          </p>
+          <a
+            href="https://www.angulararchitects.io/blog/ssr-and-hydration-with-native-federation-for-angular/"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-primary"
+            >Read the Full Guide</a
+          >
+        </div>
+      </main>
+    </div>
 
-      <div class="workshop-cta">
-        <h3>SSR and Hydration with Native Federation for Angular</h3>
-        <p>A complete walkthrough covering server configuration, hydration strategies, and production deployment considerations.</p>
-        <a href="https://www.angulararchitects.io/blog/ssr-and-hydration-with-native-federation-for-angular/" target="_blank" rel="noopener" class="btn btn-primary">Read the Full Guide</a>
-      </div>
-    </main>
-  </div>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
-
-  <script src="../components.js"></script>
-</body>
+    <script src="../components.js"></script>
+  </body>
 </html>

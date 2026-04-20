@@ -42,6 +42,11 @@
 
       <main class="docs-content">
         <h1>Angular Adapter</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+          <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+        </div>
         <p class="doc-lead">
           The Angular adapter — published as
           <code>@angular-architects/native-federation</code> — is the
@@ -53,24 +58,8 @@
           runtime helpers.
         </p>
 
-        <div class="callout callout-warning">
-          <p>
-            <strong>v4 supports Angular v20+.</strong> <br />
-            The Angular adapter which is documented in this section, is fully
-            based on native-federation v4. It is currently in beta published
-            under
-            <code>@angular-architects/native-federation-v4</code>. <br />
-            It will be released to stable in May together with NG22. This
-            adapter is fully ESM and will support Angular >20 versions. (one
-            backwards compatible major)
-            <br /><br />
-            Find the repository here:
-            <a
-              href="https://github.com/native-federation/angular-adapter"
-              target="_blank"
-              >https://github.com/native-federation/angular-adapter</a
-            >
-          </p>
+        <div class="callout">
+          <p>This section covers the v4 Angular adapter (Angular 20+, currently in beta as <code>@angular-architects/native-federation-v4</code>). For a full overview of what changed since v3 — packages, ESM, Angular version support — see <a href="../v3-vs-v4.html">v3 vs v4</a>.</p>
         </div>
 
         <h2>What's in the Box</h2>

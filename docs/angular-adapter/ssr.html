@@ -1,55 +1,102 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SSR &amp; Hydration — Angular Adapter</title>
-  <meta name="description" content="Angular SSR and Incremental Hydration with Native Federation — Node bootstrap, the fstart helper, externals, and CORS.">
-  <link rel="canonical" href="https://native-federation.io/docs/angular-adapter/ssr.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="SSR &amp; Hydration — Angular Adapter">
-  <meta property="og:description" content="Setting up SSR and (Incremental) Hydration with Native Federation for Angular.">
-  <meta property="og:url" content="https://native-federation.io/docs/angular-adapter/ssr.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../images/favicon.png">
-  <link rel="stylesheet" href="../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSR &amp; Hydration — Angular Adapter</title>
+    <meta
+      name="description"
+      content="Angular SSR and Incremental Hydration with Native Federation — Node bootstrap, the fstart helper, externals, and CORS."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/angular-adapter/ssr.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="SSR &amp; Hydration — Angular Adapter" />
+    <meta
+      property="og:description"
+      content="Setting up SSR and (Incremental) Hydration with Native Federation for Angular."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/angular-adapter/ssr.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>SSR &amp; Hydration</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          The Angular adapter supports Angular SSR and Incremental Hydration as
+          of Angular 18 — both for hosts and remotes. Most of the wiring is done
+          by the <code>init</code> schematic when it detects an SSR-enabled
+          project; this page documents what it generates and the moving parts
+          behind it.
+        </p>
 
-    <main class="docs-content">
-      <h1>SSR &amp; Hydration</h1>
-      <p class="doc-lead">The Angular adapter supports Angular SSR and Incremental Hydration as of Angular 18 — both for hosts and remotes. Most of the wiring is done by the <code>init</code> schematic when it detects an SSR-enabled project; this page documents what it generates and the moving parts behind it.</p>
+        <nav class="page-toc" aria-label="On this page">
+          <strong>On this page</strong>
+          <ul>
+            <li><a href="#enabling">Enabling SSR</a></li>
+            <li><a href="#node-bootstrap">The Node bootstrap</a></li>
+            <li><a href="#fstart">fstart.mjs</a></li>
+            <li><a href="#externals">Externals on the server</a></li>
+            <li><a href="#manifest">Manifests &amp; CORS</a></li>
+          </ul>
+        </nav>
 
-      <nav class="page-toc" aria-label="On this page">
-        <strong>On this page</strong>
-        <ul>
-          <li><a href="#enabling">Enabling SSR</a></li>
-          <li><a href="#node-bootstrap">The Node bootstrap</a></li>
-          <li><a href="#fstart">fstart.mjs</a></li>
-          <li><a href="#externals">Externals on the server</a></li>
-          <li><a href="#manifest">Manifests &amp; CORS</a></li>
-        </ul>
-      </nav>
+        <h2 id="enabling">Enabling SSR</h2>
+        <p>Add SSR to your Angular project the usual way:</p>
+        <pre><code>ng add @angular/ssr --project shell</code></pre>
+        <p>
+          Then run the federation init (or re-run it). When the schematic sees
+          <code>build.options.ssr.entry</code> it adds two SSR-specific things:
+        </p>
+        <ol>
+          <li>
+            Sets <code>ssr: true</code> on the federation
+            <code>build</code> target. The builder uses this flag to route
+            externals through Angular's
+            <code>externalDependencies</code> instead of an esbuild plugin (the
+            SSR build path doesn't run that plugin).
+          </li>
+          <li>
+            Splits <code>main.server.ts</code> into a federation bootstrap
+            (<code>main.server.ts</code>) plus the original Angular SSR
+            bootstrap (<code>bootstrap-server.ts</code>).
+          </li>
+        </ol>
 
-      <h2 id="enabling">Enabling SSR</h2>
-      <p>Add SSR to your Angular project the usual way:</p>
-      <pre><code>ng add @angular/ssr --project shell</code></pre>
-      <p>Then run the federation init (or re-run it). When the schematic sees <code>build.options.ssr.entry</code> it adds two SSR-specific things:</p>
-      <ol>
-        <li>Sets <code>ssr: true</code> on the federation <code>build</code> target. The builder uses this flag to route externals through Angular's <code>externalDependencies</code> instead of an esbuild plugin (the SSR build path doesn't run that plugin).</li>
-        <li>Splits <code>main.server.ts</code> into a federation bootstrap (<code>main.server.ts</code>) plus the original Angular SSR bootstrap (<code>bootstrap-server.ts</code>).</li>
-      </ol>
-
-      <h2 id="node-bootstrap">The Node Bootstrap</h2>
-      <p>The schematic generates a <code>main.server.ts</code> that calls <code>initNodeFederation</code> from <code>@softarc/native-federation-node</code> before pulling in the Angular SSR app:</p>
-      <pre><code>// projects/shell/src/main.server.ts (dynamic-host)
+        <h2 id="node-bootstrap">The Node Bootstrap</h2>
+        <p>
+          The schematic generates a <code>main.server.ts</code> that calls
+          <code>initNodeFederation</code> from
+          <code>@softarc/native-federation-node</code> before pulling in the
+          Angular SSR app:
+        </p>
+        <pre><code>// projects/shell/src/main.server.ts (dynamic-host)
 import { initNodeFederation } from '@softarc/native-federation-node';
 
 console.log('Starting SSR for Shell');
@@ -62,51 +109,135 @@ console.log('Starting SSR for Shell');
 
   await import('./bootstrap-server');
 })();</code></pre>
-      <p>For static hosts the manifest is inlined; for remotes only the <code>relBundlePath</code> is set:</p>
-      <pre><code>// remote variant
+        <p>
+          For static hosts the manifest is inlined; for remotes only the
+          <code>relBundlePath</code> is set:
+        </p>
+        <pre><code>// remote variant
 import { initNodeFederation } from '@softarc/native-federation-node';
 
 (async () =&gt; {
   await initNodeFederation({ relBundlePath: '../browser/' });
   await import('./bootstrap-server');
 })();</code></pre>
-      <p>Your existing SSR setup — Express, prerender, Vite middleware, anything <code>ng add @angular/ssr</code> generated — moves to <code>bootstrap-server.ts</code> unchanged. The schematic also rewrites the Express setup to:</p>
-      <ul>
-        <li>Drop the <code>isMainModule</code> guard (the federation bootstrap now controls execution).</li>
-        <li>Enable CORS on the Express app (federated remotes load across origins).</li>
-        <li>Apply the <code>--port</code> argument as the default SSR port.</li>
-      </ul>
+        <p>
+          Your existing SSR setup — Express, prerender, Vite middleware,
+          anything <code>ng add @angular/ssr</code> generated — moves to
+          <code>bootstrap-server.ts</code> unchanged. The schematic also
+          rewrites the Express setup to:
+        </p>
+        <ul>
+          <li>
+            Drop the <code>isMainModule</code> guard (the federation bootstrap
+            now controls execution).
+          </li>
+          <li>
+            Enable CORS on the Express app (federated remotes load across
+            origins).
+          </li>
+          <li>
+            Apply the <code>--port</code> argument as the default SSR port.
+          </li>
+        </ul>
 
-      <h2 id="fstart">fstart.mjs</h2>
-      <p>For SSR builds the federation builder writes a tiny <code>fstart.mjs</code> next to the server output (<code>dist/&lt;project&gt;/server/fstart.mjs</code>). It's a small Node bootstrap that ensures the federation runtime starts before Angular's server entry, mirroring the <code>main.ts</code> → <code>bootstrap.ts</code> split on the browser side. You don't need to invoke it directly — point your runtime at it the same way you'd point at <code>server.mjs</code>.</p>
+        <h2 id="fstart">fstart.mjs</h2>
+        <p>
+          For SSR builds the federation builder writes a tiny
+          <code>fstart.mjs</code> next to the server output
+          (<code>dist/&lt;project&gt;/server/fstart.mjs</code>). It's a small
+          Node bootstrap that ensures the federation runtime starts before
+          Angular's server entry, mirroring the <code>main.ts</code> →
+          <code>bootstrap.ts</code> split on the browser side. You don't need to
+          invoke it directly — point your runtime at it the same way you'd point
+          at <code>server.mjs</code>.
+        </p>
 
-      <h2 id="externals">Externals on the Server</h2>
-      <p>On the browser side, externals are excluded from the Angular bundle by an esbuild plugin the adapter installs. That plugin is bypassed for SSR builds, so the adapter instead sets <code>options.externalDependencies = externals</code> on the underlying Angular target. The result is the same — Angular doesn't pre-bundle anything Native Federation will load at runtime — but uses Angular's first-class hook.</p>
-      <p>One important consequence: <code>@angular/core</code> infers <code>ngServerMode</code> from the bundling step. Because Native Federation reuses the <em>same</em> shared <code>@angular/core</code> bundle on the server and in the browser, the adapter patches <code>node_modules/@angular/core/fesm2022/core.mjs</code> with a small runtime check:</p>
-      <pre><code>if (typeof globalThis.ngServerMode === 'undefined')
+        <h2 id="externals">Externals on the Server</h2>
+        <p>
+          On the browser side, externals are excluded from the Angular bundle by
+          an esbuild plugin the adapter installs. That plugin is bypassed for
+          SSR builds, so the adapter instead sets
+          <code>options.externalDependencies = externals</code> on the
+          underlying Angular target. The result is the same — Angular doesn't
+          pre-bundle anything Native Federation will load at runtime — but uses
+          Angular's first-class hook.
+        </p>
+        <p>
+          One important consequence: <code>@angular/core</code> infers
+          <code>ngServerMode</code> from the bundling step. Because Native
+          Federation reuses the <em>same</em> shared
+          <code>@angular/core</code> bundle on the server and in the browser,
+          the adapter patches
+          <code>node_modules/@angular/core/fesm2022/core.mjs</code> with a small
+          runtime check:
+        </p>
+        <pre><code>if (typeof globalThis.ngServerMode === 'undefined')
   globalThis.ngServerMode = (typeof window === 'undefined') ? true : false;</code></pre>
-      <p>The patch is applied automatically by the adapter on every build. Treat it as an implementation detail.</p>
+        <p>
+          The patch is applied automatically by the adapter on every build.
+          Treat it as an implementation detail.
+        </p>
 
-      <h2 id="manifest">Manifests &amp; CORS</h2>
-      <ul>
-        <li><strong>Same manifest, both worlds.</strong> Use the same <code>federation.manifest.json</code> for browser and Node. The schematic points the Node bootstrap at <code>../browser/federation.manifest.json</code> so they stay in sync.</li>
-        <li><strong>Production URLs.</strong> If your remotes are deployed across origins, list absolute URLs in the manifest. The Node side will fetch <code>remoteEntry.json</code> from those URLs; make sure they're reachable from your SSR runtime.</li>
-        <li><strong>CORS.</strong> The schematic enables <code>cors</code> on the generated Express app so cross-origin requests don't bounce. Adjust the policy in <code>bootstrap-server.ts</code> if you need stricter rules.</li>
-        <li><strong>I18N.</strong> When SSR runs alongside multiple locales, the dev server only serves <em>one</em> locale at a time (Angular's limitation). Production builds emit one folder per locale; route accordingly. See <a href="i18n.html">I18N</a>.</li>
-      </ul>
+        <h2 id="manifest">Manifests &amp; CORS</h2>
+        <ul>
+          <li>
+            <strong>Same manifest, both worlds.</strong> Use the same
+            <code>federation.manifest.json</code> for browser and Node. The
+            schematic points the Node bootstrap at
+            <code>../browser/federation.manifest.json</code> so they stay in
+            sync.
+          </li>
+          <li>
+            <strong>Production URLs.</strong> If your remotes are deployed
+            across origins, list absolute URLs in the manifest. The Node side
+            will fetch <code>remoteEntry.json</code> from those URLs; make sure
+            they're reachable from your SSR runtime.
+          </li>
+          <li>
+            <strong>CORS.</strong> The schematic enables <code>cors</code> on
+            the generated Express app so cross-origin requests don't bounce.
+            Adjust the policy in <code>bootstrap-server.ts</code> if you need
+            stricter rules.
+          </li>
+          <li>
+            <strong>I18N.</strong> When SSR runs alongside multiple locales, the
+            dev server only serves <em>one</em> locale at a time (Angular's
+            limitation). Production builds emit one folder per locale; route
+            accordingly. See <a href="i18n.html">I18N</a>.
+          </li>
+        </ul>
 
-      <h2>Related</h2>
-      <ul>
-        <li><a href="../runtime/index.html">Runtime overview</a>.</li>
-        <li><a href="https://www.angulararchitects.io/blog/ssr-and-hydration-with-native-federation-for-angular/" target="_blank" rel="noopener">SSR &amp; Hydration with Native Federation for Angular</a> — the long-form article behind these features.</li>
-      </ul>
-    </main>
-  </div>
+        <h2>Related</h2>
+        <ul>
+          <li><a href="../runtime/index.html">Runtime overview</a>.</li>
+          <li>
+            <a
+              href="https://www.angulararchitects.io/blog/ssr-and-hydration-with-native-federation-for-angular/"
+              target="_blank"
+              rel="noopener"
+              >SSR &amp; Hydration with Native Federation for Angular</a
+            >
+            — the long-form article behind these features.
+          </li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../../components.js"></script>
-</body>
+    <script src="../../components.js"></script>
+  </body>
 </html>
