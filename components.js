@@ -150,6 +150,11 @@
       ]},
       { section: 'Runtime', items: [
         { href: 'runtime/index.html', label: 'Overview', id: 'runtime' },
+        { href: 'runtime/getting-started.html', label: 'Getting Started', id: 'runtime/getting-started' },
+        { href: 'runtime/init-federation.html', label: 'initFederation', id: 'runtime/init-federation' },
+        { href: 'runtime/load-remote-module.html', label: 'loadRemoteModule', id: 'runtime/load-remote-module' },
+        { href: 'runtime/import-map.html', label: 'The Import Map', id: 'runtime/import-map' },
+        { href: 'runtime/api-reference.html', label: 'API Reference', id: 'runtime/api-reference' },
       ]},
       { section: 'Adapters', items: [
         { href: 'adapters/index.html', label: 'Overview', id: 'adapters' },

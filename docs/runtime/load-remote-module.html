@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>loadRemoteModule — Runtime Docs</title>
+  <meta name="description" content="loadRemoteModule — how to load an exposed module from a registered remote, plus lazy registration and fallback behaviour.">
+  <link rel="canonical" href="https://native-federation.io/docs/runtime/load-remote-module.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="loadRemoteModule — Runtime Docs">
+  <meta property="og:description" content="Load a remote's exposed module at runtime.">
+  <meta property="og:url" content="https://native-federation.io/docs/runtime/load-remote-module.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1><code>loadRemoteModule</code></h1>
+      <p class="doc-lead"><code>loadRemoteModule</code> resolves the URL of a remote's exposed module and performs a dynamic <code>import()</code> against the import map that <a href="init-federation.html"><code>initFederation</code></a> installed. It is the one call you make from router configs, event handlers, or anywhere else you decide a remote is needed.</p>
+
+      <nav class="page-toc" aria-label="On this page">
+        <strong>On this page</strong>
+        <ul>
+          <li><a href="#signatures">Signatures</a></li>
+          <li><a href="#short">Short form — positional</a></li>
+          <li><a href="#long">Long form — options object</a></li>
+          <li><a href="#lazy">Lazy remote registration</a></li>
+          <li><a href="#fallback">Fallbacks and error handling</a></li>
+          <li><a href="#import-shim">importShim vs. native import</a></li>
+          <li><a href="#typing">Typing the result</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="signatures">Signatures</h2>
+      <pre><code>function loadRemoteModule&lt;T = any&gt;(
+  remoteName: string,
+  exposedModule: string,
+): Promise&lt;T&gt;;
+
+function loadRemoteModule&lt;T = any&gt;(
+  options: LoadRemoteModuleOptions&lt;T&gt;,
+): Promise&lt;T&gt;;
+
+interface LoadRemoteModuleOptions&lt;T = any&gt; {
+  remoteEntry?: string;  // for lazy registration
+  remoteName?: string;
+  exposedModule: string;
+  fallback?: T;
+}</code></pre>
+      <p>The short form is the common case; the object form exists for lazy registration and fallbacks.</p>
+
+      <h2 id="short">Short form — positional</h2>
+      <pre><code>const { AppComponent } = await loadRemoteModule('mfe1', './Component');</code></pre>
+      <p>The first argument matches the key you used in <code>initFederation</code>'s remotes map (or the remote's <code>name</code> field when no key was supplied). The second argument matches the key under <code>exposes</code> in the remote's <code>federation.config.js</code> — typically <code>./Component</code>, <code>./Routes</code>, etc.</p>
+
+      <h2 id="long">Long form — options object</h2>
+      <pre><code>const { AppComponent } = await loadRemoteModule({
+  remoteName: 'mfe1',
+  exposedModule: './Component',
+});</code></pre>
+      <p>Equivalent to the short form when only <code>remoteName</code> and <code>exposedModule</code> are set — use it when you also need <code>remoteEntry</code> or <code>fallback</code>.</p>
+
+      <h2 id="lazy">Lazy remote registration</h2>
+      <p>If you want to load a remote that was <em>not</em> in the <code>initFederation</code> manifest, pass its <code>remoteEntry</code> URL. The runtime will fetch it, register it into the global registry, append its import map to the DOM, and then import the exposed module:</p>
+      <pre><code>const mod = await loadRemoteModule({
+  remoteEntry: 'http://localhost:3003/remoteEntry.json',
+  remoteName: 'mfe3',
+  exposedModule: './Component',
+});</code></pre>
+      <p>This is useful for plugin-style systems where the list of remotes is only known after user interaction. The registration happens once per base URL — subsequent calls for the same remote reuse the already-registered entry.</p>
+
+      <p>If you supply <code>remoteEntry</code> but not <code>remoteName</code>, the runtime derives the remote name from the registry lookup by base URL (populated when the remote was registered, using the <code>name</code> field from its <code>remoteEntry.json</code>). If neither is resolvable, it throws <code>unexpected arguments: Please pass remoteName or remoteEntry</code>.</p>
+
+      <h2 id="fallback">Fallbacks and error handling</h2>
+      <p><code>loadRemoteModule</code> can fail for three reasons:</p>
+      <ol>
+        <li><strong>Unknown remote</strong> — no remote matching <code>remoteName</code> is registered.</li>
+        <li><strong>Unknown exposed module</strong> — the remote is registered, but does not expose the requested key.</li>
+        <li><strong>Dynamic import failure</strong> — the URL resolved but the module itself failed to load (network, parse, runtime error).</li>
+      </ol>
+      <p>By default each of those rejects the returned promise. Supply a <code>fallback</code> value to return it instead:</p>
+      <pre><code>const mod = await loadRemoteModule({
+  remoteName: 'mfe1',
+  exposedModule: './Component',
+  fallback: { AppComponent: DefaultComponent },
+});</code></pre>
+      <p>With a fallback, cases (1) and (2) log the error to <code>console.error</code> (only in browser environments) and resolve with the fallback. Case (3) logs the error and resolves with the fallback. Without a fallback, cases (1) and (2) throw synchronously-shaped rejections (<code>unknown remote ...</code>, <code>Unknown exposed module ...</code>) and case (3) rethrows the original import error.</p>
+
+      <div class="callout">
+        <p>Fallbacks shine for non-critical widgets (recommendations panel, feature flag, A/B variant) where a missing remote should degrade gracefully. For main navigation or a route that has no sensible fallback, let it throw and handle it at your router's error boundary.</p>
+      </div>
+
+      <h2 id="import-shim">importShim vs. native import</h2>
+      <p>Under the hood the runtime prefers <code>globalThis.importShim()</code> — the hook installed by <code>es-module-shims</code> — and falls back to a native dynamic <code>import()</code> when the shim is not present:</p>
+      <pre><code>function _import&lt;T&gt;(moduleUrl: string) {
+  return typeof importShim !== 'undefined'
+    ? importShim&lt;T&gt;(moduleUrl)
+    : import(/* @vite-ignore */ moduleUrl) as T;
+}</code></pre>
+      <p>In practice <code>es-module-shims</code> must be on the page — the import map is injected as <code>type="importmap-shim"</code>, which native browsers ignore. The native fallback exists mainly for test environments and server contexts.</p>
+
+      <h2 id="typing">Typing the result</h2>
+      <p><code>loadRemoteModule</code> returns <code>Promise&lt;any&gt;</code> by default. When the shape of the module is known ahead of time, parameterize the call:</p>
+      <pre><code>interface RemoteComponent {
+  AppComponent: unknown;
+}
+
+const mod = await loadRemoteModule&lt;RemoteComponent&gt;('mfe1', './Component');
+mod.AppComponent;  // typed</code></pre>
+      <p>There is no ambient contract between host and remote — you are responsible for keeping the type you assert here in sync with what the remote actually exposes. Framework adapters (for example the Angular router's <code>loadComponent</code>) narrow the type further for you.</p>
+
+      <h2>Related</h2>
+      <ul>
+        <li><a href="init-federation.html"><code>initFederation</code></a> — populates the registry that <code>loadRemoteModule</code> reads from.</li>
+        <li><a href="import-map.html">The Import Map</a> — how the URL is actually resolved.</li>
+        <li><a href="api-reference.html">API Reference</a> — the registry helpers (<code>getRemote</code>, <code>hasRemote</code>, …).</li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>
