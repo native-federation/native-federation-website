@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Builder — esbuild Adapter</title>
+  <meta name="description" content="Reference for runEsBuildBuilder and EsBuildBuilderOptions — the Native Federation esbuild adapter's high-level entry point.">
+  <link rel="canonical" href="https://native-federation.io/docs/adapters/esbuild/builder.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Builder — esbuild Adapter">
+  <meta property="og:description" content="runEsBuildBuilder API and the full EsBuildBuilderOptions reference.">
+  <meta property="og:url" content="https://native-federation.io/docs/adapters/esbuild/builder.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../../images/favicon.png">
+  <link rel="stylesheet" href="../../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Builder</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
+      <p class="doc-lead"><code>runEsBuildBuilder</code> is the high-level entry point most projects use. It loads <code>federation.config.js</code>, registers the esbuild adapter with the core, runs the initial build, and — when <code>watch</code> is on — keeps a file watcher and rebuild queue running until you call <code>close()</code>.</p>
+
+      <h2>Signature</h2>
+      <pre><code>import { runEsBuildBuilder } from '@softarc/native-federation-esbuild';
+
+const federation = await runEsBuildBuilder(
+  federationConfigPath: string,
+  options: EsBuildBuilderOptions,
+): Promise&lt;EsBuildBuilder&gt;;</code></pre>
+
+      <h2>Minimal Call</h2>
+      <pre><code>const federation = await runEsBuildBuilder('federation.config.js', {
+  outputPath: 'dist',
+  entryPoints: ['src/bootstrap.tsx'],
+});
+await federation.close();</code></pre>
+      <p>Everything else has a sensible default. The only required field is <code>outputPath</code> — the adapter throws <code>[esbuild-builder] outputPath is required</code> if it is missing.</p>
+
+      <h2><code>EsBuildBuilderOptions</code></h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>outputPath</code></td>
+              <td><code>string</code></td>
+              <td><strong>required</strong></td>
+              <td>Directory that receives <code>remoteEntry.json</code> and the bundled artifacts.</td>
+            </tr>
+            <tr>
+              <td><code>workspaceRoot</code></td>
+              <td><code>string</code></td>
+              <td><code>process.cwd()</code></td>
+              <td>Resolved against <code>cwd()</code>. Useful when the build script runs from a monorepo root.</td>
+            </tr>
+            <tr>
+              <td><code>tsConfig</code></td>
+              <td><code>string</code></td>
+              <td><code>'tsconfig.json'</code></td>
+              <td>Forwarded to esbuild's <code>tsconfig</code> option for the source-code bundle.</td>
+            </tr>
+            <tr>
+              <td><code>cachePath</code></td>
+              <td><code>string</code></td>
+              <td>core default</td>
+              <td>If given, joined with <code>workspaceRoot</code>. Otherwise the core's <code>getDefaultCachePath</code> is used. See <a href="../../core/caching.html">Caching</a>.</td>
+            </tr>
+            <tr>
+              <td><code>projectName</code></td>
+              <td><code>string</code></td>
+              <td>—</td>
+              <td>Forwarded to the core; used for logging and cache scoping in multi-project workspaces.</td>
+            </tr>
+            <tr>
+              <td><code>entryPoints</code></td>
+              <td><code>string[]</code></td>
+              <td>—</td>
+              <td>Source entries for the federation build. Usually the files referenced by <code>exposes</code> in <code>federation.config.js</code>.</td>
+            </tr>
+            <tr>
+              <td><code>packageJson</code></td>
+              <td><code>string</code></td>
+              <td>—</td>
+              <td>Path to the project's <code>package.json</code>. Override when it is not next to the federation config.</td>
+            </tr>
+            <tr>
+              <td><code>dev</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>Enables sourcemaps and disables minification in both the source-code and node-modules esbuild contexts. Also flips the <code>process.env.NODE_ENV</code> define to <code>"development"</code>.</td>
+            </tr>
+            <tr>
+              <td><code>watch</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>Starts the file watcher and rebuild queue. The returned <code>federation</code> object stays live until you call <code>close()</code>.</td>
+            </tr>
+            <tr>
+              <td><code>verbose</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>Sets the adapter's log level to <code>verbose</code>. Rebuild cancellations, watcher events and full error stacks are logged.</td>
+            </tr>
+            <tr>
+              <td><code>rebuildDelay</code></td>
+              <td><code>number</code></td>
+              <td><code>50</code> (ms)</td>
+              <td>Debounce before a rebuild fires after a file change. Clamped to a minimum of 10 ms internally.</td>
+            </tr>
+            <tr>
+              <td><code>cacheExternalArtifacts</code></td>
+              <td><code>boolean</code></td>
+              <td><code>true</code></td>
+              <td>Set <code>false</code> to force the core to re-bundle shared node-modules on every build. Only useful when debugging cache issues.</td>
+            </tr>
+            <tr>
+              <td><code>adapterConfig</code></td>
+              <td><code>EsBuildAdapterConfig</code></td>
+              <td><code>{ plugins: [] }</code></td>
+              <td>esbuild-specific extension points. See <a href="configuration.html">Adapter Configuration</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Return Value — <code>EsBuildBuilder</code></h2>
+      <pre><code>interface EsBuildBuilder {
+  federationInfo: FederationInfo;
+  externals: string[];
+  options: NormalizedEsBuildBuilderOptions;
+  close(): Promise&lt;void&gt;;
+}</code></pre>
+      <ul>
+        <li><strong><code>federationInfo</code></strong> — the result of the last successful build (remote name, exposed modules, shared descriptors, ...). In watch mode this is a live getter — read it whenever you need a fresh snapshot.</li>
+        <li><strong><code>externals</code></strong> — the list of module names the core marked as shared/external, forwarded to esbuild's <code>external</code>.</li>
+        <li><strong><code>options</code></strong> — the normalized, fully-defaulted options that were actually used. Handy for logging.</li>
+        <li><strong><code>close()</code></strong> — tears everything down: cancels any pending rebuild, stops the watcher, disposes all esbuild contexts, and calls <code>esbuild.stop()</code>. <em>Always</em> call it before exit, even in non-watch mode, so esbuild's daemon shuts down cleanly.</li>
+      </ul>
+
+      <h2>Watch Mode</h2>
+      <p>When <code>watch: true</code>, the adapter:</p>
+      <ol>
+        <li>Creates an <a href="../../core/caching.html">NF file watcher</a> that observes every source file the initial build touched.</li>
+        <li>Queues a rebuild on change. Rebuilds are debounced by <code>rebuildDelay</code> and serialized through a <code>RebuildQueue</code> — a new change mid-build cancels the in-flight rebuild via <code>AbortSignal</code> rather than racing it.</li>
+        <li>Calls <code>rebuildForFederation</code> on the core, which only re-bundles the entry points whose inputs changed.</li>
+      </ol>
+      <p>Rebuild outcomes:</p>
+      <ul>
+        <li><strong>Success</strong> — logs <code>Federation rebuild done.</code> and updates <code>federationInfo</code>.</li>
+        <li><strong>Cancelled</strong> — a newer change came in while the previous rebuild was still running. Logged only in <code>verbose</code> mode.</li>
+        <li><strong>Error</strong> — logs <code>Federation rebuild failed!</code>. The watcher keeps running; fix the file and the next save triggers another rebuild.</li>
+      </ul>
+
+      <h2>Lower-Level API — <code>createEsBuildAdapter</code></h2>
+      <p>If you drive <code>buildForFederation</code> / <code>rebuildForFederation</code> yourself (e.g. integrating with a custom dev server or another build tool's lifecycle), skip <code>runEsBuildBuilder</code> and construct just the adapter:</p>
+      <pre><code>import { createEsBuildAdapter } from '@softarc/native-federation-esbuild';
+import { setBuildAdapter, buildForFederation } from '@softarc/native-federation';
+
+const adapter = createEsBuildAdapter({ plugins: [] });
+setBuildAdapter(adapter);
+
+await buildForFederation(config, normalizedOptions, externals);
+await adapter.dispose();</code></pre>
+      <p><code>createEsBuildAdapter</code> returns an <a href="../../core/build-adapters.html"><code>NFBuildAdapter</code></a> with three methods:</p>
+      <ul>
+        <li><strong><code>setup(name, options)</code></strong> — creates an esbuild context for a single bundle entry. Picks the source-code bundler or the node-modules bundler based on <code>options.isMappingOrExposed</code>.</li>
+        <li><strong><code>build(name, { modifiedFiles?, signal? })</code></strong> — rebuilds, writes output files, and returns an <code>NFBuildAdapterResult[]</code> with file names. Aborts cleanly when <code>signal</code> fires.</li>
+        <li><strong><code>dispose(name?)</code></strong> — disposes a single context by name, or all contexts (plus <code>esbuild.stop()</code>) when called without arguments.</li>
+      </ul>
+
+      <div class="callout">
+        <p>For 99% of projects, <code>runEsBuildBuilder</code> is the right call. Reach for <code>createEsBuildAdapter</code> only when the core's built-in build loop doesn't fit your workflow.</p>
+      </div>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../../components.js"></script>
+</body>
+</html>

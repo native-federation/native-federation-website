@@ -159,8 +159,14 @@
       ]},
       { section: 'Adapters', items: [
         { href: 'adapters/index.html', label: 'Overview', id: 'adapters' },
-        { href: 'adapters/esbuild/index.html', label: 'esbuild (React)', id: 'adapters/esbuild' },
         { href: 'adapters/build-your-own.html', label: 'Build Your Own', id: 'adapters/build-your-own' },
+      ]},
+      { section: 'esbuild Adapter', items: [
+        { href: 'adapters/esbuild/index.html', label: 'Overview', id: 'adapters/esbuild' },
+        { href: 'adapters/esbuild/getting-started.html', label: 'Getting Started', id: 'adapters/esbuild/getting-started' },
+        { href: 'adapters/esbuild/builder.html', label: 'Builder', id: 'adapters/esbuild/builder' },
+        { href: 'adapters/esbuild/configuration.html', label: 'Adapter Configuration', id: 'adapters/esbuild/configuration' },
+        { href: 'adapters/esbuild/react-interop.html', label: 'React & CJS Interop', id: 'adapters/esbuild/react-interop' },
       ]},
       { section: 'Angular Adapter', items: [
         { href: 'angular-adapter/index.html', label: 'Overview', id: 'angular-adapter' },

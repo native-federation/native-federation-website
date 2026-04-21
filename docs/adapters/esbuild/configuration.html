@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adapter Configuration — esbuild Adapter</title>
+  <meta name="description" content="Reference for EsBuildAdapterConfig — extra esbuild plugins, file replacements, compensateExports and loader mappings.">
+  <link rel="canonical" href="https://native-federation.io/docs/adapters/esbuild/configuration.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Adapter Configuration — esbuild Adapter">
+  <meta property="og:description" content="EsBuildAdapterConfig — plugins, fileReplacements, compensateExports, loader.">
+  <meta property="og:url" content="https://native-federation.io/docs/adapters/esbuild/configuration.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../../images/favicon.png">
+  <link rel="stylesheet" href="../../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Adapter Configuration</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
+      <p class="doc-lead"><code>EsBuildAdapterConfig</code> is the esbuild-specific extension point. You pass it as <code>adapterConfig</code> on <a href="builder.html"><code>runEsBuildBuilder</code></a> (or directly into <code>createEsBuildAdapter</code>). Four fields — all optional except <code>plugins</code> — control extra esbuild plugins, entry-point rewriting, export compensation, and custom file loaders.</p>
+
+      <h2>Shape</h2>
+      <pre><code>import type * as esbuild from 'esbuild';
+
+export interface EsBuildAdapterConfig {
+  plugins: esbuild.Plugin[];
+  fileReplacements?: Record&lt;string, string | { file: string }&gt;;
+  compensateExports?: RegExp[];
+  loader?: { [ext: string]: esbuild.Loader };
+}</code></pre>
+
+      <h2><code>plugins</code></h2>
+      <p>Extra esbuild plugins applied to the <strong>source-code</strong> esbuild context — the one that bundles your exposed modules and their local source files. Use it for the usual esbuild extensions: Sass, CSS modules, SVGR, a GraphQL loader, etc.</p>
+      <pre><code>import { sassPlugin } from 'esbuild-sass-plugin';
+
+adapterConfig: {
+  plugins: [sassPlugin()],
+}</code></pre>
+      <div class="callout">
+        <p>Plugins are <em>not</em> forwarded to the node-modules bundle. That bundle always runs <code>@chialab/esbuild-plugin-commonjs</code> and defines <code>process.env.NODE_ENV</code> — it is intentionally opaque. If you need to patch a node-module's build, use <code>fileReplacements</code> instead of a plugin.</p>
+      </div>
+
+      <h2><code>fileReplacements</code></h2>
+      <p>Rewrites the <em>entry-point path</em> of a shared dependency before esbuild sees it. The key is a string that will be matched as a regex against the end of the path; the value is either a target path string, or a <code>{ file: string }</code> object (the two forms are equivalent — strings are normalized to the object form internally).</p>
+      <pre><code>adapterConfig: {
+  plugins: [],
+  fileReplacements: {
+    'node_modules/react/index.js':
+      'node_modules/react/cjs/react.production.min.js',
+  },
+}</code></pre>
+      <p>Path separators are normalized to forward slashes before matching, so the same config works on Windows.</p>
+      <p>Typical uses:</p>
+      <ul>
+        <li>Swap a CJS wrapper for the pre-bundled variant it re-exports from — the canonical React example is on the <a href="react-interop.html">React &amp; CommonJS Interop</a> page.</li>
+        <li>Point a library at a browser-only build when its <code>main</code> field resolves to a Node-only file.</li>
+        <li>Feed esbuild a shim when a dependency's entry point does something esbuild cannot bundle (dynamic require on a directory, etc.).</li>
+      </ul>
+
+      <h2><code>compensateExports</code></h2>
+      <p>List of regexes matched against module paths. Matching dependencies go through the core's <strong>export compensation</strong> pass, which parses the CJS/ESM output with <code>acorn</code> and synthesises a small re-export shim so named imports resolve to the same identity as the default import. The default is:</p>
+      <pre><code>compensateExports: [/react/]</code></pre>
+      <p>You usually do not need to touch this. Extend the list only when you share another CJS library that exposes named exports through an <code>exports.*</code> pattern — typically something older in the React ecosystem. See <a href="react-interop.html">React &amp; CommonJS Interop</a> for a deeper look at why React in particular needs it.</p>
+
+      <h2><code>loader</code></h2>
+      <p>Passed straight through to <code>esbuild.context()</code>'s <code>loader</code> option for the source-code bundle. Map file extensions to esbuild's built-in loaders (<code>'file'</code>, <code>'dataurl'</code>, <code>'text'</code>, <code>'binary'</code>, <code>'json'</code>, <code>'copy'</code>, …):</p>
+      <pre><code>adapterConfig: {
+  plugins: [],
+  loader: {
+    '.svg': 'dataurl',
+    '.png': 'file',
+  },
+}</code></pre>
+
+      <h2>What the Adapter Sets for You</h2>
+      <p>A few esbuild options are fixed by the adapter and cannot be overridden through <code>EsBuildAdapterConfig</code>. They are:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>esbuild option</th><th>Value</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>bundle</code></td><td><code>true</code></td><td>Federation artifacts must be self-contained.</td></tr>
+            <tr><td><code>format</code></td><td><code>'esm'</code></td><td>The runtime loads remotes as ES modules via the import map.</td></tr>
+            <tr><td><code>platform</code></td><td><code>'browser'</code> or <code>'node'</code></td><td>Derived from the core's platform detection (see <a href="../../core/build-process.html">Build Process</a>).</td></tr>
+            <tr><td><code>target</code></td><td><code>['esnext']</code></td><td>Source-code bundle only. Downlevel in your own toolchain if needed.</td></tr>
+            <tr><td><code>splitting</code></td><td><code>false</code></td><td>Splitting is not yet supported; every entry is one file.</td></tr>
+            <tr><td><code>write</code></td><td><code>false</code></td><td>The adapter writes files itself, so it can hash names and feed them to the federation cache.</td></tr>
+            <tr><td><code>entryNames</code></td><td><code>'[name]-[hash]'</code> / <code>'[name]'</code></td><td>Hashed when the core asks for hashed output, plain otherwise.</td></tr>
+            <tr><td><code>resolveExtensions</code></td><td><code>.ts .tsx .mjs .js .cjs</code> (source) / <code>.mjs .js .cjs</code> (node-modules)</td><td>TypeScript is only resolved in the source-code bundle.</td></tr>
+            <tr><td><code>external</code></td><td>from the core</td><td>All shared dependencies are marked external so they load via the import map.</td></tr>
+            <tr><td><code>sourcemap</code> / <code>minify</code></td><td>from <code>dev</code></td><td><code>dev: true</code> enables sourcemaps and disables minification.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Everything else flows from <code>EsBuildAdapterConfig</code> — extra plugins, replaced entry paths, custom loaders, and the export-compensation list.</p>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../../components.js"></script>
+</body>
+</html>
