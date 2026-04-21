@@ -6,7 +6,7 @@
     <title>Build Your Own Adapter — Native Federation Docs</title>
     <meta
       name="description"
-      content="How to build a custom Native Federation adapter for a new bundler or framework — implement the NFBuildAdapter contract and wire it into federationBuilder."
+      content="How to build a custom Native Federation adapter for a new bundler — implement NFBuildAdapter, plug into the file watcher and rebuild queue, and expose a high-level builder."
     />
     <link
       rel="canonical"
@@ -20,7 +20,7 @@
     />
     <meta
       property="og:description"
-      content="Implement the NFBuildAdapter contract to support a new bundler."
+      content="Implement NFBuildAdapter, wire in the NF file watcher and RebuildQueue, and expose a builder for a new bundler."
     />
     <meta
       property="og:url"
@@ -44,62 +44,61 @@
         <h1>Build Your Own Adapter</h1>
         <div class="version-support">
           <span class="version-support__label">Applies to</span>
-          <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
+          <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
           <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
-        </div>
-
-        <div class="callout">
-          <p>
-            <strong>Status: TODO / work in progress.</strong> This page is a
-            skeleton aimed at people who want to wire Native Federation into a
-            bundler the project doesn't ship an adapter for. Expect sharp edges
-            and missing detail — contributions welcome on
-            <a
-              href="https://github.com/native-federation"
-              target="_blank"
-              rel="noopener"
-              >GitHub</a
-            >.
-          </p>
         </div>
 
         <p class="doc-lead">
           Native Federation Core doesn't ship a bundler. Every adapter —
           esbuild, Angular, Vite — is a thin shim that implements a three-method
-          contract (<code>NFBuildAdapter</code>) and hands its bundler's result
-          back to the core. If you want to support Rspack, Rolldown, swc, or
-          anything else, you write one of those shims.
+          contract (<code>NFBuildAdapter</code>) and hands its bundler's
+          emitted files back to the core. If you want to support Rspack,
+          Rolldown, swc, or anything else, you write one of those shims — and
+          optionally wrap it in a higher-level <em>builder</em> that plugs
+          into the file watcher and rebuild queue the core already ships.
         </p>
 
-        <h2>Before you start</h2>
-        <ul>
-          <li>
-            Read <a href="../core/build-process.html">Build Process</a> to
-            understand the lifecycle (<code>init</code> → bundle →
-            <code>build</code>).
-          </li>
-          <li>
-            Read <a href="../core/build-adapters.html">Build Adapters</a> for
-            the contract itself.
-          </li>
-          <li>
-            Read <a href="../core/artifacts.html">Build Artifacts</a> so you
-            know exactly what the core produces from your adapter's output.
-          </li>
-          <li>
-            Keep the
+        <div class="callout">
+          <p>
+            This page walks through the full surface. If you just want a
+            reference implementation open in another tab, the
             <a
               href="https://github.com/angular-architects/module-federation-plugin/tree/main/libs/native-federation-esbuild"
               target="_blank"
               rel="noopener"
               >esbuild adapter source</a
             >
-            open in another tab as a reference implementation.
+            is the smallest complete example, and the corresponding
+            <a href="esbuild/builder.html">Builder</a> page documents every
+            piece you're about to reimplement.
+          </p>
+        </div>
+
+        <h2>Before you start</h2>
+        <ul>
+          <li>
+            Read <a href="../core/build-process.html">Build Process</a> to
+            understand the lifecycle the core drives
+            (<code>setup</code> → <code>build</code> →
+            <code>dispose</code>, once per phase).
+          </li>
+          <li>
+            Read <a href="../core/build-adapters.html">Build Adapters</a> for
+            the contract surface itself.
+          </li>
+          <li>
+            Read <a href="../core/artifacts.html">Build Artifacts</a> so you
+            know exactly which files the core expects you to emit and what it
+            does with them.
           </li>
         </ul>
 
         <h2>1. The contract</h2>
-        <p>An adapter is any object that implements:</p>
+        <p>
+          An adapter is any object that implements
+          <code>NFBuildAdapter</code> from
+          <code>@softarc/native-federation/domain</code>:
+        </p>
         <pre><code>interface NFBuildAdapter {
   setup(name: string, options: NFBuildAdapterOptions): Promise&lt;void&gt;;
 
@@ -112,157 +111,507 @@
 }</code></pre>
         <p>
           The core calls these in phases. Each phase has a unique
-          <code>name</code> such as <code>'browser-shared'</code>,
-          <code>'node-shared'</code>, <code>'browser-&lt;pkg&gt;'</code>, or
-          <code>'mapping-or-exposed'</code>. One persistent bundler context per
-          <code>name</code> is the pattern you want — it's what makes watch-mode
-          rebuilds cheap.
+          <code>name</code> — use it as the key for a bundler context you
+          keep alive between rebuilds. One persistent bundler context per
+          <code>name</code> is the pattern you want: it's what makes
+          incremental rebuilds cheap and is exactly how the esbuild adapter
+          uses <code>esbuild.context()</code>.
         </p>
 
-        <h2>2. Phase cheat-sheet</h2>
+        <h2>2. The phases the core drives</h2>
+        <p>
+          During a full build the core will call your adapter for up to three
+          families of phases:
+        </p>
         <ul>
           <li>
-            <code>browser-shared</code> / <code>node-shared</code> — all
-            <code>build: 'default'</code> externals for that platform in one go.
+            <code>browser-shared</code> / <code>node-shared</code> — every
+            <code>build: 'default'</code> external for that platform bundled
+            in one pass. Called as a matched <code>setup</code> →
+            <code>build</code> → <code>dispose</code> triple.
           </li>
           <li>
-            <code>browser-&lt;pkg&gt;</code> / <code>node-&lt;pkg&gt;</code> —
-            externals declared with <code>build: 'separate'</code> or
-            <code>build: 'package'</code>, one phase per package group.
+            <code>browser-&lt;pkg&gt;</code> /
+            <code>node-&lt;pkg&gt;</code> — externals declared with
+            <code>build: 'separate'</code> or
+            <code>build: 'package'</code>, one phase per package group, again
+            as a matched triple.
           </li>
           <li>
-            <code>mapping-or-exposed</code> — every <code>exposes</code> entry
-            plus every shared <code>tsconfig</code> path.
+            <code>mapping-or-exposed</code> — every <code>exposes</code>
+            entry plus every shared <code>tsconfig</code> path. This phase
+            is special: the core keeps its context alive across incremental
+            rebuilds. <code>setup</code> is called once, then
+            <code>build</code> is called again (with
+            <code>modifiedFiles</code> populated) for every subsequent
+            rebuild, and <code>dispose</code> is only called when the whole
+            federation builder shuts down.
           </li>
         </ul>
         <p>
           The <code>options.isMappingOrExposed</code> flag tells you which
-          family you're in. Shared externals and exposed modules usually need
-          different bundler settings (format, platform, resolve.extensions, …).
+          family you're in. Shared externals and source-code exposed modules
+          usually need different bundler settings — different
+          <code>resolveExtensions</code>, different plugins (externals are
+          often CommonJS), different <code>platform</code> handling. The
+          esbuild adapter splits this into
+          <code>createSourceCodeEsbuildContext</code> vs
+          <code>createNodeModulesEsbuildContext</code>; yours probably wants
+          the same split.
         </p>
 
-        <h2>3. The setup checklist</h2>
-        <ol>
-          <li>
-            Create a bundler context (esbuild <code>context</code>, Rspack
-            <code>Compiler</code>, Vite dev server, …). Store it keyed by
-            <code>name</code>.
-          </li>
-          <li>
-            Map <code>options.entryPoints</code> to your bundler's entry syntax.
-            Each entry has <code>fileName</code> (source),
-            <code>outName</code> (desired output) and an optional
-            <code>key</code>.
-          </li>
-          <li>
-            Mark <code>options.external</code> as external — never inline them.
-          </li>
-          <li>
-            Respect <code>options.outdir</code>, <code>options.platform</code>,
-            <code>options.dev</code>, <code>options.hash</code>,
-            <code>options.chunks</code>.
-          </li>
-          <li>
-            Wire <code>options.tsConfigPath</code> into your bundler's
-            TypeScript pipeline.
-          </li>
-          <li>
-            Honor <code>options.mappedPaths</code> so shared
-            <code>tsconfig</code> paths resolve correctly.
-          </li>
-        </ol>
+        <h2>3. <code>NFBuildAdapterOptions</code></h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>entryPoints</code></td>
+                <td><code>EntryPoint[]</code></td>
+                <td>
+                  <code>{ fileName, outName, key? }</code>. Use
+                  <code>fileName</code> as the bundler's entry source and
+                  <code>outName</code> as the basename of the emitted file
+                  (without hash placeholders — the core handles hashing via
+                  <code>options.hash</code>).
+                </td>
+              </tr>
+              <tr>
+                <td><code>external</code></td>
+                <td><code>string[]</code></td>
+                <td>
+                  Modules the bundler must <em>not</em> inline. Pass through
+                  as-is to your bundler's externals setting.
+                </td>
+              </tr>
+              <tr>
+                <td><code>outdir</code></td>
+                <td><code>string</code></td>
+                <td>
+                  Absolute target directory for emitted files. For externals
+                  it points at the cache directory; for
+                  <code>mapping-or-exposed</code> it's the project's
+                  <code>outputPath</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>isMappingOrExposed</code></td>
+                <td><code>boolean</code></td>
+                <td>
+                  <code>true</code> for the source-code phase,
+                  <code>false</code> for externals.
+                </td>
+              </tr>
+              <tr>
+                <td><code>platform</code></td>
+                <td><code>'browser' | 'node'</code></td>
+                <td>Forwarded to the bundler's platform setting.</td>
+              </tr>
+              <tr>
+                <td><code>hash</code></td>
+                <td><code>boolean</code></td>
+                <td>
+                  If <code>true</code>, append a content hash to emitted
+                  filenames. The core uses the filename you emit to populate
+                  <code>remoteEntry.json</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>dev</code></td>
+                <td><code>boolean</code></td>
+                <td>
+                  Enable sourcemaps, disable minification, set
+                  <code>process.env.NODE_ENV</code> to
+                  <code>"development"</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>watch</code></td>
+                <td><code>boolean</code></td>
+                <td>
+                  Informational — the core doesn't drive the watcher for
+                  you; it just tells you whether the builder is running in
+                  watch mode so you can pick a long-lived context.
+                </td>
+              </tr>
+              <tr>
+                <td><code>chunks</code></td>
+                <td><code>boolean</code></td>
+                <td>
+                  Informational. The core decides how to wire chunks into
+                  <code>remoteEntry.json</code>; your job is to emit them
+                  and return them in <code>NFBuildAdapterResult[]</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>tsConfigPath</code></td>
+                <td><code>string?</code></td>
+                <td>
+                  Wire into your TypeScript pipeline (esbuild:
+                  <code>tsconfig</code>; swc: its config; Vite:
+                  forward to its esbuild options).
+                </td>
+              </tr>
+              <tr>
+                <td><code>mappedPaths</code></td>
+                <td><code>PathToImport</code></td>
+                <td>
+                  Resolved <code>tsconfig</code> path aliases. Honor these
+                  so shared-mapping entries resolve to the same file your
+                  app resolves them to.
+                </td>
+              </tr>
+              <tr>
+                <td><code>optimizedMappings</code></td>
+                <td><code>boolean?</code></td>
+                <td>
+                  <code>true</code> when
+                  <code>features.ignoreUnusedDeps</code> is on. Usually
+                  means you can skip the default Node-lib externals list.
+                </td>
+              </tr>
+              <tr>
+                <td><code>cache</code></td>
+                <td><code>FederationCache&lt;TBundlerCache&gt;</code></td>
+                <td>
+                  Shared cache object. <code>cache.bundlerCache</code> is
+                  the only field adapters should touch — see
+                  <a href="#section-cache">§6. The bundler cache</a>.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        <h2>4. The build checklist</h2>
-        <ol>
-          <li>
-            Run the stored context. If <code>opts.modifiedFiles</code> is
-            present, you're being asked for an incremental rebuild.
-          </li>
-          <li>
-            Thread <code>opts.signal</code> through to anything cancellable —
-            the core uses it to abort stale builds when a newer change lands.
-          </li>
-          <li>
-            Return <em>every</em> emitted file as an
-            <code>NFBuildAdapterResult</code> with an absolute
-            <code>fileName</code>. Include chunks and sourcemaps — the core
-            filters them itself.
-          </li>
-        </ol>
-
-        <h2>5. The dispose checklist</h2>
+        <h2>4. What <code>build()</code> must return</h2>
+        <p>
+          Every emitted file — entry, chunk, <code>.map</code> — goes into
+          the returned <code>NFBuildAdapterResult[]</code> with an
+          <em>absolute</em> <code>fileName</code>. Don't try to filter chunks
+          or sourcemaps yourself: the core does that and matches entries by
+          basename against <code>outName</code>, so filtering on your side
+          breaks chunk tracking.
+        </p>
+        <p>
+          The esbuild adapter writes files to disk inside
+          <code>build()</code> and returns the paths it wrote. If your
+          bundler already writes to disk, hand the paths back. If it returns
+          in-memory buffers, write them first — the core reads the files
+          back to hash them and to rewrite chunk imports.
+        </p>
+        <p>If <code>opts.signal</code> aborts:</p>
         <ul>
-          <li><code>dispose(name)</code> — close a single phase's context.</li>
           <li>
-            <code>dispose()</code> with no argument — shut everything down. The
-            core calls this from <code>federationBuilder.close()</code>.
+            Cancel the in-flight bundle — esbuild has
+            <code>ctx.cancel()</code>; other bundlers vary.
+          </li>
+          <li>
+            Throw
+            <code>AbortedError</code> from
+            <code>@softarc/native-federation/internal</code>. The core
+            checks <code>instanceof AbortedError</code> to distinguish
+            cancellations from real build failures.
           </li>
         </ul>
 
-        <h2>6. Incremental &amp; watch mode</h2>
+        <h2>5. <code>dispose()</code> semantics</h2>
+        <ul>
+          <li>
+            <code>dispose(name)</code> — close a single phase's context.
+            Called at the end of every externals phase.
+          </li>
+          <li>
+            <code>dispose()</code> with no argument — shut everything down.
+            Called from <code>federationBuilder.close()</code> or the
+            equivalent in your builder. If your bundler has a daemon (like
+            esbuild), stop it here.
+          </li>
+        </ul>
+
+        <h2 id="section-cache">6. The bundler cache</h2>
         <p>
-          <em
-            >TODO: document the file-watcher contract, rebuild queue, and
-            build-notifications endpoint.</em
-          >
-          For now, study how the esbuild adapter uses
-          <code>options.cache.bundlerCache</code> to persist its esbuild
-          <code>context</code> between rebuilds, and how it cooperates with
-          <code>createNfWatcher</code> from
-          <code>@softarc/native-federation/internal</code>.
+          <code>options.cache.bundlerCache</code> is a persistent bag of
+          state the core hands you across rebuilds. The core doesn't look
+          inside it — it's yours. The esbuild adapter uses a
+          <code>Map&lt;string, unknown&gt;</code> where the keys are the
+          absolute paths of every input file esbuild's
+          <code>metafile</code> reported, and the values are
+          <code>null</code> (only the key set matters).
+        </p>
+        <p>
+          Populate it on every successful build; invalidate entries for
+          <code>modifiedFiles</code> at the start of each rebuild so stale
+          caches don't mask a changed file.
+        </p>
+        <pre><code>// After a successful build:
+for (const input of Object.keys(result.metafile.inputs)) {
+  bundlerCache.set(input, null);
+}
+
+// At the start of the next rebuild:
+if (opts.modifiedFiles) {
+  for (const file of opts.modifiedFiles) bundlerCache.delete(file);
+}</code></pre>
+        <p>
+          The reason this matters is the file watcher — covered next.
         </p>
 
-        <h2>7. Handling CommonJS / UMD libraries</h2>
+        <h2 id="section-watcher">7. The file watcher</h2>
         <p>
-          <em>TODO.</em> Some ecosystems (React especially) still ship CommonJS
-          bundles with dynamic <code>exports</code> tricks. You'll likely need a
-          file-replacement layer (mirroring what the esbuild adapter exposes as
-          <code>fileReplacements</code> / <code>compensateExports</code>) before
-          handing these to your bundler.
+          Native Federation ships a lightweight recursive
+          <code>fs.watch</code>-based watcher in
+          <code>@softarc/native-federation/internal</code>. You don't have
+          to use it — any watcher that produces changed paths works — but
+          it's designed to pair with the bundler cache:
+        </p>
+        <pre><code>import {
+  createNfWatcher,
+  syncNfFileWatcher,
+  type NfFileWatcher,
+} from '@softarc/native-federation/internal';
+
+const bundlerCache = new Map&lt;string, unknown&gt;();
+
+const watcher: NfFileWatcher = createNfWatcher({
+  onChange: path =&gt; {
+    pendingChanges.add(path);
+    void triggerRebuild();
+  },
+});
+
+// After each build: subscribe to every input file we just compiled.
+syncNfFileWatcher(watcher, bundlerCache);</code></pre>
+        <p>
+          <code>syncNfFileWatcher</code> reads the keys from
+          <code>bundlerCache</code>, filters out
+          <code>node_modules</code>, and calls
+          <code>watcher.addPaths()</code> with anything it hasn't seen
+          before. That's why the bundler cache is keyed by input path: one
+          successful build automatically produces the watch set for the
+          next one.
+        </p>
+        <p>The watcher API:</p>
+        <ul>
+          <li>
+            <code>addPaths(paths)</code> — start watching files or
+            directories. Directory watches are recursive.
+          </li>
+          <li>
+            <code>close()</code> — stop all watches. Always call before
+            process exit.
+          </li>
+          <li>
+            <code>get() / clear() / mutate()</code> — for drivers that
+            want to batch dirty paths manually instead of via
+            <code>onChange</code>.
+          </li>
+        </ul>
+
+        <h2 id="section-queue">8. The rebuild queue</h2>
+        <p>
+          Two file saves in quick succession should produce exactly one
+          successful rebuild — not two races to the same output. The core
+          ships <code>RebuildQueue</code> for that:
+        </p>
+        <pre><code>import { RebuildQueue, AbortedError } from '@softarc/native-federation/internal';
+
+const rebuildQueue = new RebuildQueue();
+
+async function triggerRebuild(): Promise&lt;void&gt; {
+  await rebuildQueue.track(async signal =&gt; {
+    try {
+      await abortableDelay(rebuildDelay, signal);
+
+      const files = [...pendingChanges];
+      pendingChanges.clear();
+
+      await rebuildForFederation(config, options, externals, files, signal);
+      syncNfFileWatcher(watcher, bundlerCache);
+      return { success: true };
+    } catch (error) {
+      if (error instanceof AbortedError) {
+        return { success: false, cancelled: true };
+      }
+      return { success: false };
+    }
+  });
+}</code></pre>
+        <p>
+          <code>rebuildQueue.track(fn)</code> aborts any in-flight build
+          before starting a new one and waits for the old build to
+          acknowledge the abort. The
+          <code>signal</code> it hands <code>fn</code> is the same one you
+          forward to <code>build(name, { signal })</code>, which is the
+          same one you listen to inside the adapter to cancel the bundler.
+          End-to-end: a file save while a rebuild is in flight
+          <em>cancels</em> the old rebuild, drains it, and starts a fresh
+          one against the new <code>modifiedFiles</code> set.
+        </p>
+        <p>
+          <code>rebuildQueue.dispose()</code> aborts everything in flight
+          — call it from your builder's <code>close()</code> method before
+          disposing the adapter.
         </p>
 
-        <h2>8. Minimal skeleton</h2>
-        <pre><code>import type { NFBuildAdapter } from '@softarc/native-federation/domain';
+        <h2>9. Incremental rebuilds and <code>modifiedFiles</code></h2>
+        <p>
+          When the core calls <code>build('mapping-or-exposed', { modifiedFiles })</code>
+          on an already-<code>setup</code> context, it's telling you:
+          &ldquo;these input paths changed since the last build — your
+          cached state for them is stale.&rdquo; You must:
+        </p>
+        <ol>
+          <li>
+            Evict those paths from
+            <code>options.cache.bundlerCache</code> (as shown in
+            <a href="#section-cache">§6</a>).
+          </li>
+          <li>
+            Run the bundler. Most bundlers with a persistent context
+            (esbuild's <code>ctx.rebuild()</code>, Rspack's
+            <code>compiler.watch()</code>, Vite's dev server HMR) will
+            reuse what they have and only redo the affected graph.
+          </li>
+          <li>
+            Return the full emitted set again. The core reconciles names
+            itself.
+          </li>
+        </ol>
+        <p>
+          The externals phases don't pass <code>modifiedFiles</code> — they
+          run once per federation build. Only
+          <code>mapping-or-exposed</code> is incremental.
+        </p>
+
+        <h2>10. CommonJS / UMD externals</h2>
+        <p>
+          Real-world externals are frequently CommonJS with dynamic
+          <code>exports</code> tricks (React is the canonical offender).
+          Bundlers that default to ESM will trip over these. The esbuild
+          adapter solves this in two places and you'll likely want to
+          mirror both:
+        </p>
+        <ul>
+          <li>
+            A <strong>CommonJS plugin</strong> (it uses
+            <code>@chialab/esbuild-plugin-commonjs</code>) applied to the
+            externals phase only, to translate CJS into something
+            ESM-friendly.
+          </li>
+          <li>
+            A <strong><code>fileReplacements</code></strong> /
+            <strong><code>compensateExports</code></strong> layer that
+            swaps the resolved entry for a hand-written shim when the
+            package's own <code>exports</code> field points at something
+            unbundlable. See
+            <a href="esbuild/configuration.html">esbuild adapter
+            configuration</a> for how this is exposed to users.
+          </li>
+        </ul>
+
+        <h2>11. Build notifications (optional)</h2>
+        <p>
+          In dev mode the core writes a
+          <code>buildNotificationsEndpoint</code> into
+          <code>remoteEntry.json</code>. Runtime clients long-poll it to
+          know when a remote has rebuilt. If you're writing a
+          builder that owns a dev server, you can implement the endpoint
+          and push one of the
+          <code>BuildNotificationType</code> values
+          (<code>federation-rebuild-complete</code>,
+          <code>federation-rebuild-error</code>,
+          <code>federation-rebuild-cancelled</code>) after each rebuild.
+          It's opt-in and lives entirely outside the adapter contract — a
+          convenience for hot-reload workflows.
+        </p>
+
+        <h2>12. Minimal adapter skeleton</h2>
+        <pre><code>import type {
+  NFBuildAdapter,
+  NFBuildAdapterOptions,
+  NFBuildAdapterResult,
+} from '@softarc/native-federation/domain';
+import { AbortedError } from '@softarc/native-federation/internal';
+
+type BundlerCache = Map&lt;string, unknown&gt;;
+
+interface Cached {
+  ctx: MyBundlerContext;
+  outdir: string;
+  bundlerCache: BundlerCache | undefined;
+}
 
 export function createMyAdapter(): NFBuildAdapter {
-  const contexts = new Map&lt;string, MyBundlerContext&gt;();
+  const contexts = new Map&lt;string, Cached&gt;();
 
   return {
-    async setup(name, options) {
-      const ctx = await myBundler.createContext({
-        entries: options.entryPoints,
-        external: options.external,
+    async setup(name, options: NFBuildAdapterOptions&lt;BundlerCache&gt;) {
+      if (contexts.has(name)) return;
+
+      const ctx = options.isMappingOrExposed
+        ? await createSourceContext(options)
+        : await createExternalsContext(options);
+
+      contexts.set(name, {
+        ctx,
         outdir: options.outdir,
-        platform: options.platform ?? 'browser',
-        sourcemap: options.dev,
-        tsconfig: options.tsConfigPath,
-        paths: options.mappedPaths,
+        bundlerCache: options.cache?.bundlerCache,
       });
-      contexts.set(name, ctx);
     },
 
-    async build(name, opts) {
-      const ctx = contexts.get(name)!;
-      const result = await ctx.rebuild({
-        modifiedFiles: opts?.modifiedFiles,
-        signal: opts?.signal,
-      });
-      return result.outputs.map(o =&gt; ({ fileName: o.path }));
+    async build(name, opts = {}) {
+      const entry = contexts.get(name);
+      if (!entry) throw new Error(`setup() not called for "${name}"`);
+
+      if (opts.signal?.aborted) throw new AbortedError('[build] Aborted before rebuild');
+
+      if (opts.modifiedFiles &amp;&amp; entry.bundlerCache) {
+        for (const f of opts.modifiedFiles) entry.bundlerCache.delete(f);
+      }
+
+      const onAbort = () =&gt; entry.ctx.cancel();
+      opts.signal?.addEventListener('abort', onAbort, { once: true });
+
+      try {
+        const result = await entry.ctx.rebuild();
+        const written = writeOutputs(result, entry.outdir);
+
+        if (entry.bundlerCache) {
+          for (const input of result.inputs) entry.bundlerCache.set(input, null);
+        }
+
+        return written.map(fileName =&gt; ({ fileName }));
+      } catch (error) {
+        if (opts.signal?.aborted) throw new AbortedError('[build] cancelled');
+        throw error;
+      } finally {
+        opts.signal?.removeEventListener('abort', onAbort);
+      }
     },
 
     async dispose(name) {
       if (name) {
-        await contexts.get(name)?.dispose();
+        await contexts.get(name)?.ctx.dispose();
         contexts.delete(name);
-      } else {
-        for (const ctx of contexts.values()) await ctx.dispose();
-        contexts.clear();
+        return;
       }
+      await Promise.all([...contexts.values()].map(c =&gt; c.ctx.dispose()));
+      contexts.clear();
     },
   };
 }</code></pre>
 
-        <h2>9. Wiring it up</h2>
+        <h2>13. Wiring it into a one-shot build</h2>
+        <p>
+          Simplest case — you just want the federation artifacts written
+          once:
+        </p>
         <pre><code>import { federationBuilder } from '@softarc/native-federation';
 import { createMyAdapter } from './my-adapter';
 
@@ -276,39 +625,155 @@ await federationBuilder.init({
   adapter: createMyAdapter(),
 });
 
+// Build the app itself with federationBuilder.externals marked external.
 await myAppBundler.build({ external: federationBuilder.externals });
 
 await federationBuilder.build();
 await federationBuilder.close();</code></pre>
 
-        <h2>Open questions &amp; TODO</h2>
+        <h2>14. Wiring it into a watch-mode builder</h2>
+        <p>
+          If you want the same ergonomics as
+          <code>runEsBuildBuilder</code> — a single call that runs the
+          initial build, wires up the watcher and rebuild queue, and
+          returns a <code>close()</code> handle — this is the shape to
+          copy. Everything imported from
+          <code>@softarc/native-federation/internal</code> is shipped
+          specifically for adapter authors.
+        </p>
+        <pre><code>import {
+  buildForFederation,
+  createFederationCache,
+  getExternals,
+  normalizeFederationOptions,
+  rebuildForFederation,
+  setBuildAdapter,
+} from '@softarc/native-federation';
+import {
+  AbortedError,
+  RebuildQueue,
+  createNfWatcher,
+  syncNfFileWatcher,
+  type NfFileWatcher,
+} from '@softarc/native-federation/internal';
+import { createMyAdapter } from './my-adapter';
+
+export async function runMyBuilder(federationConfigPath: string, options: MyOptions) {
+  const adapter = createMyAdapter();
+  setBuildAdapter(adapter);
+
+  const bundlerCache = new Map&lt;string, unknown&gt;();
+  const { config, options: fedOptions } = await normalizeFederationOptions(
+    { /* ... */ },
+    createFederationCache(options.cachePath, bundlerCache),
+  );
+  const externals = getExternals(config);
+
+  let federationInfo = await buildForFederation(config, fedOptions, externals);
+
+  if (!options.watch) {
+    return { federationInfo, externals, close: () =&gt; adapter.dispose() };
+  }
+
+  const rebuildQueue = new RebuildQueue();
+  const pendingChanges = new Set&lt;string&gt;();
+  let closed = false;
+
+  const watcher: NfFileWatcher = createNfWatcher({
+    onChange: path =&gt; {
+      if (closed) return;
+      pendingChanges.add(path);
+      void triggerRebuild();
+    },
+  });
+  syncNfFileWatcher(watcher, bundlerCache);
+
+  async function triggerRebuild() {
+    await rebuildQueue.track(async signal =&gt; {
+      try {
+        await abortableDelay(options.rebuildDelay ?? 50, signal);
+        const files = [...pendingChanges];
+        pendingChanges.clear();
+
+        federationInfo = await rebuildForFederation(
+          config, fedOptions, externals, files, signal,
+        );
+        syncNfFileWatcher(watcher, bundlerCache);
+        return { success: true };
+      } catch (error) {
+        if (error instanceof AbortedError) return { success: false, cancelled: true };
+        return { success: false };
+      }
+    });
+  }
+
+  return {
+    get federationInfo() { return federationInfo; },
+    externals,
+    async close() {
+      closed = true;
+      rebuildQueue.dispose();
+      await watcher.close();
+      await adapter.dispose();
+    },
+  };
+}</code></pre>
+        <p>
+          That's the whole watch-mode machinery. If you squint it's 40
+          lines of glue: <code>createNfWatcher</code> streams changes into
+          a <code>Set</code>, a debounced <code>RebuildQueue.track</code>
+          drains that set into a
+          <code>rebuildForFederation</code> call, and
+          <code>syncNfFileWatcher</code> re-subscribes to whatever inputs
+          the latest build touched. Disposal unwinds in reverse order.
+        </p>
+
+        <h2>15. Things that frequently bite</h2>
         <ul>
           <li>
-            Document the <code>FederationCache.bundlerCache</code> contract for
-            long-lived state.
+            <strong>Relative paths in results.</strong> The core matches by
+            basename but reads files by absolute path. Return absolute
+            paths.
           </li>
           <li>
-            Write a reference checklist for wiring a dev server / HMR proxy into
-            the build-notifications endpoint.
+            <strong>Not forwarding <code>signal</code>.</strong> Without
+            this, <code>RebuildQueue</code> will still fire the next
+            rebuild, but the previous one runs to completion in parallel
+            and wastes CPU — and in the worst case overwrites the newer
+            output.
           </li>
           <li>
-            Add a conformance test suite adapter authors can run against their
-            implementation.
+            <strong>Skipping <code>syncNfFileWatcher</code> after
+            rebuild.</strong> New dynamic imports that land in the source
+            graph after the first build won't be watched until you
+            re-sync. Symptom: edits to a newly-imported file don't trigger
+            a rebuild.
           </li>
-          <li>Publish a <code>create-nf-adapter</code> starter template.</li>
+          <li>
+            <strong>Keeping state on the adapter instance instead of the
+            cache.</strong> The core can recreate the adapter between
+            builds; long-lived state belongs in
+            <code>options.cache.bundlerCache</code>.
+          </li>
+          <li>
+            <strong>Forgetting to call <code>dispose()</code> without a
+            name.</strong> Many bundlers leak a subprocess
+            (esbuild's service, swc's worker pool). Call
+            <code>dispose()</code> on process exit.
+          </li>
         </ul>
 
         <div class="callout">
           <p>
-            Building an adapter and want to share it? Open a PR against the
+            Built an adapter and want to share it? Open a PR against the
             <a
               href="https://github.com/native-federation"
               target="_blank"
               rel="noopener"
               >native-federation GitHub org</a
             >
-            or drop a link on the
-            <a href="../resources.html">Resources</a> page.
+            or add a link to the
+            <a href="../../resources.html">Resources</a> page.
           </p>
         </div>
       </main>
