@@ -1,49 +1,85 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orchestrator Configuration — Native Federation Docs</title>
-  <meta name="description" content="Every option you can pass to initFederation — host entry, import-map implementation, logging, resolution modes and storage.">
-  <link rel="canonical" href="https://native-federation.io/docs/orchestrator/configuration.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Orchestrator Configuration — Native Federation Docs">
-  <meta property="og:description" content="Full configuration reference for @softarc/native-federation-orchestrator.">
-  <meta property="og:url" content="https://native-federation.io/docs/orchestrator/configuration.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../images/favicon.png">
-  <link rel="stylesheet" href="../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orchestrator Configuration — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="Every option you can pass to initFederation — host entry, import-map implementation, logging, resolution modes and storage."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/orchestrator/configuration.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:title"
+      content="Orchestrator Configuration — Native Federation Docs"
+    />
+    <meta
+      property="og:description"
+      content="Full configuration reference for @softarc/native-federation-orchestrator."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/orchestrator/configuration.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>Configuration</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          Everything you pass as the second argument to
+          <code>initFederation</code> lives on this page. Options are grouped
+          into five concerns — host entry, import-map implementation, logging,
+          modes, and storage — and every option ships with a sensible default,
+          so a bare <code>initFederation(manifest)</code> is already a valid
+          call.
+        </p>
 
-    <main class="docs-content">
-      <h1>Configuration</h1>
-      <div class="version-support">
-        <span class="version-support__label">Applies to</span>
-        <label class="version-check"><input type="checkbox" disabled checked><span>v3</span></label>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
-      </div>
-      <p class="doc-lead">Everything you pass as the second argument to <code>initFederation</code> lives on this page. Options are grouped into five concerns — host entry, import-map implementation, logging, modes, and storage — and every option ships with a sensible default, so a bare <code>initFederation(manifest)</code> is already a valid call.</p>
+        <ul>
+          <li><a href="#host">1. Host configuration</a></li>
+          <li><a href="#import-map">2. Import-map implementation</a></li>
+          <li><a href="#logging">3. Logging</a></li>
+          <li>
+            <a href="#modes">4. Modes — strictness &amp; resolution profile</a>
+          </li>
+          <li><a href="#storage">5. Storage</a></li>
+        </ul>
 
-      <ul>
-        <li><a href="#host">1. Host configuration</a></li>
-        <li><a href="#import-map">2. Import-map implementation</a></li>
-        <li><a href="#logging">3. Logging</a></li>
-        <li><a href="#modes">4. Modes — strictness &amp; resolution profile</a></li>
-        <li><a href="#storage">5. Storage</a></li>
-      </ul>
+        <h2 id="host">1. Host configuration</h2>
+        <p>
+          A <strong>host remote entry</strong> is a
+          <code>remoteEntry.json</code> published by the host itself. Whenever
+          an external appears both in the host entry and in a regular remote,
+          the host version wins — making this the right escape hatch for locking
+          a framework or design-system version globally.
+        </p>
 
-      <h2 id="host">1. Host configuration</h2>
-      <p>A <strong>host remote entry</strong> is a <code>remoteEntry.json</code> published by the host itself. Whenever an external appears both in the host entry and in a regular remote, the host version wins — making this the right escape hatch for locking a framework or design-system version globally.</p>
-
-      <pre><code>type HostOptions = {
+        <pre><code>type HostOptions = {
   hostRemoteEntry?: string | false | {
     name?: string;
     url: string;
@@ -51,69 +87,113 @@
   };
 };</code></pre>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Option</th><th>Default</th><th>Description</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>hostRemoteEntry</code></td>
-              <td><code>false</code></td>
-              <td>Adds a host <code>remoteEntry.json</code> that takes precedence during shared-version resolution. Can be a URL, the full object form, or <code>false</code> to disable.</td>
-            </tr>
-            <tr>
-              <td><code>hostRemoteEntry.cacheTag</code></td>
-              <td><em>none</em></td>
-              <td>Opaque string appended as a query parameter — the orchestrator treats a new <code>cacheTag</code> as a different file and refetches. Use this to bust caches after a host redeploy.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>hostRemoteEntry</code></td>
+                <td><code>false</code></td>
+                <td>
+                  Adds a host <code>remoteEntry.json</code> that takes
+                  precedence during shared-version resolution. Can be a URL, the
+                  full object form, or <code>false</code> to disable.
+                </td>
+              </tr>
+              <tr>
+                <td><code>hostRemoteEntry.cacheTag</code></td>
+                <td><em>none</em></td>
+                <td>
+                  Opaque string appended as a query parameter — the orchestrator
+                  treats a new <code>cacheTag</code> as a different file and
+                  refetches. Use this to bust caches after a host redeploy.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <h3>Example</h3>
-      <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
+        <h3>Example</h3>
+        <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
 
 initFederation('http://example.org/manifest.json', {
   hostRemoteEntry: { url: './remoteEntry.json', cacheTag: 'v1.2.3' },
 });</code></pre>
 
-      <h2 id="import-map">2. Import-map implementation</h2>
-      <p>The orchestrator commits a standard <a href="https://caniuse.com/import-maps" target="_blank" rel="noopener">import map</a> to the DOM and uses the browser's own <code>import()</code> to load modules. For older browsers — or whenever you need <a href="version-resolver.html#dynamic-init">dynamic init</a> — swap in <a href="https://www.npmjs.com/package/es-module-shims" target="_blank" rel="noopener">es-module-shims</a>.</p>
+        <h2 id="import-map">2. Import-map implementation</h2>
+        <p>
+          The orchestrator commits a standard
+          <a
+            href="https://caniuse.com/import-maps"
+            target="_blank"
+            rel="noopener"
+            >import map</a
+          >
+          to the DOM and uses the browser's own <code>import()</code> to load
+          modules. For older browsers — or whenever you need
+          <a href="version-resolver.html#dynamic-init">dynamic init</a> — swap
+          in
+          <a
+            href="https://www.npmjs.com/package/es-module-shims"
+            target="_blank"
+            rel="noopener"
+            >es-module-shims</a
+          >.
+        </p>
 
-      <pre><code>type ImportMapOptions = {
+        <pre><code>type ImportMapOptions = {
   loadModuleFn?:   (url: string) =&gt; Promise&lt;unknown&gt;;
   setImportMapFn?: (importMap: ImportMap, opts?: { override?: boolean }) =&gt; Promise&lt;ImportMap&gt;;
   reloadBrowserFn?: () =&gt; void;
 };</code></pre>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Option</th><th>Default</th><th>Description</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>setImportMapFn</code></td>
-              <td><code>replaceInDOM('importmap')</code></td>
-              <td>How to commit an import map — by default, replaces any existing <code>&lt;script type="importmap"&gt;</code> in the DOM.</td>
-            </tr>
-            <tr>
-              <td><code>loadModuleFn</code></td>
-              <td><code>url =&gt; import(url)</code></td>
-              <td>How a module is actually imported. Override when you need the shim loader or custom instrumentation.</td>
-            </tr>
-            <tr>
-              <td><code>reloadBrowserFn</code></td>
-              <td><code>() =&gt; window.location.reload()</code></td>
-              <td>Called when the SSE dev feature detects a rebuilt remote. Override for custom reload UX.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>setImportMapFn</code></td>
+                <td><code>replaceInDOM('importmap')</code></td>
+                <td>
+                  How to commit an import map — by default, replaces any
+                  existing <code>&lt;script type="importmap"&gt;</code> in the
+                  DOM.
+                </td>
+              </tr>
+              <tr>
+                <td><code>loadModuleFn</code></td>
+                <td><code>url =&gt; import(url)</code></td>
+                <td>
+                  How a module is actually imported. Override when you need the
+                  shim loader or custom instrumentation.
+                </td>
+              </tr>
+              <tr>
+                <td><code>reloadBrowserFn</code></td>
+                <td><code>() =&gt; window.location.reload()</code></td>
+                <td>
+                  Called when the SSE dev feature detects a rebuilt remote.
+                  Override for custom reload UX.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <h3>Two ready-made presets</h3>
-      <pre><code>import 'es-module-shims';
+        <h3>Two ready-made presets</h3>
+        <pre><code>import 'es-module-shims';
 import { initFederation } from '@softarc/native-federation-orchestrator';
 import {
   useShimImportMap,
@@ -133,14 +213,22 @@ initFederation('http://example.org/manifest.json', {
   setImportMapFn: replaceInDOM('importmap'),
 });</code></pre>
 
-      <div class="callout">
-        <p><code>useShimImportMap</code> is required for dynamic init — native import maps can be committed to the DOM only once, while es-module-shims accepts additional maps at runtime.</p>
-      </div>
+        <div class="callout">
+          <p>
+            <code>useShimImportMap</code> is required for dynamic init — native
+            import maps can be committed to the DOM only once, while
+            es-module-shims accepts additional maps at runtime.
+          </p>
+        </div>
 
-      <h2 id="logging">3. Logging</h2>
-      <p>Diagnostics for both development and production. Ships with two built-in loggers and accepts any object that matches the <code>Logger</code> interface.</p>
+        <h2 id="logging">3. Logging</h2>
+        <p>
+          Diagnostics for both development and production. Ships with two
+          built-in loggers and accepts any object that matches the
+          <code>Logger</code> interface.
+        </p>
 
-      <pre><code>type LoggingOptions = {
+        <pre><code>type LoggingOptions = {
   logger?:   Logger;
   logLevel?: 'debug' | 'warn' | 'error';
   sse?:      boolean;
@@ -152,33 +240,46 @@ interface Logger {
   error(step: number, msg: string, details?: unknown): void;
 }</code></pre>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Option</th><th>Default</th><th>Description</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>logger</code></td>
-              <td><code>noopLogger</code></td>
-              <td>Where logs go. Use <code>consoleLogger</code> during development, or provide your own for Sentry / Bugsnag / etc.</td>
-            </tr>
-            <tr>
-              <td><code>logLevel</code></td>
-              <td><code>'error'</code></td>
-              <td>Level threshold. <code>'warn'</code> emits warn+error; <code>'debug'</code> emits everything.</td>
-            </tr>
-            <tr>
-              <td><code>sse</code></td>
-              <td><code>false</code></td>
-              <td>Dev feature — listens to server-sent rebuild events from remotes and triggers <code>reloadBrowserFn</code>.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>logger</code></td>
+                <td><code>noopLogger</code></td>
+                <td>
+                  Where logs go. Use <code>consoleLogger</code> during
+                  development, or provide your own for Sentry / Bugsnag / etc.
+                </td>
+              </tr>
+              <tr>
+                <td><code>logLevel</code></td>
+                <td><code>'error'</code></td>
+                <td>
+                  Level threshold. <code>'warn'</code> emits warn+error;
+                  <code>'debug'</code> emits everything.
+                </td>
+              </tr>
+              <tr>
+                <td><code>sse</code></td>
+                <td><code>false</code></td>
+                <td>
+                  Dev feature — listens to server-sent rebuild events from
+                  remotes and triggers <code>reloadBrowserFn</code>.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <h3>Example</h3>
-      <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
+        <h3>Example</h3>
+        <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
 import { noopLogger, consoleLogger } from '@softarc/native-federation-orchestrator/options';
 
 initFederation('http://example.org/manifest.json', {
@@ -186,10 +287,15 @@ initFederation('http://example.org/manifest.json', {
   logger: consoleLogger,     // or noopLogger, or a custom Logger
 });</code></pre>
 
-      <h2 id="modes">4. Modes — strictness &amp; resolution profile</h2>
-      <p>Mode options are the hyperparameters for the <a href="version-resolver.html">Version Resolver</a>: how strict to be when something unexpected happens, and how aggressively to reuse cached state.</p>
+        <h2 id="modes">4. Modes — strictness &amp; resolution profile</h2>
+        <p>
+          Mode options are the hyperparameters for the
+          <a href="version-resolver.html">Version Resolver</a>: how strict to be
+          when something unexpected happens, and how aggressively to reuse
+          cached state.
+        </p>
 
-      <pre><code>type ModeOptions = {
+        <pre><code>type ModeOptions = {
   strict?: boolean | {
     strictRemoteEntry?: boolean;
     strictExternalCompatibility?: boolean;
@@ -204,79 +310,139 @@ initFederation('http://example.org/manifest.json', {
   };
 };</code></pre>
 
-      <h3 id="strictness">Strictness</h3>
-      <p>All flags default to <code>false</code>, which means "log and continue". Setting <code>strict: true</code> turns them all on at once.</p>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Option</th><th>Effect</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>strict</code></td>
-              <td>Shortcut — sets every specific strict flag below to <code>true</code>.</td>
-            </tr>
-            <tr>
-              <td><code>strict.strictRemoteEntry</code></td>
-              <td>Throws on malformed <code>remoteEntry.json</code>. When <code>false</code>, the broken remote is skipped and initialization continues.</td>
-            </tr>
-            <tr>
-              <td><code>strict.strictExternalCompatibility</code></td>
-              <td>Throws when two shared externals have incompatible version ranges. When <code>false</code>, the incompatible version is demoted to a scoped external with a warning.</td>
-            </tr>
-            <tr>
-              <td><code>strict.strictExternalSameVersionCompatibility</code></td>
-              <td>Niche edge case — throws when an already-cached shared version is re-submitted with a different <code>requiredVersion</code> range. Otherwise, the cached entry is preserved.</td>
-            </tr>
-            <tr>
-              <td><code>strict.strictExternalVersion</code></td>
-              <td>Throws if a shared external's <code>version</code> is missing or not valid semver. When <code>false</code>, the first entry matching <code>requiredVersion</code> is picked.</td>
-            </tr>
-            <tr>
-              <td><code>strict.strictImportMap</code></td>
-              <td>Throws when the import-map builder encounters corrupt cache state.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <h3 id="strictness">Strictness</h3>
+        <p>
+          All flags default to <code>false</code>, which means "log and
+          continue". Setting <code>strict: true</code> turns them all on at
+          once.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Effect</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>strict</code></td>
+                <td>
+                  Shortcut — sets every specific strict flag below to
+                  <code>true</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>strict.strictRemoteEntry</code></td>
+                <td>
+                  Throws on malformed <code>remoteEntry.json</code>. When
+                  <code>false</code>, the broken remote is skipped and
+                  initialization continues.
+                </td>
+              </tr>
+              <tr>
+                <td><code>strict.strictExternalCompatibility</code></td>
+                <td>
+                  Throws when two shared externals have incompatible version
+                  ranges. When <code>false</code>, the incompatible version is
+                  demoted to a scoped external with a warning.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>strict.strictExternalSameVersionCompatibility</code>
+                </td>
+                <td>
+                  Niche edge case — throws when an already-cached shared version
+                  is re-submitted with a different
+                  <code>requiredVersion</code> range. Otherwise, the cached
+                  entry is preserved.
+                </td>
+              </tr>
+              <tr>
+                <td><code>strict.strictExternalVersion</code></td>
+                <td>
+                  Throws if a shared external's <code>version</code> is missing
+                  or not valid semver. When <code>false</code>, the first entry
+                  matching <code>requiredVersion</code> is picked.
+                </td>
+              </tr>
+              <tr>
+                <td><code>strict.strictImportMap</code></td>
+                <td>
+                  Throws when the import-map builder encounters corrupt cache
+                  state.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <h3 id="profile">Resolution profile</h3>
-      <p>The profile controls <em>how</em> the resolver picks winners and <em>whether</em> it refreshes cached remotes.</p>
+        <h3 id="profile">Resolution profile</h3>
+        <p>
+          The profile controls <em>how</em> the resolver picks winners and
+          <em>whether</em> it refreshes cached remotes.
+        </p>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Option</th><th>Default</th><th>Description</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>profile.latestSharedExternal</code></td>
-              <td><code>false</code></td>
-              <td>When <code>true</code>, always pick the highest version in the scope. When <code>false</code> (default), pick the version that minimizes extra scoped downloads.</td>
-            </tr>
-            <tr>
-              <td><code>profile.overrideCachedRemotes</code></td>
-              <td><code>'init-only'</code></td>
-              <td>When to refetch a remote that already lives in cache — see below.</td>
-            </tr>
-            <tr>
-              <td><code>profile.overrideCachedRemotesIfURLMatches</code></td>
-              <td><code>false</code></td>
-              <td>By default, a cached remote is only overridden when its URL changed. Set this to <code>true</code> to force refetch even when the URL is identical.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>profile.latestSharedExternal</code></td>
+                <td><code>false</code></td>
+                <td>
+                  When <code>true</code>, always pick the highest version in the
+                  scope. When <code>false</code> (default), pick the version
+                  that minimizes extra scoped downloads.
+                </td>
+              </tr>
+              <tr>
+                <td><code>profile.overrideCachedRemotes</code></td>
+                <td><code>'init-only'</code></td>
+                <td>
+                  When to refetch a remote that already lives in cache — see
+                  below.
+                </td>
+              </tr>
+              <tr>
+                <td><code>profile.overrideCachedRemotesIfURLMatches</code></td>
+                <td><code>false</code></td>
+                <td>
+                  By default, a cached remote is only overridden when its URL
+                  changed. Set this to <code>true</code> to force refetch even
+                  when the URL is identical.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <p><code>overrideCachedRemotes</code> values:</p>
-      <ul>
-        <li><code>'never'</code> — don't touch cached remotes, ever. Strongest cache, slowest pickup of new versions.</li>
-        <li><code>'init-only'</code> (default) — allow overrides during <code>initFederation</code>, skip during dynamic init. Good compromise.</li>
-        <li><code>'always'</code> — always check and possibly refetch. Use when cache freshness matters more than bandwidth.</li>
-      </ul>
+        <p><code>overrideCachedRemotes</code> values:</p>
+        <ul>
+          <li>
+            <code>'never'</code> — don't touch cached remotes, ever. Strongest
+            cache, slowest pickup of new versions.
+          </li>
+          <li>
+            <code>'init-only'</code> (default) — allow overrides during
+            <code>initFederation</code>, skip during dynamic init. Good
+            compromise.
+          </li>
+          <li>
+            <code>'always'</code> — always check and possibly refetch. Use when
+            cache freshness matters more than bandwidth.
+          </li>
+        </ul>
 
-      <h3>Two ready-made profiles</h3>
-      <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
+        <h3>Two ready-made profiles</h3>
+        <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
 import { defaultProfile, cachingProfile } from '@softarc/native-federation-orchestrator/options';
 
 // defaultProfile
@@ -290,46 +456,75 @@ initFederation('http://example.org/manifest.json', {
   profile: cachingProfile,
 });</code></pre>
 
-      <div class="callout">
-        <p>The caching profile is tempting but comes with a trade-off: newly deployed remote versions won't be picked up until the cache is explicitly cleared. Pair it with <code>clearStorage: true</code> on cache-busting events, or stick with <code>defaultProfile</code> when remotes change frequently.</p>
-      </div>
+        <div class="callout">
+          <p>
+            The caching profile is tempting but comes with a trade-off: newly
+            deployed remote versions won't be picked up until the cache is
+            explicitly cleared. Pair it with <code>clearStorage: true</code> on
+            cache-busting events, or stick with <code>defaultProfile</code> when
+            remotes change frequently.
+          </p>
+        </div>
 
-      <h2 id="storage">5. Storage</h2>
-      <p>The orchestrator keeps its internal caches (remote info, shared externals, scoped externals) inside a <strong>storage entry</strong>. The default is an in-memory map on <code>globalThis</code>, but any <code>Storage</code>-compatible backend works.</p>
+        <h2 id="storage">5. Storage</h2>
+        <p>
+          The orchestrator keeps its internal caches (remote info, shared
+          externals, scoped externals) inside a <strong>storage entry</strong>.
+          The default is an in-memory map on <code>globalThis</code>, but any
+          <code>Storage</code>-compatible backend works.
+        </p>
 
-      <pre><code>type StorageOptions = {
+        <pre><code>type StorageOptions = {
   storage?:          StorageEntryCreator;
   clearStorage?:     boolean;
   storageNamespace?: string;
 };</code></pre>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Option</th><th>Default</th><th>Description</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>storage</code></td>
-              <td><code>globalThisStorageEntry</code></td>
-              <td>How the cache is persisted. Built-ins: <code>globalThisStorageEntry</code>, <code>sessionStorageEntry</code>, <code>localStorageEntry</code>. Custom implementations are supported.</td>
-            </tr>
-            <tr>
-              <td><code>clearStorage</code></td>
-              <td><code>false</code></td>
-              <td>When <code>true</code>, <code>initFederation</code> wipes the namespace before initializing — handy for one-shot cache busts after a deploy.</td>
-            </tr>
-            <tr>
-              <td><code>storageNamespace</code></td>
-              <td><code>'__NATIVE_FEDERATION__'</code></td>
-              <td>Namespace prefix for stored keys (e.g. <code>__NATIVE_FEDERATION__.remotes</code>). Change it to run multiple orchestrators on the same origin.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>storage</code></td>
+                <td><code>globalThisStorageEntry</code></td>
+                <td>
+                  How the cache is persisted. Built-ins:
+                  <code>globalThisStorageEntry</code>,
+                  <code>sessionStorageEntry</code>,
+                  <code>localStorageEntry</code>. Custom implementations are
+                  supported.
+                </td>
+              </tr>
+              <tr>
+                <td><code>clearStorage</code></td>
+                <td><code>false</code></td>
+                <td>
+                  When <code>true</code>, <code>initFederation</code> wipes the
+                  namespace before initializing — handy for one-shot cache busts
+                  after a deploy.
+                </td>
+              </tr>
+              <tr>
+                <td><code>storageNamespace</code></td>
+                <td><code>'__NATIVE_FEDERATION__'</code></td>
+                <td>
+                  Namespace prefix for stored keys (e.g.
+                  <code>__NATIVE_FEDERATION__.remotes</code>). Change it to run
+                  multiple orchestrators on the same origin.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <h3>Example</h3>
-      <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
+        <h3>Example</h3>
+        <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
 import {
   globalThisStorageEntry,
   localStorageEntry,
@@ -350,12 +545,17 @@ initFederation('http://example.org/manifest.json', {
   storage: localStorageEntry,
 });</code></pre>
 
-      <div class="callout">
-        <p>Most server-rendered hosts want <code>sessionStorageEntry</code>: it survives navigation-triggered full reloads (the whole point of caching here) but is automatically cleared when the tab closes, so a stale resolution can never live longer than the user's session.</p>
-      </div>
+        <div class="callout">
+          <p>
+            Most server-rendered hosts want <code>sessionStorageEntry</code>: it
+            survives navigation-triggered full reloads (the whole point of
+            caching here) but is automatically cleared when the tab closes, so a
+            stale resolution can never live longer than the user's session.
+          </p>
+        </div>
 
-      <h2>Putting it together</h2>
-      <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
+        <h2>Putting it together</h2>
+        <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
 import {
   consoleLogger,
   sessionStorageEntry,
@@ -384,19 +584,47 @@ const { loadRemoteModule } = await initFederation(manifest, {
   clearStorage: false,
 });</code></pre>
 
-      <h2>See also</h2>
-      <ul>
-        <li><a href="version-resolver.html">Version Resolver</a> — how the profile and strictness flags actually shape resolution output.</li>
-        <li><a href="architecture.html#caches">Architecture — caches</a> — what lives in the storage namespace.</li>
-        <li><a href="getting-started.html">Getting Started</a> — worked examples for the quickstart, registry and custom setups.</li>
-      </ul>
-    </main>
-  </div>
+        <h2>See also</h2>
+        <ul>
+          <li>
+            <a
+              href="https://github.com/native-federation/orchestrator/blob/main/docs/config.md"
+              >The orchestrator docs</a
+            >
+            — Which shows a bit more in-depth how the orchestrator can be
+            configured.
+          </li>
+          <li>
+            <a href="version-resolver.html">Version Resolver</a> — how the
+            profile and strictness flags actually shape resolution output.
+          </li>
+          <li>
+            <a href="architecture.html#caches">Architecture — caches</a> — what
+            lives in the storage namespace.
+          </li>
+          <li>
+            <a href="getting-started.html">Getting Started</a> — worked examples
+            for the quickstart, registry and custom setups.
+          </li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../../components.js"></script>
-</body>
+    <script src="../../components.js"></script>
+  </body>
 </html>

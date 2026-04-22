@@ -1,48 +1,85 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Getting Started — esbuild Adapter</title>
-  <meta name="description" content="Install the esbuild adapter and build your first React remote with Native Federation.">
-  <link rel="canonical" href="https://native-federation.io/docs/adapters/esbuild/getting-started.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Getting Started — esbuild Adapter">
-  <meta property="og:description" content="Walk through the React reference example for the Native Federation esbuild adapter.">
-  <meta property="og:url" content="https://native-federation.io/docs/adapters/esbuild/getting-started.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../../images/favicon.png">
-  <link rel="stylesheet" href="../../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Getting Started — esbuild Adapter</title>
+    <meta
+      name="description"
+      content="Install the esbuild adapter and build your first React remote with Native Federation."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/adapters/esbuild/getting-started.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Getting Started — esbuild Adapter" />
+    <meta
+      property="og:description"
+      content="Walk through the React reference example for the Native Federation esbuild adapter."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/adapters/esbuild/getting-started.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../../images/favicon.png" />
+    <link rel="stylesheet" href="../../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>Getting Started</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          This page walks the
+          <a
+            href="https://github.com/Aukevanoost/native-federation-examples-react/"
+            target="_blank"
+            rel="noopener"
+            >React reference example</a
+          >
+          end-to-end — a <code>federation.config.js</code>, a
+          <code>build.mjs</code> that drives the adapter, and a host page that
+          mounts the remote as a custom element. The whole setup is roughly
+          fifty lines.
+        </p>
 
-    <main class="docs-content">
-      <h1>Getting Started</h1>
-      <div class="version-support">
-        <span class="version-support__label">Applies to</span>
-        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
-      </div>
-      <p class="doc-lead">This page walks the <a href="https://github.com/Aukevanoost/native-federation-examples-react/" target="_blank" rel="noopener">React reference example</a> end-to-end — a <code>federation.config.js</code>, a <code>build.mjs</code> that drives the adapter, and a host page that mounts the remote as a custom element. The whole setup is roughly fifty lines.</p>
-
-      <h2>1. Install</h2>
-      <pre><code>npm i -D esbuild \
+        <h2>1. Install</h2>
+        <pre><code>npm i -D esbuild \
   @softarc/native-federation \
   @softarc/native-federation-esbuild \
   @chialab/esbuild-plugin-commonjs
 npm i @softarc/native-federation-orchestrator</code></pre>
-      <p>Also make sure your <code>package.json</code> has <code>"type": "module"</code> — the adapter and its generated <code>federation.config.js</code> are native ESM.</p>
+        <p>
+          Also make sure your <code>package.json</code> has
+          <code>"type": "module"</code> — the adapter and its generated
+          <code>federation.config.js</code> are native ESM.
+        </p>
 
-      <h2>2. <code>federation.config.js</code></h2>
-      <p>Declare the remote's name, what it exposes, and how it shares dependencies. This is the exact configuration the React example uses:</p>
-      <pre><code>import {
+        <h2>2. <code>federation.config.js</code></h2>
+        <p>
+          Declare the remote's name, what it exposes, and how it shares
+          dependencies. This is the exact configuration the React example uses:
+        </p>
+        <pre><code>import {
   withNativeFederation,
   shareAll,
 } from "@softarc/native-federation/config";
@@ -87,16 +124,37 @@ export default withNativeFederation({
     'react-dom/test-utils'
   ]
 });</code></pre>
-      <p>A few things are specifically shaped for React; the rest is standard federation config — see <a href="../../core/configuration.html">federation.config.js</a> for the full schema.</p>
-      <ul>
-        <li><code>react</code> and <code>react-dom</code> are pinned as <strong>singletons</strong> with <code>includeSecondaries: { keepAll: true }</code> — React's internal sub-modules (<code>react/jsx-runtime</code>, <code>react-dom/client</code>, …) must all resolve to the same copy.</li>
-        <li>The <code>skip</code> list removes server entry points that React ships but the browser build should not try to bundle.</li>
-        <li><code>features.ignoreUnusedDeps: true</code> tells the core to skip sharing anything the build didn't actually pull in — useful for apps that list everything in <code>package.json</code>.</li>
-      </ul>
+        <p>
+          A few things are specifically shaped for React; the rest is standard
+          federation config — see
+          <a href="../../core/configuration.html">federation.config.js</a> for
+          the full schema.
+        </p>
+        <ul>
+          <li>
+            <code>react</code> and <code>react-dom</code> are pinned as
+            <strong>singletons</strong> with
+            <code>includeSecondaries: { keepAll: true }</code> — React's
+            internal sub-modules (<code>react/jsx-runtime</code>,
+            <code>react-dom/client</code>, …) must all resolve to the same copy.
+          </li>
+          <li>
+            The <code>skip</code> list removes server entry points that React
+            ships but the browser build should not try to bundle.
+          </li>
+          <li>
+            <code>features.ignoreUnusedDeps: true</code> tells the core to skip
+            sharing anything the build didn't actually pull in — useful for apps
+            that list everything in <code>package.json</code>.
+          </li>
+        </ul>
 
-      <h2>3. <code>build.mjs</code></h2>
-      <p>The adapter does not ship a CLI. You call <code>runEsBuildBuilder</code> from a small Node script:</p>
-      <pre><code>import { createServer } from 'http';
+        <h2>3. <code>build.mjs</code></h2>
+        <p>
+          The adapter does not ship a CLI. You call
+          <code>runEsBuildBuilder</code> from a small Node script:
+        </p>
+        <pre><code>import { createServer } from 'http';
 import { readFileSync, existsSync } from 'fs';
 import { extname, join } from 'path';
 import { runEsBuildBuilder } from '@softarc/native-federation-esbuild';
@@ -120,23 +178,54 @@ if (isDev) {
   await federation.close();
   console.log('Build complete.');
 }</code></pre>
-      <p>The option names mirror <code>EsBuildBuilderOptions</code> one-to-one (see <a href="builder.html">Builder</a>). In short:</p>
-      <ul>
-        <li><code>outputPath</code> — where federation artifacts and the bundled entry points are written. <code>remoteEntry.json</code> lands here.</li>
-        <li><code>dev: true</code> — sourcemaps on, minification off.</li>
-        <li><code>watch: true</code> — start the file watcher and rebuild queue; calling <code>federation.close()</code> stops them.</li>
-        <li><code>entryPoints</code> — the source files esbuild starts from. You normally list the files named in <code>exposes</code>.</li>
-        <li><code>adapterConfig.plugins</code> — extra esbuild plugins for the source bundle (Sass, SVG loader, …). Leave empty if you don't need any.</li>
-      </ul>
-      <p>In production mode (<code>npm run build</code>), the script awaits <code>federation.close()</code> to tear esbuild down cleanly and exits. In dev mode, <code>watch: true</code> keeps the process alive — the adapter rebuilds on file changes and the tiny HTTP server serves <code>dist/</code> and <code>public/</code>.</p>
+        <p>
+          The option names mirror <code>EsBuildBuilderOptions</code> one-to-one
+          (see <a href="builder.html">Builder</a>). In short:
+        </p>
+        <ul>
+          <li>
+            <code>outputPath</code> — where federation artifacts and the bundled
+            entry points are written. <code>remoteEntry.json</code> lands here.
+          </li>
+          <li><code>dev: true</code> — sourcemaps on, minification off.</li>
+          <li>
+            <code>watch: true</code> — start the file watcher and rebuild queue;
+            calling <code>federation.close()</code> stops them.
+          </li>
+          <li>
+            <code>entryPoints</code> — the source files esbuild starts from. You
+            normally list the files named in <code>exposes</code>.
+          </li>
+          <li>
+            <code>adapterConfig.plugins</code> — extra esbuild plugins for the
+            source bundle (Sass, SVG loader, …). Leave empty if you don't need
+            any.
+          </li>
+        </ul>
+        <p>
+          In production mode (<code>npm run build</code>), the script awaits
+          <code>federation.close()</code> to tear esbuild down cleanly and
+          exits. In dev mode, <code>watch: true</code> keeps the process alive —
+          the adapter rebuilds on file changes and the tiny HTTP server serves
+          <code>dist/</code> and <code>public/</code>.
+        </p>
 
-      <div class="callout">
-        <p>The example uses a hand-written <code>http.createServer</code> because the adapter is deliberately framework-agnostic. You can just as easily pipe its output into Vite, a Fastify static server, or <code>@web/dev-server</code>.</p>
-      </div>
+        <div class="callout">
+          <p>
+            The example uses a hand-written
+            <code>http.createServer</code> because the adapter is deliberately
+            framework-agnostic. You can just as easily pipe its output into
+            Vite, a Fastify static server, or <code>@web/dev-server</code>.
+          </p>
+        </div>
 
-      <h2>4. Host page (<code>public/index.html</code>)</h2>
-      <p>The host page declares the remotes, pulls in the orchestrator runtime, and mounts the remote's custom element. No JS framework needed on the host itself:</p>
-      <pre><code>&lt;!doctype html&gt;
+        <h2>4. Host page (<code>public/index.html</code>)</h2>
+        <p>
+          The host page declares the remotes, pulls in the orchestrator runtime,
+          and mounts the remote's custom element. No JS framework needed on the
+          host itself:
+        </p>
+        <pre><code>&lt;!doctype html&gt;
 &lt;html&gt;
   &lt;head&gt;
     &lt;meta charset="utf-8" /&gt;
@@ -157,18 +246,27 @@ if (isDev) {
     &lt;/script&gt;
 
     &lt;!-- 3. Include the orchestrator runtime --&gt;
-    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.0/quickstart.mjs"&gt;&lt;/script&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.2/quickstart.mjs"&gt;&lt;/script&gt;
   &lt;/head&gt;
   &lt;body&gt;
     &lt;!-- 4. Use your loaded components --&gt;
     &lt;my-react-app&gt;&lt;/my-react-app&gt;
   &lt;/body&gt;
 &lt;/html&gt;</code></pre>
-      <p>See the <a href="../../orchestrator/index.html">orchestrator docs</a> for the full <code>quickstart.mjs</code> story, or <a href="../../runtime/init-federation.html">initFederation</a> if you want to drive loading manually.</p>
+        <p>
+          See the
+          <a href="../../orchestrator/index.html">orchestrator docs</a> for the
+          full <code>quickstart.mjs</code> story, or
+          <a href="../../runtime/init-federation.html">initFederation</a> if you
+          want to drive loading manually.
+        </p>
 
-      <h2>5. <code>src/bootstrap.tsx</code></h2>
-      <p>The exposed entry point registers a custom element that owns a Shadow DOM — this keeps the remote's styles from leaking into the host page:</p>
-      <pre><code>import { StrictMode } from 'react';
+        <h2>5. <code>src/bootstrap.tsx</code></h2>
+        <p>
+          The exposed entry point registers a custom element that owns a Shadow
+          DOM — this keeps the remote's styles from leaking into the host page:
+        </p>
+        <pre><code>import { StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { styles } from './styles';
 import { TodoApp } from './TodoApp';
@@ -199,32 +297,56 @@ class MyReactAppElement extends HTMLElement {
 if (!customElements.get('my-react-app')) {
   customElements.define('my-react-app', MyReactAppElement);
 }</code></pre>
-      <p>The custom-element-plus-Shadow-DOM pattern is covered in more detail on the <a href="react-interop.html">React &amp; CommonJS Interop</a> page.</p>
+        <p>
+          The custom-element-plus-Shadow-DOM pattern is covered in more detail
+          on the
+          <a href="react-interop.html">React &amp; CommonJS Interop</a> page.
+        </p>
 
-      <h2>6. Run it</h2>
-      <p>Wire the two scripts in <code>package.json</code>:</p>
-      <pre><code>{
+        <h2>6. Run it</h2>
+        <p>Wire the two scripts in <code>package.json</code>:</p>
+        <pre><code>{
   "scripts": {
     "start": "node build.mjs --dev",
     "build": "node build.mjs"
   }
 }</code></pre>
-      <pre><code>npm start   # dev server on http://localhost:3000 with file watching
+        <pre><code>npm start   # dev server on http://localhost:3000 with file watching
 npm run build   # writes dist/remoteEntry.json + bundled artifacts</code></pre>
 
-      <h2>Next Steps</h2>
-      <ul>
-        <li><a href="builder.html">Builder</a> — the full <code>EsBuildBuilderOptions</code> reference.</li>
-        <li><a href="configuration.html">Adapter Configuration</a> — add esbuild plugins, file replacements and custom loaders.</li>
-        <li><a href="react-interop.html">React &amp; CommonJS Interop</a> — what to do when a CJS library doesn't Just Work.</li>
-      </ul>
-    </main>
-  </div>
+        <h2>Next Steps</h2>
+        <ul>
+          <li>
+            <a href="builder.html">Builder</a> — the full
+            <code>EsBuildBuilderOptions</code> reference.
+          </li>
+          <li>
+            <a href="configuration.html">Adapter Configuration</a> — add esbuild
+            plugins, file replacements and custom loaders.
+          </li>
+          <li>
+            <a href="react-interop.html">React &amp; CommonJS Interop</a> — what
+            to do when a CJS library doesn't Just Work.
+          </li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../../../components.js"></script>
-</body>
+    <script src="../../../components.js"></script>
+  </body>
 </html>

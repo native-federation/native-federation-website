@@ -81,7 +81,10 @@
             <strong>Discover.</strong> Read the manifest (inline object or URL
             pointing to a JSON manifest) to know which remotes exist. The
             <code>quickstart.mjs</code> bundle additionally reads a manifest out
-            of a <code>&lt;script type="application/json" id="mfe-manifest"&gt;</code>
+            of a
+            <code
+              >&lt;script type="application/json" id="mfe-manifest"&gt;</code
+            >
             element before handing it to <code>initFederation</code>.
           </li>
           <li>
@@ -106,9 +109,9 @@
           <li>
             <strong>Expose loaders.</strong> Resolve the
             <code>initFederation</code> promise with
-            <code>loadRemoteModule</code>, <code>load</code>,
-            <code>as</code>, <code>config</code>, <code>adapters</code>
-            and <code>initRemoteEntry</code>.
+            <code>loadRemoteModule</code>, <code>load</code>, <code>as</code>,
+            <code>config</code>, <code>adapters</code> and
+            <code>initRemoteEntry</code>.
           </li>
         </ol>
 
@@ -331,8 +334,8 @@
           Dependencies with <code>singleton: false</code> are always scoped to
           their remote. The cache is a simple map
           <code>remoteName → packageName → { tag, file, bundle? }</code>; the
-          import-map builder later joins each <code>file</code> to the
-          owning remote's <code>scopeUrl</code>:
+          import-map builder later joins each <code>file</code> to the owning
+          remote's <code>scopeUrl</code>:
         </p>
         <pre><code>{
   "scoped-externals": {
@@ -426,9 +429,9 @@
             remote resolves the import inside its own scope.
           </li>
           <li>
-            <strong>Shared chunks</strong> — when a v4 remote opts into
-            chunked shared externals, each chunk sibling is registered inside
-            the owning remote's scope under an internal specifier (e.g.
+            <strong>Shared chunks</strong> — when a v4 remote opts into chunked
+            shared externals, each chunk sibling is registered inside the owning
+            remote's scope under an internal specifier (e.g.
             <code>@nf-internal/chunk-IXOA6WTM</code>). Dynamic imports emitted
             by the bundler inside a shared package then resolve to the right
             sibling file without polluting the global <code>imports</code>.
@@ -554,6 +557,13 @@
 
         <h2>Where to go next</h2>
         <ul>
+          <li>
+            <a
+              href="https://github.com/native-federation/orchestrator/blob/main/docs/architecture.md"
+              >The orchestrator docs</a
+            >
+            — The orchestrator docs regarding native-federation's architecture.
+          </li>
           <li>
             <a href="version-resolver.html">Version Resolver</a> — the algorithm
             behind <code>share</code> / <code>skip</code> /
