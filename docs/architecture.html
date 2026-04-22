@@ -122,10 +122,10 @@
         <pre><code>                 ┌─────────────────────┐      plugs in      ┌────────────┐
                  │         Core        │ ◄───────────────── │  Adapter   │
                  │ (federationBuilder) │                    │  (esbuild, │
-                 │                     │ ──────────────────► │   Angular) │
-                 └──────────┬──────────┘   delegates build   └────────────┘
-                            │ emits
-              remoteEntry.json + importmap.json + bundles
+                 │                     │ ──────────────────►│  Angular)  │
+                 └──────────┬──────────┘   delegates build  └────────────┘
+                            │ 
+                            │ exposes remoteEntry.json + remotes + shared external bundles              
                             │
                             ▼
           ┌──────────────────────────────────────┐
