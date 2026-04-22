@@ -60,9 +60,7 @@
         <div class="callout">
           <p>
             The fastest path is
-            <code
-              >ng g @angular-architects/native-federation-v4:update-v4</code
-            >
+            <code>ng g @angular-architects/native-federation-v4:update-v4</code>
             — see
             <a href="schematics.html#update-v4">Schematics → update-v4</a>. Pass
             <code>--project &lt;name&gt;</code> to scope it to a single project,
@@ -75,7 +73,7 @@
 
         <h2>Files Touched</h2>
         <pre><code>📁 /
-├── 📄 package.json                     ← "type": "module", new deps
+├── 📄 package.json                     ← (optional) "type": "module", new deps
 ├── 📄 angular.json                     ← v4 builder name, entryPoints, projectName
 └── 📁 projects/&lt;your-project&gt;/
     ├── 📄 federation.config.mjs        ← renamed from .js, CommonJS → ESM, package rename
@@ -97,7 +95,7 @@
     "@softarc/native-federation-runtime": "~4.0.0"
   },
   "devDependencies": {
-    "@angular-architects/native-federation-v4": "21.x.x",
+    "@angular-architects/native-federation-v4": "^21.1.12",
     "@softarc/native-federation": "~4.0.0",
     "@softarc/native-federation-orchestrator": "^4.0.0"
   }
@@ -110,7 +108,10 @@
           code changes needed at that point.
         </p>
 
-        <h2>2. <code>federation.config.js</code> → <code>federation.config.mjs</code></h2>
+        <h2>
+          2. <code>federation.config.js</code> →
+          <code>federation.config.mjs</code>
+        </h2>
         <p>
           Rename the file to <code>federation.config.mjs</code>, switch from
           CommonJS to ESM, and update the import path. Functionally everything
@@ -178,9 +179,9 @@ export default withNativeFederation({
           <code>@angular-architects/native-federation-v4:build</code>. The
           <code>update-v4</code> schematic also seeds every federation target
           with <code>entryPoints</code> (defaulting to
-          <code>&lt;sourceRoot&gt;/main.ts</code>) and <code>projectName</code>
-          when they aren't already set. A typical <code>serve</code> target on
-          v4:
+          <code>&lt;sourceRoot&gt;/main.ts</code>) and
+          <code>projectName</code> when they aren't already set. A typical
+          <code>serve</code> target on v4:
         </p>
         <pre><code>"serve": {
   "builder": "@angular-architects/native-federation-v4:build",
@@ -222,9 +223,10 @@ initFederation()
         <p>
           The <code>update-v4</code> schematic offers this step interactively
           via the <code>--orchestrator</code> flag (or the prompt). It keeps
-          your existing <code>initFederation</code> first argument (the
-          manifest path, remote map, or <code>{ '&lt;project&gt;': './remoteEntry.json' }</code>)
-          and appends the orchestrator's options block as a second argument:
+          your existing <code>initFederation</code> first argument (the manifest
+          path, remote map, or
+          <code>{ '&lt;project&gt;': './remoteEntry.json' }</code>) and appends
+          the orchestrator's options block as a second argument:
         </p>
         <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
 import {
@@ -246,8 +248,8 @@ initFederation('/assets/federation.manifest.json', {
         <p>
           The biggest behavioural change is that
           <code>loadRemoteModule</code> is no longer a global export — it's
-          returned from the resolved <code>initFederation</code> promise. If
-          you rely on <code>loadRemoteModule</code> inside your Angular code
+          returned from the resolved <code>initFederation</code> promise. If you
+          rely on <code>loadRemoteModule</code> inside your Angular code
           (routes, components, services), thread it through Angular's DI:
         </p>
         <pre><code>import { initFederation, type NativeFederationResult, type LoadRemoteModule } from '@softarc/native-federation-orchestrator';

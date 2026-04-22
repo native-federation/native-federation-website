@@ -201,7 +201,7 @@
               </tr>
               <tr>
                 <td>Angular version</td>
-                <td>Angular 14–19</td>
+                <td>Angular 14–21</td>
                 <td>Angular 20+ (one backwards-compatible major)</td>
               </tr>
               <tr>
@@ -271,9 +271,8 @@
         <h2 id="angular-version">Angular Version</h2>
         <p>
           The v4 Angular adapter targets <strong>Angular 20 and above</strong>,
-          with one backwards-compatible major so Angular 19 projects can still
-          upgrade. If you are on Angular 14–19 and cannot upgrade Angular yet,
-          stay on v3.
+          with one backwards-compatible major. If you are on Angular 14–19 and
+          cannot upgrade Angular yet, stay on v3.
         </p>
         <p>
           The v4 adapter is currently in beta. It will be released as stable
@@ -289,11 +288,11 @@
         </p>
         <ol>
           <li>
-            <strong><code>package.json</code></strong> — add
+            <strong><code>package.json</code></strong> — (optionally) add
             <code>"type": "module"</code> to mark the workspace as ESM.
           </li>
           <li>
-            <strong><code>federation.config.js</code></strong> — switch from
+            <strong><code>federation.config.(m)js</code></strong> — switch from
             <code>require()</code> / <code>module.exports</code> to
             <code>import</code> / <code>export default</code>, and update the
             import path to the v4 adapter package.
@@ -301,10 +300,9 @@
         </ol>
         <div class="callout">
           <p>
-            If a legacy CommonJS script breaks after adding
-            <code>"type": "module"</code>, rename it to <code>.cjs</code> — Node
-            treats that extension as CommonJS regardless of the package-wide
-            setting.
+            The easiest change is to rename the `federation.config.js` to
+            `federation.config.mjs`. — Node will treat that extension as ESM
+            regardless of the package-wide setting.
           </p>
         </div>
         <p>
