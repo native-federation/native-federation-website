@@ -51,9 +51,11 @@
         <p class="doc-lead">
           The Angular adapter doesn't ship its own runtime — it re-exports
           <code>initFederation</code> and <code>loadRemoteModule</code> from
-          <code>@softarc/native-federation-runtime</code>. This page covers how
-          the two integrate with an Angular bootstrap and what changes when you
-          opt into the new
+          <code>@softarc/native-federation-runtime</code> (on v3 under
+          <code>@angular-architects/native-federation</code>, on v4 under
+          <code>@angular-architects/native-federation-v4</code>). This page
+          covers how the two integrate with an Angular bootstrap and what
+          changes when you opt into the new
           <a href="../runtime/index.html">orchestrator</a> runtime.
         </p>
 
@@ -146,8 +148,9 @@ export const APP_ROUTES: Routes = [
 ];</code></pre>
         <p>
           <code>remoteName</code> matches the <code>name</code> in the remote's
-          <code>federation.config.js</code> (and the key in the host's
-          manifest). <code>exposedKey</code> matches the key under
+          <code>federation.config.mjs</code> (or <code>.js</code> on v3 / legacy
+          projects) and the key in the host's manifest. <code>exposedKey</code>
+          matches the key under
           <code>exposes</code>. The promise resolves to the module's exports —
           whatever you'd get from a regular dynamic <code>import()</code>.
         </p>
@@ -181,15 +184,20 @@ export const APP_ROUTES: Routes = [
         <h2 id="orchestrator">Opting into the Orchestrator</h2>
         <p>
           The legacy runtime (<code>@softarc/native-federation-runtime</code>,
-          re-exported as <code>@angular-architects/native-federation</code>) is
-          the default for v3 setups. v4 introduces a more capable runtime — the
-          <strong>orchestrator</strong> — with range-based version selection,
-          share scopes, in-browser caching, configurable storage, and pluggable
-          loggers.
+          re-exported from the adapter as
+          <code>@angular-architects/native-federation</code> on v3 and
+          <code>@angular-architects/native-federation-v4</code> on v4) is the
+          v3 default and remains fully supported on v4. v4 introduces a more
+          capable runtime — the <strong>orchestrator</strong> — with
+          range-based version selection, share scopes, in-browser caching,
+          configurable storage, and pluggable loggers.
         </p>
         <p>
-          On v4 the schematic generates orchestrator-flavoured bootstraps by
-          default. Manually, the migration looks like this:
+          On v4 the <code>init</code> schematic generates
+          orchestrator-flavoured bootstraps by default, and
+          <code>update-v4 --orchestrator</code> rewrites an existing
+          <code>main.ts</code> onto the orchestrator. Manually, the migration
+          looks like this:
         </p>
         <pre><code>// projects/shell/src/main.ts
 import { initFederation } from '@softarc/native-federation-orchestrator';

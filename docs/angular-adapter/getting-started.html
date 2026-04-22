@@ -33,22 +33,22 @@
       <p class="doc-lead">Install the adapter, run <code>ng add</code> on every project that should participate in the federation, and you have a working host + remote pair within minutes. This page walks the happy path; the <a href="../tutorial.html">Tutorial</a> goes through a complete example.</p>
 
       <h2>1. Install</h2>
-      <pre><code>npm i @angular-architects/native-federation -D</code></pre>
-      <p>The package brings <code>@softarc/native-federation</code> and <code>@softarc/native-federation-runtime</code> as transitive dependencies — there is nothing else to install up front.</p>
+      <pre><code>npm i @angular-architects/native-federation-v4 -D</code></pre>
+      <p>The package brings <code>@softarc/native-federation</code> (<code>~4.0.0</code>) and <code>@softarc/native-federation-runtime</code> (<code>~4.0.0</code>) as transitive dependencies. The <code>ng add</code> step below adds <code>es-module-shims</code>, <code>@angular-devkit/build-angular</code> and <code>@softarc/native-federation-orchestrator</code> on top — nothing else to install up front.</p>
 
       <h2>2. Scaffold a Remote (Micro Frontend)</h2>
-      <pre><code>ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote</code></pre>
+      <pre><code>ng g @angular-architects/native-federation-v4:init --project mfe1 --port 4201 --type remote</code></pre>
       <p>This runs the <code>init</code> schematic against <code>mfe1</code>. See <a href="schematics.html#init">Schematics → init</a> for the full list of changes; in summary it:</p>
       <ul>
         <li>Adds <code>es-module-shims</code> to the polyfills.</li>
-        <li>Generates <code>projects/mfe1/federation.config.js</code> with one entry exposed (<code>./Component</code> → the project's <code>app.component.ts</code>).</li>
+        <li>Generates <code>projects/mfe1/federation.config.mjs</code> with one entry exposed (<code>./Component</code> → the project's <code>app.component.ts</code>).</li>
         <li>Generates <code>projects/mfe1/tsconfig.federation.json</code>.</li>
-        <li>Renames the existing <code>build</code>/<code>serve</code> targets in <code>angular.json</code> to <code>esbuild</code> / <code>serve-original</code> and points <code>build</code>/<code>serve</code> at <code>@angular-architects/native-federation:build</code>.</li>
-        <li>Splits <code>main.ts</code> in two: a federation bootstrap, and the original Angular bootstrap moved to <code>bootstrap.ts</code>.</li>
+        <li>Renames the existing <code>build</code>/<code>serve</code> targets in <code>angular.json</code> to <code>esbuild</code> / <code>serve-original</code> and points <code>build</code>/<code>serve</code> at <code>@angular-architects/native-federation-v4:build</code>.</li>
+        <li>Splits <code>main.ts</code> in two: an orchestrator-based federation bootstrap, and the original Angular bootstrap moved to <code>bootstrap.ts</code>.</li>
       </ul>
 
       <h2>3. Scaffold a Host (Shell)</h2>
-      <pre><code>ng g @angular-architects/native-federation:init --project shell --port 4200 --type dynamic-host</code></pre>
+      <pre><code>ng g @angular-architects/native-federation-v4:init --project shell --port 4200 --type dynamic-host</code></pre>
       <p>The same schematic runs in <code>dynamic-host</code> mode for the shell. In addition to the changes above, it creates a <code>federation.manifest.json</code> in the project's <code>public/</code> (or <code>src/assets/</code>) folder listing the remotes it knows about:</p>
       <pre><code>{
   "mfe1": "http://localhost:4201/remoteEntry.json"
@@ -80,19 +80,37 @@
       </div>
 
       <h2>4. Wire a Lazy Route in the Host</h2>
-      <p>Loading a remote module is plain Angular lazy-loading with <code>loadRemoteModule</code> in place of a dynamic <code>import()</code>:</p>
+      <p>Loading a remote module is plain Angular lazy-loading with <code>loadRemoteModule</code> in place of a dynamic <code>import()</code>. On v4 the schematic wires the orchestrator by default, which returns <code>loadRemoteModule</code> from <code>initFederation</code> — pass it through Angular's DI so routes can use it:</p>
+      <pre><code>// projects/shell/src/main.ts (generated)
+import { initFederation } from '@softarc/native-federation-orchestrator';
+import {
+  useShimImportMap,
+  consoleLogger,
+  globalThisStorageEntry,
+} from '@softarc/native-federation-orchestrator/options';
+
+initFederation('/assets/federation.manifest.json', {
+  ...useShimImportMap({ shimMode: true }),
+  logger: consoleLogger,
+  storage: globalThisStorageEntry,
+  hostRemoteEntry: './remoteEntry.json',
+  logLevel: 'debug',
+})
+  .then(({ loadRemoteModule }) =&gt;
+    import('./bootstrap').then(m =&gt; m.bootstrap(loadRemoteModule)))
+  .catch(err =&gt; console.error(err));</code></pre>
       <pre><code>// projects/shell/src/app/app.routes.ts
 import { Routes } from '@angular/router';
-import { loadRemoteModule } from '@angular-architects/native-federation';
+import type { LoadRemoteModule } from '@softarc/native-federation-orchestrator';
 
-export const APP_ROUTES: Routes = [
+export const routes = (loadRemoteModule: LoadRemoteModule): Routes =&gt; [
   {
     path: 'flights',
     loadComponent: () =&gt;
       loadRemoteModule('mfe1', './Component').then(m =&gt; m.AppComponent),
   },
 ];</code></pre>
-      <p>See <a href="runtime.html">Runtime</a> for the full <code>loadRemoteModule</code> reference, including share-scope selection and the orchestrator runtime.</p>
+      <p>See <a href="runtime.html">Runtime</a> for the full <code>loadRemoteModule</code> reference, the bootstrap/app-config wiring, and how to stay on the classic runtime (<code>@softarc/native-federation-runtime</code>) if you prefer a global <code>loadRemoteModule</code> import.</p>
 
       <h2>5. Run It</h2>
       <pre><code>ng serve mfe1 -o   # in one terminal
@@ -102,17 +120,17 @@ ng serve shell -o  # in another</code></pre>
       <h2>What Got Generated</h2>
       <p>After running <code>ng add</code> against a project, expect the following layout:</p>
       <pre><code>projects/mfe1/
-├── federation.config.js          ← shared/exposes config (see Angular Config)
+├── federation.config.mjs         ← shared/exposes config (see Angular Config)
 ├── tsconfig.federation.json      ← extends tsconfig.json, used only by the federation builder
 └── src/
-    ├── main.ts                   ← initFederation(...) bootstrap
+    ├── main.ts                   ← initFederation(...) bootstrap (orchestrator by default)
     └── bootstrap.ts              ← the *original* Angular bootstrap (bootstrapApplication etc.)</code></pre>
       <p>And in the workspace root:</p>
-      <pre><code>angular.json    ← build → @angular-architects/native-federation:build
-                ← serve → @angular-architects/native-federation:build
+      <pre><code>angular.json    ← build → @angular-architects/native-federation-v4:build
+                ← serve → @angular-architects/native-federation-v4:build
                 ← esbuild → @angular/build:application (the original build)
                 ← serve-original → @angular/build:dev-server (the original serve)
-package.json    ← + es-module-shims, + @softarc/native-federation-orchestrator (v4)</code></pre>
+package.json    ← + es-module-shims, + @softarc/native-federation-orchestrator (devDep)</code></pre>
 
       <h2>Production Builds</h2>
       <pre><code>ng build mfe1

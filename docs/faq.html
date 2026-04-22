@@ -1,152 +1,286 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FAQ — Native Federation Docs</title>
-  <meta name="description" content="Frequently asked questions about Native Federation — when to use it, how to troubleshoot shared packages, CommonJS handling, and more.">
-  <link rel="canonical" href="https://native-federation.io/docs/faq.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="FAQ — Native Federation Docs">
-  <meta property="og:description" content="Frequently asked questions about Native Federation.">
-  <meta property="og:url" content="https://native-federation.io/docs/faq.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../images/favicon.png">
-  <link rel="apple-touch-icon" href="../images/favicon.png">
-  <link rel="stylesheet" href="../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FAQ — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="Frequently asked questions about Native Federation — when to use it, how to troubleshoot shared packages, CommonJS handling, and more."
+    />
+    <link rel="canonical" href="https://native-federation.io/docs/faq.html" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="FAQ — Native Federation Docs" />
+    <meta
+      property="og:description"
+      content="Frequently asked questions about Native Federation."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/faq.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../images/favicon.png" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>FAQ</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          Answers to common questions about Native Federation — from when to use
+          it, to troubleshooting shared packages and CommonJS handling.
+        </p>
 
-    <main class="docs-content">
-      <h1>FAQ</h1>
-      <div class="version-support">
-        <span class="version-support__label">Applies to</span>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
-      </div>
-      <p class="doc-lead">Answers to common questions about Native Federation — from when to use it, to troubleshooting shared packages and CommonJS handling.</p>
-
-      <div class="faq-list">
-
-        <div class="faq-item open">
-          <button class="faq-question" aria-expanded="true">
-            When should I use this package?
-            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="faq-answer">
-            <div class="faq-answer-inner">
-              <p>If you like the idea of webpack Module Federation but want to switch to Angular's new esbuild builder, Native Federation is the right choice. It provides the same mental model and API while being built on web standards (ESM and Import Maps), making it independent of any specific build tool.</p>
+        <div class="faq-list">
+          <div class="faq-item open">
+            <button class="faq-question" aria-expanded="true">
+              When should I use this package?
+              <svg
+                class="faq-chevron"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                  If you like the idea of webpack Module Federation but want to
+                  switch to Angular's new esbuild builder, Native Federation is
+                  the right choice. It provides the same mental model and API
+                  while being built on web standards (ESM and Import Maps),
+                  making it independent of any specific build tool.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false">
-            I get an error when preparing shared packages. What should I do?
-            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="faq-answer">
-            <div class="faq-answer-inner">
-              <p>Native Federation needs to prepare all shared packages as EcmaScript modules. This happens once for development and once for production builds, and results are cached.</p>
-              <p>If preparation fails, it's typically because:</p>
-              <ul>
-                <li><strong>Node-only package:</strong> You're trying to share a package intended for Node.js that can't be converted to ESM. If you use <code>shareAll</code> and the package is in your <code>dependencies</code>, move it to <code>devDependencies</code> or add it to the <code>skip</code> section of your <code>federation.config.js</code>.</li>
-                <li><strong>Incompatible code:</strong> The package contains code that esbuild can't convert to ESM. This shouldn't happen with packages built using the Angular CLI or Nx (ng-packagr). If it does, please report the specific package.</li>
-              </ul>
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              I get an error when preparing shared packages. What should I do?
+              <svg
+                class="faq-chevron"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                  Native Federation needs to prepare all shared packages as
+                  EcmaScript modules. This happens once for development and once
+                  for production builds, and results are cached.
+                </p>
+                <p>If preparation fails, it's typically because:</p>
+                <ul>
+                  <li>
+                    <strong>Node-only package:</strong> You're trying to share a
+                    package intended for Node.js that can't be converted to ESM.
+                    If you use <code>shareAll</code> and the package is in your
+                    <code>dependencies</code>, move it to
+                    <code>devDependencies</code> or add it to the
+                    <code>skip</code> section of your
+                    <code>federation.config.(m)js</code>.
+                  </li>
+                  <li>
+                    <strong>Incompatible code:</strong> The package contains
+                    code that esbuild can't convert to ESM. This shouldn't
+                    happen with packages built using the Angular CLI or Nx
+                    (ng-packagr). If it does, please report the specific
+                    package.
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false">
-            How do I deal with CommonJS packages?
-            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="faq-answer">
-            <div class="faq-answer-inner">
-              <p>The official Angular Package Format has used ESM for years, and all packages created with the Angular CLI follow this standard. Native Federation is built on ESM.</p>
-              <p>For older CommonJS packages, Native Federation automatically converts them to ESM. Depending on the package, some details may change. For more information, see the <a href="https://shorturl.at/jmzH0" target="_blank" rel="noopener">CommonJS handling guide</a>.</p>
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              How do I deal with CommonJS packages?
+              <svg
+                class="faq-chevron"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                  The official Angular Package Format has used ESM for years,
+                  and all packages created with the Angular CLI follow this
+                  standard. Native Federation is built on ESM.
+                </p>
+                <p>
+                  For older CommonJS packages, Native Federation automatically
+                  converts them to ESM. Depending on the package, some details
+                  may change. For more information, see the
+                  <a
+                    href="https://shorturl.at/jmzH0"
+                    target="_blank"
+                    rel="noopener"
+                    >CommonJS handling guide</a
+                  >.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false">
-            How do I manually define a package's entry point?
-            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="faq-answer">
-            <div class="faq-answer-inner">
-              <p>Usually, entry points are auto-detected. If a package doesn't follow standard conventions, you can provide the entry point manually:</p>
-              <pre><code>module.exports = withNativeFederation({
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              How do I manually define a package's entry point?
+              <svg
+                class="faq-chevron"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                  Usually, entry points are auto-detected. If a package doesn't
+                  follow standard conventions, you can provide the entry point
+                  manually:
+                </p>
+                <pre><code>export default withNativeFederation({
   shared: {
     ...shareAll({
       singleton: true,
       strictVersion: true,
-      requiredVersion: "auto",
+      requiredVersion: 'auto',
     }),
-    "test-pkg": {
+    'test-pkg': {
       packageInfo: {
-        entryPoint: "/path/to/test-pkg/entry.mjs",
-        version: "1.0.0",
+        entryPoint: '/path/to/test-pkg/entry.mjs',
+        version: '1.0.0',
         esm: true,
       },
     },
   },
 });</code></pre>
-              <p>When specifying a manual entry point, you also need to provide the <code>version</code> and <code>esm</code> flag since there may not be a <code>package.json</code> nearby.</p>
+                <p>
+                  When specifying a manual entry point, you also need to provide
+                  the <code>version</code> and <code>esm</code> flag since there
+                  may not be a <code>package.json</code> nearby.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              How can I speed up package preparation during builds?
+              <svg
+                class="faq-chevron"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                  Prepared packages are cached in
+                  <code>node_modules/.cache</code>. Make sure this folder is
+                  preserved and reused across subsequent builds — for example,
+                  in your CI/CD pipeline. This avoids re-preparing packages that
+                  haven't changed.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              How does Native Federation work under the hood?
+              <svg
+                class="faq-chevron"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                  At runtime, Native Federation uses
+                  <strong>Import Maps</strong> — a web standard for mapping
+                  module specifiers to URLs. In addition, it uses code at both
+                  build time and runtime to provide the full mental model of
+                  Module Federation, including shared dependency negotiation and
+                  version mismatch handling.
+                </p>
+              </div>
             </div>
           </div>
         </div>
+      </main>
+    </div>
 
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false">
-            How can I speed up package preparation during builds?
-            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="faq-answer">
-            <div class="faq-answer-inner">
-              <p>Prepared packages are cached in <code>node_modules/.cache</code>. Make sure this folder is preserved and reused across subsequent builds — for example, in your CI/CD pipeline. This avoids re-preparing packages that haven't changed.</p>
-            </div>
-          </div>
-        </div>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-        <div class="faq-item">
-          <button class="faq-question" aria-expanded="false">
-            How does Native Federation work under the hood?
-            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="faq-answer">
-            <div class="faq-answer-inner">
-              <p>At runtime, Native Federation uses <strong>Import Maps</strong> — a web standard for mapping module specifiers to URLs. In addition, it uses code at both build time and runtime to provide the full mental model of Module Federation, including shared dependency negotiation and version mismatch handling.</p>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </main>
-  </div>
-
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
-
-  <script src="../components.js"></script>
-  <script>
-    document.querySelectorAll('.faq-question').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var item = btn.closest('.faq-item');
-        var isOpen = item.classList.contains('open');
-        item.classList.toggle('open');
-        btn.setAttribute('aria-expanded', !isOpen);
+    <script src="../components.js"></script>
+    <script>
+      document.querySelectorAll(".faq-question").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var item = btn.closest(".faq-item");
+          var isOpen = item.classList.contains("open");
+          item.classList.toggle("open");
+          btn.setAttribute("aria-expanded", !isOpen);
+        });
       });
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>

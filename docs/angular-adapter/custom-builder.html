@@ -53,7 +53,7 @@
           code transformation, bundling tweaks, third-party tooling. Since v4
           the Angular adapter exposes its builder factory as
           <code>runBuilder</code> from
-          <code>@angular-architects/native-federation/internal</code>, so you
+          <code>@angular-architects/native-federation-v4/internal</code>, so you
           can wrap it in your own Architect builder and pass extra plugins
           through.
         </p>
@@ -67,13 +67,13 @@
           <li>
             Point the relevant <code>angular.json</code> targets at your wrapper
             instead of the default
-            <code>@angular-architects/native-federation:build</code>.
+            <code>@angular-architects/native-federation-v4:build</code>.
           </li>
         </ol>
 
         <h3>1. The wrapper</h3>
         <pre><code>// custom-builder.js
-import { runBuilder } from '@angular-architects/native-federation/internal';
+import { runBuilder } from '@angular-architects/native-federation-v4/internal';
 import { createBuilder } from '@angular-devkit/architect';
 import { myEsbuildPlugin } from './my-esbuild-plugin.js';
 
@@ -129,7 +129,7 @@ export default createBuilder(customBuilder);</code></pre>
         <ul>
           <li>
             <code>runBuilder</code> is exposed from
-            <code>@angular-architects/native-federation/internal</code>. As the
+            <code>@angular-architects/native-federation-v4/internal</code>. As the
             name suggests, it's not part of the public API guarantee — minor
             bumps may rename or refine the signature. Pin the adapter version
             when you ship a custom builder.
@@ -143,7 +143,7 @@ export default createBuilder(customBuilder);</code></pre>
             If you only need a config tweak rather than a plugin (e.g. forcing
             externals, changing output paths), prefer the existing
             <a href="builder.html#options">builder options</a> or a
-            <code>federation.config.js</code> change.
+            <code>federation.config.mjs</code> change.
           </li>
         </ul>
 

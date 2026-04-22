@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Builder — Angular Adapter</title>
-  <meta name="description" content="The @angular-architects/native-federation:build target — what it puts in angular.json, how it wraps Angular's ApplicationBuilder, and every option it accepts.">
+  <meta name="description" content="The @angular-architects/native-federation-v4:build target — what it puts in angular.json, how it wraps Angular's ApplicationBuilder, and every option it accepts.">
   <link rel="canonical" href="https://native-federation.io/docs/angular-adapter/builder.html">
   <meta name="robots" content="index, follow">
   <meta property="og:type" content="article">
@@ -30,7 +30,7 @@
         <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
         <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
       </div>
-      <p class="doc-lead">The <code>@angular-architects/native-federation:build</code> target is a thin wrapper around <code>@angular/build:application</code>. It runs the Native Federation build (shared bundles, exposed modules, <code>remoteEntry.json</code>), then delegates to Angular's Application Builder for the host/remote app itself. The same builder is used for both <code>build</code> and <code>serve</code>; the difference is configured by options.</p>
+      <p class="doc-lead">The <code>@angular-architects/native-federation-v4:build</code> target is a thin wrapper around <code>@angular/build:application</code>. It runs the Native Federation build (shared bundles, exposed modules, <code>remoteEntry.json</code>), then delegates to Angular's Application Builder for the host/remote app itself. The same builder is used for both <code>build</code> and <code>serve</code>; the difference is configured by options.</p>
 
       <nav class="page-toc" aria-label="On this page">
         <strong>On this page</strong>
@@ -47,8 +47,8 @@
       <p>The <code>init</code> schematic <em>doesn't</em> replace your existing build — it shifts everything sideways and slots the federation builder on top. After running it, every federated project has four targets:</p>
       <pre><code>{
   "architect": {
-    "build":           { "builder": "@angular-architects/native-federation:build", ... },
-    "serve":           { "builder": "@angular-architects/native-federation:build", ... },
+    "build":           { "builder": "@angular-architects/native-federation-v4:build", ... },
+    "serve":           { "builder": "@angular-architects/native-federation-v4:build", ... },
     "esbuild":         { "builder": "@angular/build:application", ... },        // ← old build
     "serve-original":  { "builder": "@angular/build:dev-server", ... }          // ← old serve
   }
@@ -61,7 +61,7 @@
       </ul>
       <p>The schematic's defaults look like this:</p>
       <pre><code>"build": {
-  "builder": "@angular-architects/native-federation:build",
+  "builder": "@angular-architects/native-federation-v4:build",
   "options": {
     "projectName": "mfe1",
     "tsConfig": "projects/mfe1/tsconfig.federation.json",
@@ -75,7 +75,7 @@
   "defaultConfiguration": "production"
 },
 "serve": {
-  "builder": "@angular-architects/native-federation:build",
+  "builder": "@angular-architects/native-federation-v4:build",
   "options": {
     "projectName": "mfe1",
     "tsConfig": "projects/mfe1/tsconfig.federation.json",
@@ -94,7 +94,7 @@
       <ol>
         <li>Resolve the underlying target (the <code>esbuild</code> or <code>serve-original</code> target referenced by <code>options.target</code>) and load its options.</li>
         <li>Construct an <code>NFBuildAdapter</code> over esbuild and Angular's <code>SourceFileCache</code> (see <a href="#how">below</a>).</li>
-        <li>Call the core's <code>normalizeFederationOptions</code> with the project's <code>federation.config.js</code> and <code>tsconfig.federation.json</code>.</li>
+        <li>Call the core's <code>normalizeFederationOptions</code> with the project's <code>federation.config.mjs</code> (falling back to <code>federation.config.js</code> if no <code>.mjs</code> file exists) and <code>tsconfig.federation.json</code>.</li>
         <li>Validate that there are no invalid <code>.</code>-imports in the shared mappings or externals (a current Vite limitation — see <a href="https://github.com/vitejs/vite/issues/21036" target="_blank" rel="noopener">vitejs/vite#21036</a>).</li>
         <li>Run the core's <code>buildForFederation</code> — this writes the shared bundles, exposed modules and <code>remoteEntry.json</code> into the configured output directory.</li>
         <li>If I18N is configured, post-process the federation artifacts with <code>localize-translate</code> (one bundle copy per target locale).</li>
@@ -133,7 +133,7 @@
               <td><code>entryPoints</code></td>
               <td><code>string[]</code></td>
               <td><code>[&lt;tsConfig dir&gt;/src/main.ts]</code></td>
-              <td>Entry points used to detect which dependencies are actually used. Combined with <code>features.ignoreUnusedDeps</code> in <code>federation.config.js</code> this drives shaking of unused shared externals.</td>
+              <td>Entry points used to detect which dependencies are actually used. Combined with <code>features.ignoreUnusedDeps</code> in <code>federation.config.mjs</code> this drives shaking of unused shared externals. Seeded by the <code>init</code> / <code>update-v4</code> schematics; defaults to <code>[&lt;sourceRoot&gt;/main.ts]</code>.</td>
             </tr>
             <tr>
               <td><code>dev</code></td>

@@ -141,7 +141,7 @@
       { section: 'Core', items: [
         { href: 'core/index.html', label: 'Overview', id: 'core' },
         { href: 'core/getting-started.html', label: 'Getting Started', id: 'core/getting-started' },
-        { href: 'core/configuration.html', label: 'federation.config.js', id: 'core/configuration' },
+        { href: 'core/configuration.html', label: 'federation.config.mjs', id: 'core/configuration' },
         { href: 'core/sharing.html', label: 'Sharing Dependencies', id: 'core/sharing' },
         { href: 'core/build-process.html', label: 'Build Process', id: 'core/build-process' },
         { href: 'core/caching.html', label: 'Caching', id: 'core/caching' },

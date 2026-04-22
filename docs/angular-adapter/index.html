@@ -49,8 +49,10 @@
         </div>
         <p class="doc-lead">
           The Angular adapter — published as
-          <code>@angular-architects/native-federation</code> — is the
-          first-class integration between Angular's esbuild-based
+          <code>@angular-architects/native-federation-v4</code> during the v4
+          beta (it will revert to
+          <code>@angular-architects/native-federation</code> once stable) — is
+          the first-class integration between Angular's esbuild-based
           <code>@angular/build:application</code> and the
           <a href="../core/index.html">Native Federation core</a>. It ships a
           builder that wraps the Angular CLI, schematics that scaffold hosts and
@@ -76,7 +78,7 @@
               <tr>
                 <td><strong>Builder</strong></td>
                 <td>
-                  <code>@angular-architects/native-federation:build</code>
+                  <code>@angular-architects/native-federation-v4:build</code>
                 </td>
                 <td>
                   Replaces the default Angular build/serve target. Wraps
@@ -88,19 +90,21 @@
               <tr>
                 <td><strong>Schematics</strong></td>
                 <td>
-                  <code>ng add @angular-architects/native-federation</code>
+                  <code>ng add @angular-architects/native-federation-v4</code>
                 </td>
                 <td>
                   Initializes a project as a host, dynamic-host or remote —
                   patches <code>angular.json</code>, polyfills,
                   <code>main.ts</code> and creates
-                  <code>federation.config.js</code>.
+                  <code>federation.config.mjs</code>. Also ships
+                  <code>update-v4</code>, <code>appbuilder</code> and
+                  <code>remove</code>.
                 </td>
               </tr>
               <tr>
                 <td><strong>Config helpers</strong></td>
                 <td>
-                  <code>@angular-architects/native-federation/config</code>
+                  <code>@angular-architects/native-federation-v4/config</code>
                 </td>
                 <td>
                   <code>withNativeFederation</code>, <code>share</code>,
@@ -111,19 +115,21 @@
               </tr>
               <tr>
                 <td><strong>Runtime re-exports</strong></td>
-                <td><code>@angular-architects/native-federation</code></td>
+                <td><code>@angular-architects/native-federation-v4</code></td>
                 <td>
-                  Re-exports <code>initFederation</code> and
-                  <code>loadRemoteModule</code> from
+                  Re-exports <code>initFederation</code>,
+                  <code>loadRemoteModule</code> (and related types) from
                   <code>@softarc/native-federation-runtime</code> for ergonomic
-                  import.
+                  import when using the classic runtime. The generated
+                  <code>main.ts</code> wires the orchestrator by default — see
+                  <a href="runtime.html">Runtime</a>.
                 </td>
               </tr>
               <tr>
                 <td><strong>Nx generator</strong></td>
                 <td>
                   <code
-                    >@angular-architects/native-federation:native-federation</code
+                    >@angular-architects/native-federation-v4:native-federation</code
                   >
                 </td>
                 <td>
@@ -133,7 +139,7 @@
               <tr>
                 <td><strong>Internal API</strong></td>
                 <td>
-                  <code>@angular-architects/native-federation/internal</code>
+                  <code>@angular-architects/native-federation-v4/internal</code>
                 </td>
                 <td>
                   Exposes <code>runBuilder</code> for users who need to inject
@@ -196,7 +202,7 @@
           </li>
           <li>
             <a href="builder.html">Builder</a> — the
-            <code>@angular-architects/native-federation:build</code> target,
+            <code>@angular-architects/native-federation-v4:build</code> target,
             what it puts in your <code>angular.json</code>, and every option it
             accepts.
           </li>
