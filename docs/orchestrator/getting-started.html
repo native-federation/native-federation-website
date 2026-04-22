@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      Getting Started with the Orchestrator — Native Federation Docs
+    </title>
+    <meta
+      name="description"
+      content="Integrate the @softarc/native-federation-orchestrator into any HTML page — from the drop-in quickstart bundle to a fully customized orchestrator script."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/orchestrator/getting-started.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:title"
+      content="Getting Started with the Orchestrator — Native Federation Docs"
+    />
+    <meta
+      property="og:description"
+      content="Install, configure and run the Native Federation Orchestrator in the browser."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/orchestrator/getting-started.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+      <main class="docs-content">
+        <h1>Getting Started with the Orchestrator</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          This page walks through three ways to wire the orchestrator into a
+          host — the drop-in <strong>quickstart</strong> bundle for plain HTML
+          pages, the <strong>event registry</strong> for race-free module
+          loading, and a fully custom <strong>orchestrator script</strong> you
+          bundle yourself for production.
+        </p>
+
+        <div class="callout">
+          <p>
+            The orchestrator is a <em>host-side</em> library. Your remotes are
+            still built the usual way (<a href="../core/getting-started.html"
+              >core</a
+            >, <a href="../angular-adapter/index.html">Angular adapter</a>,
+            <a href="../adapters/esbuild/index.html">esbuild adapter</a>, …) and
+            just need to publish a standard <code>remoteEntry.json</code>.
+          </p>
+        </div>
+
+        <h2>Prerequisites</h2>
+        <ul>
+          <li>Basic HTML and JavaScript.</li>
+          <li>
+            One or more remotes that publish a
+            <code>remoteEntry.json</code> (built with
+            <code>@softarc/native-federation</code> v3 or v4).
+          </li>
+        </ul>
+
+        <h2>1. Quickstart — drop-in HTML</h2>
+        <p>
+          The simplest integration uses the pre-built
+          <code>quickstart.mjs</code> runtime and a declarative manifest in the
+          DOM. No npm install, no bundler — everything lives in the HTML.
+        </p>
+
+        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title&gt;My Application&lt;/title&gt;
+
+    &lt;!-- Enable shim-mode for optimal browser support (optional) --&gt;
+    &lt;script type="esms-options"&gt;
+      { "shimMode": true }
+    &lt;/script&gt;
+
+    &lt;!-- Define your remotes --&gt;
+    &lt;script type="application/json" id="mfe-manifest"&gt;
+      {
+        "team/mfe1": "http://localhost:3000/remoteEntry.json",
+        "team/mfe2": "http://localhost:4000/remoteEntry.json"
+      }
+    &lt;/script&gt;
+
+    &lt;!-- Load remote modules once the orchestrator is ready --&gt;
+    &lt;script&gt;
+      window.addEventListener(
+        'mfe-loader-available',
+        e =&gt; {
+          e.detail.loadRemoteModule('team/mfe1', './Button');
+          e.detail.loadRemoteModule('team/mfe2', './Header');
+        },
+        { once: true }
+      );
+    &lt;/script&gt;
+
+    &lt;!-- Include the orchestrator --&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.1/quickstart.mjs"&gt;&lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;my-header&gt;&lt;/my-header&gt;
+    &lt;my-button&gt;Click me&lt;/my-button&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+        <h3>Three pieces, three responsibilities</h3>
+
+        <p>
+          <strong>The manifest</strong> (<code
+            >&lt;script type="application/json" id="mfe-manifest"&gt;</code
+          >) tells the orchestrator where every remote lives. The
+          <code>id="mfe-manifest"</code> is required —
+          <code>quickstart.mjs</code> specifically looks up that element. Each
+          key is the logical remote name used by <code>loadRemoteModule</code>;
+          each value is the URL of a <code>remoteEntry.json</code>.
+        </p>
+
+        <div class="callout">
+          <p>
+            In production, you'll often fetch the manifest from a discovery
+            service (feature-flag backend, micro-frontend registry, tenant-aware
+            feed) rather than hard-coding it. For that, use the
+            <a href="#custom-implementation">custom implementation</a> below and
+            pass <code>initFederation</code> a URL instead of an object.
+          </p>
+        </div>
+
+        <p>
+          <strong>The event handler</strong> listens for
+          <code>mfe-loader-available</code>. Initialization is asynchronous —
+          the orchestrator fetches every <code>remoteEntry.json</code>, resolves
+          shared versions, writes the import map, and only then fires the event
+          with <code>{ loadRemoteModule }</code> attached to
+          <code>event.detail</code>. The <code>{ once: true }</code> flag avoids
+          double-wiring.
+        </p>
+
+        <p>
+          <strong>The runtime script</strong> performs all the orchestration
+          work. It must appear <em>after</em> the manifest and the event
+          listener in the DOM — it runs immediately and fires the event as soon
+          as the import map is live.
+        </p>
+
+        <h3>Rendering the components</h3>
+        <p>
+          Remotes typically register
+          <a
+            href="https://developer.mozilla.org/en-US/docs/Web/API/Web_components"
+            target="_blank"
+            rel="noopener"
+            >custom elements</a
+          >
+          when their module executes. The elements in your HTML stay empty until
+          the corresponding module loads — which happens inside
+          <code>loadRemoteModule</code>.
+        </p>
+
+        <h2 id="event-registry">
+          2. Avoiding race conditions — the event registry
+        </h2>
+        <p>
+          Native DOM events are fire-and-forget: a listener attached after the
+          event fires never hears it. For hosts that add listeners late
+          (framework bootstrap, async imports, user navigation) the orchestrator
+          ships a small <strong>event registry</strong> that replays the ready
+          event and resolves promises retroactively.
+        </p>
+
+        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title&gt;My Application&lt;/title&gt;
+
+    &lt;!-- 1. Init the registry BEFORE any consumers --&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.1/init-registry.mjs"&gt;&lt;/script&gt;
+
+    &lt;script type="esms-options"&gt;{ "shimMode": true }&lt;/script&gt;
+
+    &lt;!-- 2. Manifest --&gt;
+    &lt;script type="application/json" id="mfe-manifest"&gt;
+      {
+        "team/mfe1": "http://localhost:3000/remoteEntry.json",
+        "team/mfe2": "http://localhost:4000/remoteEntry.json"
+      }
+    &lt;/script&gt;
+
+    &lt;!-- 3. Consumer can register whenever — even after ready --&gt;
+    &lt;script&gt;
+      window.__NF_REGISTRY__.onReady('orch.init-ready', ({ loadRemoteModule }) =&gt; {
+        loadRemoteModule('team/mfe1', './Button');
+        loadRemoteModule('team/mfe2', './Header');
+      });
+    &lt;/script&gt;
+
+    &lt;!-- 4. The orchestrator --&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.1/quickstart.mjs"&gt;&lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;my-header&gt;&lt;/my-header&gt;
+    &lt;my-button&gt;Click me&lt;/my-button&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+        <div class="callout">
+          <p>
+            The registry is also a clean channel for remote-to-remote
+            communication after initialization — any module can
+            <code>emit</code> and any other can <code>onReady</code>.
+          </p>
+        </div>
+
+        <h2 id="custom-implementation">
+          3. Custom orchestrator — production builds
+        </h2>
+        <p>
+          For production-grade hosts you usually want a bundled orchestrator you
+          control: custom loggers (Sentry, Bugsnag), remote discovery over HTTP,
+          integration with a framework bootstrap, explicit error handling.
+          That's what <code>initFederation</code> is for.
+        </p>
+
+        <h3>Install</h3>
+        <pre><code>npm install @softarc/native-federation-orchestrator es-module-shims</code></pre>
+        <p>
+          <a
+            href="https://www.npmjs.com/package/es-module-shims"
+            target="_blank"
+            rel="noopener"
+            >es-module-shims</a
+          >
+          polyfills
+          <a
+            href="https://caniuse.com/import-maps"
+            target="_blank"
+            rel="noopener"
+            >import maps</a
+          >
+          for older browsers and is also needed for the orchestrator's
+          dynamic-init flow. Even when targeting modern browsers, including it
+          broadens compatibility.
+        </p>
+
+        <h3>Write the orchestrator script</h3>
+        <pre><code>// src/orchestrator.ts
+import 'es-module-shims';
+import { initFederation } from '@softarc/native-federation-orchestrator';
+import {
+  consoleLogger,
+  sessionStorageEntry,
+  useShimImportMap,
+} from '@softarc/native-federation-orchestrator/options';
+
+(async () =&gt; {
+  const manifest = {
+    'team/button': 'http://localhost:3000/remoteEntry.json',
+    'team/header': 'http://localhost:4000/remoteEntry.json',
+  };
+
+  try {
+    const { loadRemoteModule } = await initFederation(manifest, {
+      logLevel: 'error',
+      logger: consoleLogger,
+      storage: sessionStorageEntry,
+      ...useShimImportMap({ shimMode: true }),
+    });
+
+    await Promise.all([
+      loadRemoteModule('team/button', './Button'),
+      loadRemoteModule('team/header', './Header'),
+    ]);
+  } catch (error) {
+    console.error('Failed to initialize micro frontends:', error);
+    // application-specific fallback
+  }
+})();</code></pre>
+        <p>
+          <code>initFederation</code> accepts either an inline manifest object
+          or a URL string that points to a remote manifest file; both forms
+          return a promise that resolves with the loader API (see
+          <a href="#load-remote-module">Loading remote modules</a>).
+        </p>
+
+        <h3>Embed it in the host page</h3>
+        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title&gt;Application&lt;/title&gt;
+    &lt;script type="esms-options"&gt;{ "shimMode": true }&lt;/script&gt;
+    &lt;script async src="https://ga.jspm.io/npm:es-module-shims@2.6.0/dist/es-module-shims.js"&gt;&lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;my-header&gt;&lt;/my-header&gt;
+    &lt;my-button&gt;Click me&lt;/my-button&gt;
+
+    &lt;script type="module-shim" src="./orchestrator.js"&gt;&lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+        <p>
+          <code>type="module-shim"</code> tells es-module-shims to execute the
+          script under its own loader — which is what enables the orchestrator
+          to inject new import maps after the page loaded. On evergreen browsers
+          you can also use <code>type="module"</code> when you don't need
+          dynamic init.
+        </p>
+
+        <h3>Bundling the orchestrator</h3>
+        <p>
+          Produce a single file so the host only loads one script. Any bundler
+          works — esbuild is the lightest:
+        </p>
+        <pre><code>// build.js
+import * as esbuild from 'esbuild';
+
+await esbuild.build({
+  entryPoints: ['src/orchestrator.ts'],
+  bundle: true,
+  format: 'esm',
+  outfile: 'dist/orchestrator.min.js',
+  minify: true,
+  platform: 'browser',
+  target: 'es2022',
+});</code></pre>
+
+        <h2 id="load-remote-module">Loading remote modules</h2>
+        <p>
+          <code>initFederation</code> resolves with a
+          <code>NativeFederationResult</code> that exposes six properties.
+          <code>loadRemoteModule</code>, <code>load</code>, and both functions
+          inside <code>as&lt;T&gt;()</code> all delegate to the same underlying
+          loader — they only differ in their TypeScript types.
+        </p>
+
+        <pre><code>const {
+  loadRemoteModule,   // &lt;T = unknown&gt;(remoteName, exposedModule) =&gt; Promise&lt;T&gt;
+  load,               // alias of loadRemoteModule
+  as,                 // typed-loader factory: &lt;T&gt;() =&gt; { loadRemoteModule, load }
+  config,             // resolved ConfigContract (logger, storage, import-map fns)
+  adapters,           // DrivingContract — the cache repos + providers + browser/sse
+  initRemoteEntry,    // (url, name?) =&gt; Promise&lt;NativeFederationResult&gt; — dynamic init
+} = await initFederation(manifest, { /* options */ });
+
+// Side-effectful loading (e.g. custom-element registration)
+await loadRemoteModule('team/button', './Button');
+await load('team/button', './Button');                              // identical
+
+// Typed loading (TypeScript) — generic on the call
+const btn1 = await loadRemoteModule&lt;ButtonModule&gt;('team/button', './Button');
+
+// Typed loading — scoped factory (handy when you reuse the same type)
+const typed = as&lt;ButtonModule&gt;();
+const btn2 = await typed.loadRemoteModule('team/button', './Button');
+
+// Read the resolved configuration
+console.log(config);</code></pre>
+
+        <p>
+          <code>config</code> is the <code>ConfigContract</code> — the merged
+          result of your options and the library defaults. It exposes the active
+          logger, storage handle and import-map functions, so you can reach the
+          orchestrator's internals from anywhere without re-creating them.
+        </p>
+
+        <p>
+          <code>adapters</code> is the <code>DrivingContract</code> — a
+          hexagonal-architecture concept (see
+          <a
+            href="https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c"
+            target="_blank"
+            rel="noopener"
+            >Hexagonal Architecture: there are always two sides to every
+            story</a
+          >) giving direct handles to <code>remoteInfoRepo</code>,
+          <code>sharedExternalsRepo</code>, <code>scopedExternalsRepo</code>,
+          <code>sharedChunksRepo</code>, the manifest and remote-entry
+          providers, and the browser/SSE adapters. Use it to introspect the
+          caches described in
+          <a href="architecture.html#caches">Architecture — caches</a>.
+        </p>
+
+        <p>
+          <code>initRemoteEntry(remoteEntryUrl, remoteName?)</code> adds a
+          remote after the initial load and resolves with the same
+          <code>NativeFederationResult</code> shape (so the chain can continue).
+          See <a href="version-resolver.html#dynamic-init">Dynamic init</a> for
+          the rules and constraints.
+        </p>
+
+        <h2>Configuration at a glance</h2>
+        <p>
+          Everything below has its own page — this section is a tour. Full
+          reference: <a href="configuration.html">Configuration</a>.
+        </p>
+
+        <h3>Storage</h3>
+        <p>
+          The orchestrator caches processed <code>remoteEntry.json</code> data
+          and resolved shared externals between page loads. That's the real win
+          for server-rendered hosts.
+        </p>
+        <pre><code>import {
+  globalThisStorageEntry,   // in-memory, default — fastest, lost on reload
+  sessionStorageEntry,      // persists within the browser session
+  localStorageEntry,        // persists across browser restarts
+} from '@softarc/native-federation-orchestrator/options';
+
+await initFederation(manifest, {
+  storage: sessionStorageEntry,
+  storageNamespace: '__NATIVE_FEDERATION__',
+  clearStorage: false,
+});</code></pre>
+        <p>
+          In memory (<code>globalThisStorageEntry</code>) is the default —
+          fastest, but wiped on every reload, so it only helps SPAs that never
+          refresh the page. Session storage is the sweet spot for multi-page SSR
+          hosts: caching survives navigation but dies with the tab. Local
+          storage persists across browser restarts, which maximizes cache hits
+          for returning visitors, but is generally discouraged because stale
+          entries can outlive a remote deploy.
+        </p>
+
+        <h3>Import map implementation</h3>
+        <pre><code>// Native import maps (default)
+await initFederation(manifest, {
+  loadModuleFn: url =&gt; import(url),
+});
+
+// es-module-shims (broader browser support, enables dynamic init)
+await initFederation(manifest, {
+  ...useShimImportMap({ shimMode: true }),
+});</code></pre>
+
+        <h3>Logging</h3>
+        <pre><code>import { consoleLogger, noopLogger } from '@softarc/native-federation-orchestrator/options';
+
+await initFederation(manifest, {
+  logLevel: 'debug',          // 'debug' | 'warn' | 'error'
+  logger: consoleLogger,      // or noopLogger, or a custom implementation
+});</code></pre>
+        <p>
+          Custom loggers implement <code>{ debug, warn, error }</code> with a
+          <code>(step: number, msg: string, details?: unknown)</code> signature,
+          which is how you wire the orchestrator into Sentry, Bugsnag or your
+          own telemetry.
+        </p>
+
+        <h3>Host remote entry</h3>
+        <pre><code>await initFederation(manifest, {
+  hostRemoteEntry: {
+    url: './host-remoteEntry.json',
+    cacheTag: 'v1.2.3',       // optional cache-buster
+  },
+});</code></pre>
+        <p>
+          The <code>hostRemoteEntry</code> is the host's own
+          <code>remoteEntry.json</code> — the <em>host</em> participating in
+          federation as a first-class peer. By design, it has
+          <strong>precedence over every other remote entry</strong>: for any
+          shared dependency the host declares, the host's version is the one
+          committed to the import map for that scope. The version resolver is
+          bypassed entirely for those packages.
+        </p>
+        <p>
+          Use it to <strong>force or lock a specific version</strong> of a
+          dependency across the whole application — Angular, React, a design
+          system, a shared SDK — without relying on whatever the resolver would
+          otherwise pick from the remotes. Anything the host does <em>not</em>
+          declare keeps going through normal resolution. The optional
+          <code>cacheTag</code> lets you invalidate the cached host entry after
+          a deploy without changing its URL.
+        </p>
+        <p>
+          If you <em>don't</em> want the host's versions to take precedence,
+          just drop the <code>hostRemoteEntry</code> option and add the same
+          <code>remoteEntry.json</code> to the manifest as a regular remote
+          instead:
+        </p>
+        <pre><code>await initFederation({
+  'shell':      './host-remoteEntry.json',  // treated like any other remote
+  'team/mfe1':  'http://localhost:3000/remoteEntry.json',
+  'team/mfe2':  'http://localhost:4000/remoteEntry.json',
+});</code></pre>
+        <p>
+          In this form the host participates in federation but doesn't win
+          version fights — its shared dependencies go through the same resolver
+          as every other remote, which is useful when the host is just another
+          peer rather than the authority.
+        </p>
+
+        <h2>Framework integration</h2>
+        <p>
+          The orchestrator only needs a browser and a script tag, so it drops
+          into any framework. Below is the Angular flow; the same pattern works
+          for Vue, Svelte and other SPA frameworks — initialize first, bootstrap
+          second.
+        </p>
+
+        <h3>Angular host</h3>
+        <pre><code>// src/main.ts
+import { initFederation } from '@softarc/native-federation-orchestrator';
+import { useShimImportMap } from '@softarc/native-federation-orchestrator/options';
+
+initFederation(
+  {},
+  {
+    hostRemoteEntry: './remoteEntry.json',
+    ...useShimImportMap({ shimMode: true }),
+  }
+)
+  .then(async nf =&gt; {
+    const app = await nf.loadRemoteModule&lt;typeof import('./bootstrap')&gt;(
+      '__NF-HOST__',
+      './bootstrap'
+    );
+    await app.bootstrap(nf.loadRemoteModule);
+  })
+  .catch(err =&gt; {
+    console.error('Failed to load app!', err);
+  });</code></pre>
+        <p>
+          <code>loadRemoteModule</code> routes through the orchestrator's
+          <code>loadModuleFn</code> — in shim mode, that's
+          <code>importShim</code>, which actually sees the import map the
+          orchestrator just committed. A raw <code>import('./bootstrap')</code>
+          would bypass the shim loader and miss every shared external. The
+          <code>'__NF-HOST__'</code> name is the default assigned to
+          <code>hostRemoteEntry</code> (override it via
+          <code>hostRemoteEntry.name</code>), and <code>./bootstrap</code> must
+          be listed in the host's <code>federation.config.mjs</code> under
+          <code>exposes</code>.
+        </p>
+
+        <pre><code>// src/bootstrap.ts
+import { bootstrapApplication } from '@angular/platform-browser';
+import { ApplicationConfig, InjectionToken, provideZoneChangeDetection } from '@angular/core';
+import { AppComponent } from './app/app.component';
+import { LoadRemoteModule } from '@softarc/native-federation-orchestrator';
+
+export const MODULE_LOADER = new InjectionToken&lt;LoadRemoteModule&gt;('MODULE_LOADER');
+
+const appConfig = (loader: LoadRemoteModule): ApplicationConfig =&gt; ({
+  providers: [
+    { provide: MODULE_LOADER, useValue: loader },
+    provideZoneChangeDetection({ eventCoalescing: true }),
+  ],
+});
+
+export const bootstrap = (loader: LoadRemoteModule) =&gt;
+  bootstrapApplication(AppComponent, appConfig(loader))
+    .catch(err =&gt; console.error(err));</code></pre>
+
+        <p>
+          Injecting <code>MODULE_LOADER</code> keeps routing, guards and
+          services framework-idiomatic while still backed by the orchestrator's
+          import map.
+        </p>
+
+        <h2>Next steps</h2>
+        <ul>
+          <li>
+            <a href="architecture.html">Architecture</a> — the domain model
+            behind the runtime.
+          </li>
+          <li>
+            <a href="configuration.html">Configuration</a> — every option, with
+            defaults.
+          </li>
+          <li>
+            <a href="version-resolver.html">Version Resolver</a> — how the
+            orchestrator picks which versions to share.
+          </li>
+        </ul>
+      </main>
+    </div>
+
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../../components.js"></script>
+  </body>
+</html>

@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orchestrator Architecture — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="How the Native Federation Orchestrator discovers remotes, caches metadata, resolves shared dependencies and generates the browser's import map."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/orchestrator/architecture.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:title"
+      content="Orchestrator Architecture — Native Federation Docs"
+    />
+    <meta
+      property="og:description"
+      content="Domain model and runtime flow of the Native Federation Orchestrator."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/orchestrator/architecture.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+      <main class="docs-content">
+        <h1>Orchestrator Architecture</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          The orchestrator turns a list of remote URLs into a live import map
+          the browser can resolve. This page walks through the moving parts: the
+          manifest, each <code>remoteEntry.json</code>, the internal caches it
+          builds in memory (or persistent storage), and the final import map the
+          browser actually sees.
+        </p>
+
+        <h2>The problem, in one paragraph</h2>
+        <p>
+          Host (or shell) applications want to mount micro frontends that other
+          teams build and deploy independently — without downloading their
+          dependencies multiple times. Two teams both needing React shouldn't
+          download React twice, three teams using the same design system
+          shouldn't each ship their own copy, and a legacy app stuck on React 17
+          shouldn't break the whole page. The orchestrator solves that at runtim
+          on init: it reads everyone's metadata, decides what can be shared and
+          what has to be isolated, and writes a single import map the browser
+          uses to resolve every <code>import</code> in every remote.
+        </p>
+
+        <h2>Runtime flow</h2>
+        <p>
+          A single <code>initFederation</code> call drives the whole lifecycle:
+        </p>
+        <ol>
+          <li>
+            <strong>Discover.</strong> Read the manifest (inline object or URL
+            pointing to a JSON manifest) to know which remotes exist. The
+            <code>quickstart.mjs</code> bundle additionally reads a manifest out
+            of a <code>&lt;script type="application/json" id="mfe-manifest"&gt;</code>
+            element before handing it to <code>initFederation</code>.
+          </li>
+          <li>
+            <strong>Fetch metadata.</strong> In parallel, fetch each remote's
+            <code>remoteEntry.json</code>.
+          </li>
+          <li>
+            <strong>Cache.</strong> Store the parsed exposes and shared
+            externals in the internal caches, keyed by share-scope.
+          </li>
+          <li>
+            <strong>Resolve.</strong> For every shared dependency, pick a winner
+            per scope using the rules described in
+            <a href="version-resolver.html">Version Resolver</a>.
+          </li>
+          <li>
+            <strong>Write the import map.</strong> Commit it to the DOM via
+            <code>setImportMapFn</code> — either a native
+            <code>&lt;script type="importmap"&gt;</code> or the
+            <code>importmap-shim</code> form when running under es-module-shims.
+          </li>
+          <li>
+            <strong>Expose loaders.</strong> Resolve the
+            <code>initFederation</code> promise with
+            <code>loadRemoteModule</code>, <code>load</code>,
+            <code>as</code>, <code>config</code>, <code>adapters</code>
+            and <code>initRemoteEntry</code>.
+          </li>
+        </ol>
+
+        <p>
+          Steps 2–5 can happen again after initialization through
+          <a href="version-resolver.html#dynamic-init">dynamic init</a>, but
+          only additively — nothing resolved during the initial pass is ever
+          rewritten.
+        </p>
+
+        <h2>Core concepts</h2>
+
+        <h3 id="manifest">1. Manifest — the service directory</h3>
+        <p>
+          The manifest maps remote names to <code>remoteEntry.json</code> URLs.
+          Nothing else. It's the one piece of configuration your host owns
+          end-to-end.
+        </p>
+        <pre><code>{
+  "shopping-cart":  "https://example.cdn/shopping-cart/1.0.1/remoteEntry.json",
+  "user-profile":   "https://example.cdn/user-profile/1.3.2/remoteEntry.json",
+  "payment-widget": "https://example.cdn/payment-widget/2.3.1/remoteEntry.json"
+}</code></pre>
+        <p>
+          The directory that contains each <code>remoteEntry.json</code> becomes
+          that remote's <strong>scope URL</strong>. Every module path and every
+          scoped external is resolved relative to that directory — so publishing
+          a remote at
+          <code>https://example.org/mfe1/remoteEntry.json</code> means all of
+          its JS lives under <code>https://example.org/mfe1/</code>.
+        </p>
+        <div class="callout">
+          <p>
+            Inline manifests are fine for demos. In production, prefer serving
+            the manifest from a discovery endpoint or feed service so you can
+            roll out, A/B-test or feature-flag remotes without rebuilding the
+            host.
+          </p>
+        </div>
+
+        <h3 id="remote-entry">2. remoteEntry.json — the component metadata</h3>
+        <p>
+          Every remote publishes one <code>remoteEntry.json</code>. It lists the
+          modules the remote exposes and the dependencies the remote wants to
+          share.
+        </p>
+        <pre><code>{
+  "name": "team/remote1",
+  "exposes": [
+    { "key": "./comp-a", "outFileName": "component-a.js" }
+  ],
+  "shared": [
+    {
+      "packageName": "dep-a",
+      "outFileName": "dep-a.js",
+      "version": "1.2.3",
+      "requiredVersion": "~1.2.1",
+      "strictVersion": false,
+      "singleton": true
+    },
+    {
+      "packageName": "dep-b",
+      "outFileName": "dep-b.js",
+      "version": "4.5.6",
+      "requiredVersion": "^4.1.1",
+      "strictVersion": true,
+      "singleton": false
+    }
+  ]
+}</code></pre>
+
+        <h4>Shared external properties</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>version</code></td>
+                <td>The actual version this remote ships.</td>
+              </tr>
+              <tr>
+                <td><code>requiredVersion</code></td>
+                <td>
+                  The range this remote is willing to accept from a shared copy
+                  — the basis for compatibility checks.
+                </td>
+              </tr>
+              <tr>
+                <td><code>strictVersion</code></td>
+                <td>
+                  When <code>true</code>, the remote refuses incompatible shared
+                  versions and gets its own scoped copy instead of a warning.
+                </td>
+              </tr>
+              <tr>
+                <td><code>singleton</code></td>
+                <td>
+                  When <code>true</code>, the dependency is a candidate for
+                  sharing across remotes. When <code>false</code>, it is always
+                  scoped to this remote.
+                </td>
+              </tr>
+              <tr>
+                <td><code>shareScope</code></td>
+                <td>
+                  Group externals into logical clusters; the special
+                  <code>"strict"</code> scope enables exact-version sharing. See
+                  <a href="version-resolver.html#share-scopes">shareScope</a>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>packageName</code></td>
+                <td>
+                  The import specifier remotes use (e.g. <code>'react'</code>).
+                </td>
+              </tr>
+              <tr>
+                <td><code>outFileName</code></td>
+                <td>File name, relative to the remote's scope URL.</td>
+              </tr>
+              <tr>
+                <td><code>bundle</code></td>
+                <td>
+                  Optional name of the shared bundle this external belongs to —
+                  the key the orchestrator uses to look up sibling chunk files
+                  in the shared-chunks cache (v4 opt-in).
+                </td>
+              </tr>
+              <tr>
+                <td><code>dev</code></td>
+                <td>Optional dev-mode metadata (original source path, etc).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="caches">Internal caches</h2>
+        <p>
+          After fetching metadata, the orchestrator keeps four caches in memory
+          (and optionally mirrors them to
+          <code>sessionStorage</code>/<code>localStorage</code>). Everything the
+          resolver and the import-map builder need lives in these structures —
+          they're accessible via
+          <code>@softarc/native-federation-orchestrator/sdk</code> if you need
+          to introspect.
+        </p>
+
+        <h3>Remote information cache</h3>
+        <p>A plain map of remote name → scope URL + exposed modules:</p>
+        <pre><code>{
+  "shopping-cart": {
+    "scopeUrl": "https://ecommerce-team.com/",
+    "exposes": [
+      { "moduleName": "./CartButton",  "file": "cart-button.js" },
+      { "moduleName": "./CartSummary", "file": "cart-summary.js" }
+    ]
+  }
+}</code></pre>
+        <p>
+          This is what
+          <code>loadRemoteModule('shopping-cart', './CartButton')</code> reads
+          to compute the final URL.
+        </p>
+
+        <h3>Shared externals cache</h3>
+        <p>
+          Dependencies with <code>singleton: true</code> become
+          <em>shared externals</em>. The cache groups them by
+          <code>shareScope</code> (with the special sentinel
+          <code>__GLOBAL__</code> for unnamed scopes), then by package name.
+          Each entry is a list of candidate versions, each annotated with a
+          resolved <strong>action</strong>:
+        </p>
+        <pre><code>{
+  "shared-externals": {
+    "__GLOBAL__": {
+      "dep-a": {
+        "dirty": false,
+        "versions": [
+          {
+            "tag": "1.2.3",
+            "host": false,
+            "action": "share",
+            "remotes": [
+              { "file": "dep-a.js", "name": "team/mfe1", "requiredVersion": "~1.2.1", "strictVersion": false, "cached": true  },
+              { "file": "dep-a.js", "name": "team/mfe2", "requiredVersion": "~1.2.1", "strictVersion": false, "cached": false }
+            ]
+          },
+          {
+            "tag": "1.2.2",
+            "host": false,
+            "action": "skip",
+            "remotes": [
+              { "file": "dep-a.js", "name": "team/mfe2", "requiredVersion": "^1.2.1", "strictVersion": true, "cached": false }
+            ]
+          }
+        ]
+      }
+    },
+    "custom-scope": {
+      "dep-c": { "/* … */": "…" }
+    }
+  }
+}</code></pre>
+        <p>
+          The three possible actions — <code>share</code>, <code>skip</code>,
+          <code>scope</code> — come out of the resolver. The
+          <code>dirty</code> flag marks scopes whose version list changed since
+          the last resolution pass; only dirty scopes get re-resolved, which
+          keeps warm reloads fast.
+        </p>
+
+        <h3>Scoped externals cache</h3>
+        <p>
+          Dependencies with <code>singleton: false</code> are always scoped to
+          their remote. The cache is a simple map
+          <code>remoteName → packageName → { tag, file, bundle? }</code>; the
+          import-map builder later joins each <code>file</code> to the
+          owning remote's <code>scopeUrl</code>:
+        </p>
+        <pre><code>{
+  "scoped-externals": {
+    "team/mfe1": {
+      "dep-b": { "tag": "4.5.6", "file": "dep-b.js" }
+    }
+  }
+}</code></pre>
+
+        <h3>Shared chunks cache</h3>
+        <div class="callout callout-info">
+          <p>
+            <strong>Opt-in, introduced in native-federation v4.</strong> <br />
+            Shared chunks are an opt-in feature of Native Federation v4 —
+            remotes built without it simply won't populate this cache, and the
+            orchestrator falls back to loading each shared external as a single
+            file. Before this feature, chunks were added to the shared object as
+            separate externals which was very expensive to calculate.
+          </p>
+        </div>
+        <p>
+          When a v4 remote opts in, the builder can code-split a shared external
+          — breaking a single package into multiple chunk files. The
+          orchestrator then needs to know the sibling file names so dynamic
+          imports inside that package resolve correctly. The shared chunks cache
+          stores that list, keyed by remote and by the bundle the chunks belong
+          to:
+        </p>
+        <pre><code>{
+  "shared-chunks": {
+    "team/mfe1": {
+      "browser-shared": ["dep-a.chunk-AAAA.js", "dep-a.chunk-BBBB.js"],
+      "angular-core": ["dep-b.chunk-CCCC.js"]
+    }
+  }
+}</code></pre>
+        <p>
+          During import-map generation, these chunk files are added under a
+          dedicated chunk scope so every dynamic <code>import()</code> inside a
+          shared bundle lands on the right URL. Most consumers never touch this
+          cache directly — it exists to make opt-in multi-chunk shared externals
+          work transparently.
+        </p>
+
+        <h2 id="import-map">The generated import map</h2>
+        <p>
+          All four caches feed into a single import map that the orchestrator
+          commits to the DOM before resolving the init promise:
+        </p>
+        <pre><code>{
+  "imports": {
+    // Exposed modules, addressable as "&lt;remoteName&gt;/&lt;key&gt;"
+    "shopping-cart/./CartButton":  "https://ecommerce-team.com/cart-button.js",
+    "shopping-cart/./CartSummary": "https://ecommerce-team.com/cart-summary.js",
+
+    // Globally shared externals
+    "dep-a": "https://example.org/mfe1/dep-a.js"
+  },
+  "scopes": {
+    // Scoped externals — only visible inside one remote
+    "https://example.org/mfe1/": {
+      "dep-b": "https://example.org/mfe1/dep-b.js",
+      "dep-c": "https://example.org/mfe1/dep-c.js",
+
+      // Shared-chunk siblings (v4 opt-in) — resolved inside the remote's scope
+      "@nf-internal/chunk-IXOA6WTM": "https://example.org/mfe1/chunk-IXOA6WTM.js",
+      "@nf-internal/chunk-WDE5IQ2F": "https://example.org/mfe1/chunk-WDE5IQ2F.js"
+    },
+    // shareScope grouping — same URL reused across several scopes
+    "https://example.org/mfe2/": {
+      "dep-c": "https://example.org/mfe1/dep-c.js"
+    }
+  }
+}</code></pre>
+        <p>Four patterns fall out of this structure:</p>
+        <ul>
+          <li>
+            <strong>Global sharing</strong> via <code>imports</code> — one
+            download for every consumer.
+          </li>
+          <li>
+            <strong>Scoped isolation</strong> via <code>scopes</code> — a
+            specific remote gets its own copy without disturbing anyone else.
+          </li>
+          <li>
+            <strong>Scope groups</strong> — the same URL reused in several
+            <code>scopes</code> entries. Import maps don't have a first-class
+            "group of scopes" concept, so the orchestrator emulates it by
+            writing the same file under each member scope. From the browser's
+            perspective it's still one download (the URL is identical), but each
+            remote resolves the import inside its own scope.
+          </li>
+          <li>
+            <strong>Shared chunks</strong> — when a v4 remote opts into
+            chunked shared externals, each chunk sibling is registered inside
+            the owning remote's scope under an internal specifier (e.g.
+            <code>@nf-internal/chunk-IXOA6WTM</code>). Dynamic imports emitted
+            by the bundler inside a shared package then resolve to the right
+            sibling file without polluting the global <code>imports</code>.
+          </li>
+        </ul>
+
+        <h2 id="caching">Caching &amp; performance</h2>
+        <p>
+          Resolved metadata is worth keeping around. Between page loads, the
+          orchestrator can remember which remotes it already knows about and
+          which shared versions it already picked, so a navigation-triggered
+          reload doesn't re-fetch <code>remoteEntry.json</code> files the
+          browser already cached in its HTTP cache.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Storage</th>
+                <th>Lifetime</th>
+                <th>Best for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>Memory</strong> (<code>globalThisStorageEntry</code>,
+                  default)
+                </td>
+                <td>Single page load</td>
+                <td>SPAs, development, testing</td>
+              </tr>
+              <tr>
+                <td><strong>sessionStorage</strong></td>
+                <td>Browser session</td>
+                <td>Multi-page server-rendered hosts — the main use case</td>
+              </tr>
+              <tr>
+                <td><strong>localStorage</strong></td>
+                <td>Until cleared</td>
+                <td>
+                  Aggressive caching across browser restarts; accept some
+                  staleness
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          On top of storage choice, the resolver applies four optimization
+          strategies:
+        </p>
+        <ul>
+          <li>
+            <strong>Skip cached remotes.</strong> If a remote is already in
+            cache with the same <code>remoteEntry.json</code> URL, don't
+            refetch. Controlled by <code>profile.overrideCachedRemotes</code>.
+          </li>
+          <li>
+            <strong>Reuse resolved versions.</strong> Which version was picked
+            for each shared external last time survives the reload.
+          </li>
+          <li>
+            <strong>Host wins ties.</strong> A
+            <code>hostRemoteEntry</code> always dictates the shared version for
+            its scope.
+          </li>
+          <li>
+            <strong>Maximize sharing.</strong> The default resolution strategy
+            picks the version that minimizes extra downloads (see
+            <a href="version-resolver.html#optimal">Optimal Version Strategy</a
+            >).
+          </li>
+        </ul>
+
+        <p>
+          Every knob above has a dedicated option on
+          <a href="configuration.html">Configuration</a>.
+        </p>
+
+        <h2>A worked example</h2>
+        <p>An e-commerce host with three independently-owned remotes:</p>
+        <pre><code>&lt;script type="application/json" id="mfe-manifest"&gt;
+{
+  "product-catalog": "https://catalog-team.com/remoteEntry.json",
+  "shopping-cart":   "https://cart-team.com/remoteEntry.json",
+  "user-account":    "https://account-team.com/remoteEntry.json"
+}
+&lt;/script&gt;</code></pre>
+        <p>What happens:</p>
+        <ol>
+          <li>
+            <strong>Manifest processing</strong> — three remotes discovered.
+          </li>
+          <li>
+            <strong>Metadata collection</strong> — three
+            <code>remoteEntry.json</code> fetches, executed in parallel.
+          </li>
+          <li>
+            <strong>Dependency resolution</strong> — overlapping React, lodash
+            and shared UI components are unified; incompatible entries fall into
+            scoped downloads.
+          </li>
+          <li>
+            <strong>Import map generation</strong> — one map, committed once
+            before any module loads.
+          </li>
+          <li>
+            <strong>Runtime</strong> — <code>loadRemoteModule()</code> calls now
+            resolve synchronously against the import map.
+          </li>
+        </ol>
+        <p>What you get:</p>
+        <ul>
+          <li>
+            Teams deploy on their own cadence without coordinating releases.
+          </li>
+          <li>Shared libraries download once and are reused across remotes.</li>
+          <li>The browser HTTP cache keeps warm navigations near-instant.</li>
+        </ul>
+
+        <h2>Where to go next</h2>
+        <ul>
+          <li>
+            <a href="version-resolver.html">Version Resolver</a> — the algorithm
+            behind <code>share</code> / <code>skip</code> /
+            <code>scope</code> decisions.
+          </li>
+          <li>
+            <a href="configuration.html">Configuration</a> — every option that
+            changes the behavior described above.
+          </li>
+          <li>
+            <a href="../v3-vs-v4.html">v3 vs v4</a> — how the orchestrator
+            compares to the classic
+            <code>@softarc/native-federation-runtime</code>.
+          </li>
+        </ul>
+      </main>
+    </div>
+
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../../components.js"></script>
+  </body>
+</html>
