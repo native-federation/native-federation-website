@@ -137,6 +137,10 @@
       ]},
       { section: 'Orchestrator', items: [
         { href: 'orchestrator/index.html', label: 'Overview', id: 'orchestrator' },
+        { href: 'orchestrator/getting-started.html', label: 'Getting Started', id: 'orchestrator/getting-started' },
+        { href: 'orchestrator/architecture.html', label: 'Architecture', id: 'orchestrator/architecture' },
+        { href: 'orchestrator/configuration.html', label: 'Configuration', id: 'orchestrator/configuration' },
+        { href: 'orchestrator/version-resolver.html', label: 'Version Resolver', id: 'orchestrator/version-resolver' },
       ]},
       { section: 'Core', items: [
         { href: 'core/index.html', label: 'Overview', id: 'core' },
