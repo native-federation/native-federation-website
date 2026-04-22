@@ -1,63 +1,133 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Component Libs — Native Federation Docs</title>
-  <meta name="description" content="Native Federation has been tested with several popular Angular UI component libraries. Browse the demo repository to see compatibility results.">
-  <link rel="canonical" href="https://native-federation.io/docs/component-libs.html">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Component Libs — Native Federation Docs">
-  <meta property="og:description" content="Native Federation tested with popular Angular UI component libraries.">
-  <meta property="og:url" content="https://native-federation.io/docs/component-libs.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../images/favicon.png">
-  <link rel="apple-touch-icon" href="../images/favicon.png">
-  <link rel="stylesheet" href="../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Component Libs — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="Native Federation has been tested with several popular Angular UI component libraries. Browse the demo repository to see compatibility results."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/component-libs.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:title"
+      content="Component Libs — Native Federation Docs"
+    />
+    <meta
+      property="og:description"
+      content="Native Federation tested with popular Angular UI component libraries."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/component-libs.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../images/favicon.png" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>Component Libs</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          Native Federation is tested with several well-known Angular UI
+          component libraries to ensure broad compatibility across the
+          ecosystem.
+        </p>
 
-    <main class="docs-content">
-      <h1>Component Libs</h1>
-      <p class="doc-lead">Native Federation is tested with several well-known Angular UI component libraries to ensure broad compatibility across the ecosystem.</p>
+        <h2>Demo Repository</h2>
+        <p>
+          The
+          <a
+            href="https://github.com/manfredsteyer/nf-test.git"
+            target="_blank"
+            rel="noopener"
+            >demo repository</a
+          >
+          compiles sample applications built with popular Angular UI libraries
+          using Native Federation. This verifies that Native Federation works
+          seamlessly with these libraries in real-world scenarios.
+        </p>
 
-      <h2>Demo Repository</h2>
-      <p>The <a href="https://github.com/manfredsteyer/nf-test.git" target="_blank" rel="noopener">demo repository</a> compiles sample applications built with popular Angular UI libraries using Native Federation. This verifies that Native Federation works seamlessly with these libraries in real-world scenarios.</p>
+        <img
+          src="../images/demo-repo.png"
+          alt="Native Federation demo repository showing compatibility tests with various UI component libraries"
+          width="500"
+          loading="lazy"
+        />
 
-      <img src="../images/demo-repo.png" alt="Native Federation demo repository showing compatibility tests with various UI component libraries" width="500" loading="lazy">
+        <h2>Try It Yourself</h2>
+        <p>Clone the repository and run any of the included demo apps:</p>
 
-      <h2>Try It Yourself</h2>
-      <p>Clone the repository and run any of the included demo apps:</p>
-
-      <pre><code>git clone https://github.com/manfredsteyer/nf-test.git
+        <pre><code>git clone https://github.com/manfredsteyer/nf-test.git
 
 cd nf-test
 
 npm i</code></pre>
 
-      <div class="callout">
-        <p>This repository is primarily for compatibility testing. For a step-by-step introduction to Native Federation, see the <a href="tutorial.html">Tutorial</a> or the <a href="example.html">Example</a>.</p>
-      </div>
+        <div class="callout">
+          <p>
+            This repository is primarily for compatibility testing. For a
+            step-by-step introduction to Native Federation, see the
+            <a href="tutorial.html">Tutorial</a> or the
+            <a href="example.html">Example</a>.
+          </p>
+        </div>
 
-      <h2>Related</h2>
-      <ul>
-        <li><a href="example.html">Example</a> — a working starter example</li>
-        <li><a href="tutorial.html">Tutorial</a> — build your first Micro Frontend step by step</li>
-        <li><a href="faq.html">FAQ</a> — common questions including CommonJS handling</li>
-      </ul>
-    </main>
-  </div>
+        <h2>Related</h2>
+        <ul>
+          <li>
+            <a href="example.html">Example</a> — a working starter example
+          </li>
+          <li>
+            <a href="tutorial.html">Tutorial</a> — build your first Micro
+            Frontend step by step
+          </li>
+          <li>
+            <a href="faq.html">FAQ</a> — common questions including CommonJS
+            handling
+          </li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../components.js"></script>
-</body>
+    <script src="../components.js"></script>
+  </body>
 </html>

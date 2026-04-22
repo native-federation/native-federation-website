@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Import Map — Runtime Docs</title>
+  <meta name="description" content="How the classic runtime constructs the browser import map — host root imports, per-remote scopes, externals deduplication, Trusted Types and es-module-shims.">
+  <link rel="canonical" href="https://native-federation.io/docs/runtime/import-map.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="The Import Map — Runtime Docs">
+  <meta property="og:description" content="How the runtime builds and injects the import map.">
+  <meta property="og:url" content="https://native-federation.io/docs/runtime/import-map.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>The Import Map</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
+      <p class="doc-lead">Everything the runtime does — resolving shared dependencies, loading exposed modules, keeping two remotes' <code>rxjs</code> apart — is implemented as entries in a single browser import map. This page walks through how that map is built, how it ends up in the DOM, and what the scoping rules actually mean at runtime.</p>
+
+      <nav class="page-toc" aria-label="On this page">
+        <strong>On this page</strong>
+        <ul>
+          <li><a href="#shape">The shape of the map</a></li>
+          <li><a href="#host">Host contributions — root imports</a></li>
+          <li><a href="#remote">Remote contributions — root imports &amp; scopes</a></li>
+          <li><a href="#chunks">Chunks</a></li>
+          <li><a href="#externals">The externals registry</a></li>
+          <li><a href="#injection">Injection into the DOM</a></li>
+          <li><a href="#trusted-types">Trusted Types</a></li>
+          <li><a href="#shim">es-module-shims</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="shape">The shape of the map</h2>
+      <p>The runtime's import map follows the standard browser shape:</p>
+      <pre><code>type Imports = Record&lt;string, string&gt;;
+type Scopes  = Record&lt;string, Imports&gt;;
+
+interface ImportMap {
+  imports: Imports;
+  scopes:  Scopes;
+}</code></pre>
+      <p><code>imports</code> applies to bare specifiers anywhere on the page. <code>scopes</code> applies only when the importing module's URL starts with the scope key. That distinction is what lets two remotes bring their own <code>rxjs</code> without stepping on each other.</p>
+
+      <p>A typical merged map for a host + two remotes looks roughly like this:</p>
+      <pre><code>{
+  "imports": {
+    "@angular/core":   "./angular-core-A9B2.js",
+    "rxjs":            "./rxjs-1123.js",
+    "mfe1/Component":  "http://localhost:3001/Component-QX77.js",
+    "mfe2/Orders":     "http://localhost:3002/Orders-P4A9.js"
+  },
+  "scopes": {
+    "http://localhost:3001/": {
+      "@angular/core": "./angular-core-A9B2.js",
+      "rxjs":          "http://localhost:3001/rxjs-1123.js"
+    },
+    "http://localhost:3002/": {
+      "@angular/core": "./angular-core-A9B2.js",
+      "rxjs":          "http://localhost:3002/rxjs-F802.js"
+    }
+  }
+}</code></pre>
+
+      <h2 id="host">Host contributions — root imports</h2>
+      <p>The host's <code>remoteEntry.json</code> is fetched from <code>./remoteEntry.json</code> (same origin as the host page). Every <code>shared[]</code> entry becomes a root-level import, keyed by package name and pointing at a relative path under the host's bundle directory (default <code>./</code>):</p>
+      <pre><code>// From processHostInfo
+imports[shared.packageName] = relBundlesPath + shared.outFileName;</code></pre>
+      <p>Host shared deps go into <em>root</em> imports rather than a scope because the host loads first and should be the shared-dep baseline for remotes that can reuse its versions. The externals registry (<a href="#externals">below</a>) is what makes that reuse possible.</p>
+
+      <h2 id="remote">Remote contributions — root imports &amp; scopes</h2>
+      <p>Every remote contributes two things:</p>
+      <ul>
+        <li><strong>Exposed modules</strong> go into root imports, keyed by <code>&lt;remoteName&gt;/&lt;exposedKey&gt;</code> (for example <code>mfe1/Component</code>). That is what makes <code>loadRemoteModule('mfe1', './Component')</code> resolve to an absolute URL on the remote's origin.</li>
+        <li><strong>Shared deps</strong> go into a <strong>scope</strong> keyed by the remote's base URL (the directory of its <code>remoteEntry.json</code>) with a trailing slash. That scope contains one entry per shared package, pointing at the remote's own bundled copy — unless the externals registry hands back a URL that was already registered (typically the host's).</li>
+      </ul>
+      <pre><code>// From processRemoteImports
+for (const shared of remoteInfo.shared) {
+  const outFileName = getExternalUrl(shared) ?? joinPaths(baseUrl, shared.outFileName);
+  setExternalUrl(shared, outFileName);
+  scopedImports[shared.packageName] = outFileName;
+}
+scopes[baseUrl + '/'] = scopedImports;</code></pre>
+      <p>Because the scope key is the remote's base URL, browser import-map matching ensures that code loaded <em>from that remote</em> resolves <code>@angular/core</code> against the scoped entry, while code loaded from the host uses the root-level entry. Both entries point at URLs — the same one when the externals registry reused an earlier registration.</p>
+
+      <h2 id="chunks">Chunks</h2>
+      <p>If the build emitted a <code>chunks</code> map in <code>remoteEntry.json</code> (shared code split across multiple files), each chunk file is also added to the map. Host chunks go into root imports; remote chunks go into the remote's scope. The key is derived from the chunk's filename via the core's <code>toChunkImport</code> helper, so the runtime does not have to invent names itself.</p>
+
+      <h2 id="externals">The externals registry</h2>
+      <p>The runtime maintains a small in-memory registry — a <code>Map&lt;string, string&gt;</code> keyed by <code>&lt;packageName&gt;@&lt;version&gt;</code>:</p>
+      <pre><code>// From externals.ts
+function getExternalKey(shared: SharedInfo) {
+  return `${shared.packageName}@${shared.version}`;
+}</code></pre>
+      <p>When a shared dep is registered, the runtime looks up its <code>packageName@version</code> in the registry. If a URL is already there, it reuses that URL; if not, it stores the current remote's URL. That means the <em>first</em> remote to register a given <code>packageName@version</code> wins: any subsequent remote with the same <code>packageName@version</code> gets pointed at the first remote's copy instead of shipping its own.</p>
+      <p>This is how the classic runtime deduplicates shared deps: <strong>exact version match on <code>packageName@version</code></strong>. If the versions differ at all — even by a patch — every remote keeps its own copy under its own scope.</p>
+
+      <div class="callout callout-warning">
+        <p>The classic runtime has <strong>no semver-range resolution</strong>. It does not look at <code>requiredVersion</code>, it does not compare ranges, it does not pick a common version — the <code>version</code> string must be <em>byte-identical</em> for two remotes to share a bundle. Range-aware version selection is what the <a href="../orchestrator/index.html">Orchestrator</a> adds on top.</p>
+      </div>
+
+      <p>The registry lives on <code>globalThis.__NATIVE_FEDERATION__.externals</code> along with the remotes registry (<code>remoteNamesToRemote</code>, <code>baseUrlToRemoteNames</code>). That puts it in the same object that <code>@angular-architects/module-federation</code> historically exposed, which matters for the <code>getShared()</code> interop helper used when mixing with Module Federation remotes.</p>
+
+      <h2 id="injection">Injection into the DOM</h2>
+      <p>Once <code>initFederation</code> has merged the host + remote maps, it injects the result as a script tag at the end of <code>document.head</code>:</p>
+      <pre><code>document.head.appendChild(
+  Object.assign(document.createElement('script'), {
+    type:        'importmap-shim',
+    textContent: JSON.stringify(importMap),
+  }),
+);</code></pre>
+      <p>A second call (for example, when <code>loadRemoteModule</code> lazily registers a new remote) appends <em>another</em> <code>importmap-shim</code> script. The es-module-shims polyfill merges them on the fly, so later entries add to rather than replace earlier ones.</p>
+
+      <h2 id="trusted-types">Trusted Types</h2>
+      <p>If the page enforces <a href="https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API" target="_blank" rel="noopener">Trusted Types</a>, assigning a plain string to a script tag's <code>type</code> or <code>textContent</code> would be blocked. The runtime creates a Trusted Types policy named <code>native-federation</code> the first time it needs one, and pipes both values through <code>policy.createScript(...)</code> before assigning them. If the browser has no Trusted Types, or the policy cannot be created (for example because the name is already registered), the runtime silently falls back to the raw string.</p>
+      <p>If your CSP restricts <code>trusted-types</code>, allow the <code>native-federation</code> policy name.</p>
+
+      <h2 id="shim">es-module-shims</h2>
+      <p>The runtime uses the shimmed flavour of the spec (<code>type="importmap-shim"</code>, <code>globalThis.importShim()</code>) rather than the native one for two reasons:</p>
+      <ul>
+        <li><strong>Multiple maps.</strong> Browsers only accept <em>one</em> native <code>&lt;script type="importmap"&gt;</code> per page, and it must appear before the first module import. The runtime needs to append additional maps as remotes are lazily registered after the page has already started running — which is exactly what es-module-shims allows.</li>
+        <li><strong>Broader compatibility.</strong> Native import maps are well supported today, but the shimmed path gives the same behaviour across the long tail of engines the Angular/React ecosystem still targets.</li>
+      </ul>
+      <p>The practical consequence is that <strong>every host page must load <code>es-module-shims</code></strong> before <code>initFederation</code> runs. The native <code>import()</code> fallback inside <code>loadRemoteModule</code> exists for tests and SSR — it will happily resolve absolute URLs, but it won't honour the shimmed import map, so remote-originated bare specifiers will not resolve.</p>
+
+      <h2>Related</h2>
+      <ul>
+        <li><a href="../core/artifacts.html"><code>remoteEntry.json</code> reference</a> — the shape the runtime reads.</li>
+        <li><a href="init-federation.html"><code>initFederation</code></a> — what actually drives the merge and injection.</li>
+        <li><a href="../orchestrator/index.html">Orchestrator</a> — for range-based deduplication and share scopes.</li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>

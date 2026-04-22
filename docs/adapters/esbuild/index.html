@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>esbuild Adapter — Native Federation Docs</title>
+  <meta name="description" content="The esbuild adapter — a framework-agnostic Native Federation adapter, used by the React reference example.">
+  <link rel="canonical" href="https://native-federation.io/docs/adapters/esbuild/index.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="esbuild Adapter — Native Federation Docs">
+  <meta property="og:description" content="The esbuild-based Native Federation adapter.">
+  <meta property="og:url" content="https://native-federation.io/docs/adapters/esbuild/index.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../../images/favicon.png">
+  <link rel="stylesheet" href="../../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>esbuild Adapter</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
+      <p class="doc-lead">The <code>@softarc/native-federation-esbuild</code> package is a thin, framework-agnostic adapter that plugs the <a href="../../core/index.html">core builder</a> into esbuild. It powers the React reference example and can be used with any stack where you drive your own build script — there is no CLI wrapper or framework coupling.</p>
+
+      <div class="callout">
+        <p>If you are on Angular, use the <a href="../../angular-adapter/index.html">Angular adapter</a> instead — it wraps this adapter and adds builder, schematics and dev-server integration. This section is for projects (React, Preact, Lit, plain TypeScript, …) that drive esbuild themselves.</p>
+      </div>
+
+      <h2>What's in the Box</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Piece</th>
+              <th>Entry point</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Builder</strong></td>
+              <td><code>runEsBuildBuilder(configPath, options)</code></td>
+              <td>High-level entry point. Loads <code>federation.config.js</code>, runs the initial build, and — when <code>watch: true</code> — wires up the file watcher and rebuild queue. See <a href="builder.html">Builder</a>.</td>
+            </tr>
+            <tr>
+              <td><strong>Low-level adapter</strong></td>
+              <td><code>createEsBuildAdapter(config)</code></td>
+              <td>Returns an <code>NFBuildAdapter</code> (<code>setup</code> / <code>build</code> / <code>dispose</code>) for users who want to drive <code>buildForFederation</code> directly. See <a href="../../core/build-adapters.html">Build Adapters</a>.</td>
+            </tr>
+            <tr>
+              <td><strong>Build options</strong></td>
+              <td><code>EsBuildBuilderOptions</code></td>
+              <td>Workspace-level options: <code>outputPath</code>, <code>tsConfig</code>, <code>entryPoints</code>, <code>dev</code>, <code>watch</code>, <code>cachePath</code>, … See <a href="builder.html">Builder</a>.</td>
+            </tr>
+            <tr>
+              <td><strong>Adapter config</strong></td>
+              <td><code>EsBuildAdapterConfig</code></td>
+              <td>esbuild-specific extension points: <code>plugins</code>, <code>fileReplacements</code>, <code>compensateExports</code>, <code>loader</code>. See <a href="configuration.html">Configuration</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Why an Adapter?</h2>
+      <p>The <a href="../../core/index.html">core builder</a> is intentionally bundler-agnostic — it orchestrates the federation build and delegates the actual bundling to an <a href="../../core/build-adapters.html"><code>NFBuildAdapter</code></a>. The esbuild adapter is that bridge for esbuild:</p>
+      <ul>
+        <li><strong>Two bundling modes</strong> — source-code entries (your exposed modules) and node-modules entries (shared dependencies) are bundled with different esbuild configurations. Shared dependencies always go through <code>@chialab/esbuild-plugin-commonjs</code> and get <code>process.env.NODE_ENV</code> defined, so CommonJS libraries Just Work.</li>
+        <li><strong>File writes + cache integration</strong> — esbuild runs with <code>write: false</code>; the adapter writes outputs into <code>outputPath</code> and tracks every input file through the core's federation cache, so watch-mode rebuilds only touch what changed.</li>
+        <li><strong>Watch mode</strong> — wraps <code>esbuild.context()</code> with a debounced <code>RebuildQueue</code>, an <code>AbortSignal</code>-aware rebuild loop, and the core file watcher. Cancelled rebuilds are aborted cleanly rather than racing.</li>
+        <li><strong>CJS/ESM interop knobs</strong> — <code>fileReplacements</code> lets you swap problematic CJS entry points for their pre-bundled variants (e.g. React's <code>cjs/</code> files), and <code>compensateExports</code> routes selected packages through the core's export-compensation pass.</li>
+      </ul>
+
+      <h2>Install</h2>
+      <pre><code>npm i -D esbuild @softarc/native-federation @softarc/native-federation-esbuild</code></pre>
+      <p>On the host page, you also want the orchestrator runtime for import-map + remote loading:</p>
+      <pre><code>npm i @softarc/native-federation-orchestrator</code></pre>
+
+      <h2>In this Section</h2>
+      <ul>
+        <li><a href="getting-started.html">Getting Started</a> — walk through the React reference example end-to-end: <code>federation.config.js</code>, <code>build.mjs</code>, host page and run commands.</li>
+        <li><a href="builder.html">Builder</a> — reference for <code>runEsBuildBuilder</code> and every field of <code>EsBuildBuilderOptions</code>, plus the lower-level <code>createEsBuildAdapter</code>.</li>
+        <li><a href="configuration.html">Adapter Configuration</a> — <code>EsBuildAdapterConfig</code>: extra esbuild <code>plugins</code>, <code>fileReplacements</code>, <code>compensateExports</code> and custom <code>loader</code> mappings.</li>
+        <li><a href="react-interop.html">React &amp; CommonJS Interop</a> — why React needs extra care, the CJS plugin, the canonical <code>fileReplacements</code> map, <code>shareAll</code> overrides, and the Shadow-DOM custom-element pattern.</li>
+      </ul>
+
+      <h2>Prerequisites</h2>
+      <ul>
+        <li><strong>Node 18+</strong> — the adapter is ESM-only and uses top-level <code>await</code> in typical build scripts.</li>
+        <li><strong><code>"type": "module"</code></strong> in your project's <code>package.json</code> — the adapter and its entry points are native ESM.</li>
+        <li><strong>esbuild ≥ 0.25</strong> as a peer — the adapter imports <code>esbuild</code> directly rather than bundling a copy.</li>
+        <li><strong><code>@softarc/native-federation</code> ~4.0.0</strong> — the core package is a peer dependency; the adapter calls <code>buildForFederation</code> / <code>rebuildForFederation</code> from it.</li>
+      </ul>
+
+      <div class="callout">
+        <p>A complete working example lives at <a href="https://github.com/Aukevanoost/native-federation-examples-react/" target="_blank" rel="noopener">native-federation-examples-react</a> — React 18 + esbuild + Shadow-DOM custom element + orchestrator host page.</p>
+      </div>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../../components.js"></script>
+</body>
+</html>

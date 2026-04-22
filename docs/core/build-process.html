@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build Process — Native Federation Core Docs</title>
+  <meta name="description" content="The federationBuilder lifecycle — init, build and close — plus watch-mode rebuilds, caching and build notifications.">
+  <link rel="canonical" href="https://native-federation.io/docs/core/build-process.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Build Process — Native Federation Core Docs">
+  <meta property="og:description" content="The federationBuilder lifecycle.">
+  <meta property="og:url" content="https://native-federation.io/docs/core/build-process.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Build Process</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
+      <p class="doc-lead">The <code>federationBuilder</code> object is the entry point for the core build. It wraps the underlying steps (normalize config, compute externals, bundle shared and exposed modules, write artifacts) behind three methods: <code>init</code>, <code>build</code>, <code>close</code>.</p>
+
+      <h2>Lifecycle Overview</h2>
+      <ol>
+        <li><strong><code>init(params)</code></strong> — load and normalize <code>federation.config.js</code>, register the bundler adapter, decide which packages are externals, and attach a federation cache. Exposes the <code>externals</code> list so your bundler step can exclude them.</li>
+        <li><em>Your own bundler step</em> — compile your application entry points. Pass <code>federationBuilder.externals</code> as externals so shared packages aren't inlined.</li>
+        <li><strong><code>build(opts?)</code></strong> — bundle every shared external (once, with caching), every shared mapped path, and every exposed module, then write <code>remoteEntry.json</code> and the import map. When called again on the same builder instance it performs an incremental rebuild.</li>
+        <li><strong><code>close()</code></strong> — dispose the underlying adapter (closes contexts, stops watchers, flushes caches).</li>
+      </ol>
+
+      <h2>Minimal Example</h2>
+      <pre><code>import * as esbuild from 'esbuild';
+import * as path from 'path';
+import { esBuildAdapter } from '@softarc/native-federation-esbuild';
+import { federationBuilder } from '@softarc/native-federation';
+
+await federationBuilder.init({
+  options: {
+    workspaceRoot: path.join(__dirname, '..'),
+    outputPath: 'dist/shell',
+    tsConfig: 'tsconfig.json',
+    federationConfig: 'shell/federation.config.js',
+    verbose: false,
+  },
+  adapter: esBuildAdapter,
+});
+
+await esbuild.build({
+  entryPoints: ['shell/main.ts'],
+  outdir: 'dist/shell',
+  bundle: true,
+  format: 'esm',
+  external: federationBuilder.externals,
+});
+
+await federationBuilder.build();
+await federationBuilder.close();</code></pre>
+
+      <h2>The <code>FederationOptions</code> Object</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>workspaceRoot</code></td><td><code>string</code></td><td>yes</td><td>Absolute path to the monorepo / workspace root. All other paths are resolved against it.</td></tr>
+            <tr><td><code>outputPath</code></td><td><code>string</code></td><td>yes</td><td>Directory for federation artifacts (shared bundles, <code>remoteEntry.json</code>, import map).</td></tr>
+            <tr><td><code>federationConfig</code></td><td><code>string</code></td><td>yes</td><td>Path (relative to <code>workspaceRoot</code>) to <code>federation.config.js</code>.</td></tr>
+            <tr><td><code>projectName</code></td><td><code>string</code></td><td>no</td><td>Overrides the project name used for cache isolation. Defaults to the <code>name</code> field of the federation config.</td></tr>
+            <tr><td><code>tsConfig</code></td><td><code>string</code></td><td>no</td><td>Path to <code>tsconfig.json</code>. Used to resolve mapped paths.</td></tr>
+            <tr><td><code>packageJson</code></td><td><code>string</code></td><td>no</td><td>Override the <code>package.json</code> used by <code>shareAll</code> for dependency discovery.</td></tr>
+            <tr><td><code>entryPoints</code></td><td><code>string[]</code></td><td>no</td><td>Additional entry points considered when <code>ignoreUnusedDeps</code> is enabled. Defaults to the values of <code>exposes</code>.</td></tr>
+            <tr><td><code>dev</code></td><td><code>boolean</code></td><td>no</td><td>Development mode — influences bundling and enables the build-notifications endpoint.</td></tr>
+            <tr><td><code>watch</code></td><td><code>boolean</code></td><td>no</td><td>Hint to the adapter that it should set up watch mode.</td></tr>
+            <tr><td><code>verbose</code></td><td><code>boolean</code></td><td>no</td><td>Verbose logging.</td></tr>
+            <tr><td><code>cacheExternalArtifacts</code></td><td><code>boolean</code></td><td>no</td><td>Cache built shared externals across builds (default <code>true</code>).</td></tr>
+            <tr><td><code>buildNotifications</code></td><td><code>BuildNotificationOptions</code></td><td>no</td><td>Configures the dev-only notification endpoint that tells the runtime to reload on rebuild.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Incremental Builds</h2>
+      <p>The first call to <code>federationBuilder.build()</code> performs a full build. Every subsequent call on the same builder instance is treated as a rebuild and only re-runs what has changed:</p>
+      <pre><code>// initial build
+await federationBuilder.build();
+
+// file-change notification from your watcher
+await federationBuilder.build({
+  modifiedFiles: ['/abs/path/to/mfe1/component.ts'],
+  signal: abortController.signal,
+});</code></pre>
+      <p>Rebuilds reuse the federation cache — already-bundled shared externals are skipped unless their checksum changes. Pass an <code>AbortSignal</code> to cancel a build mid-flight (e.g. when a newer file change arrives).</p>
+
+      <h2 id="caching">Caching Shared Externals</h2>
+      <p>Shared externals are the slowest part of a federation build, so the core caches them by default under <code>node_modules/.cache/native-federation/&lt;projectName&gt;</code>. On a cache hit the build adapter is never invoked for that bundle — the outputs are copied from the cache and their metadata is merged into <code>remoteEntry.json</code>.</p>
+      <ul>
+        <li>Disable it with <code>cacheExternalArtifacts: false</code> on <code>FederationOptions</code>.</li>
+        <li>Supply your own cache via <code>normalizeFederationOptions(options, cache)</code> or <code>createFederationCache(path, bundlerCache?)</code>.</li>
+      </ul>
+      <p>For the full mechanics — what counts as a cache hit, the checksum format, the cache layout, how to invalidate it — see <a href="caching.html">Caching</a>.</p>
+
+      <h2>Accessors on <code>federationBuilder</code></h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Accessor</th><th>Available after</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>externals</code></td><td><code>init</code></td><td>Array of package names to pass as <code>external</code> to your bundler.</td></tr>
+            <tr><td><code>config</code></td><td><code>init</code></td><td>The normalized federation config.</td></tr>
+            <tr><td><code>federationInfo</code></td><td><code>build</code></td><td>The last <code>FederationInfo</code> object that was written to <code>remoteEntry.json</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Dev-mode Build Notifications</h2>
+      <p>When <code>dev: true</code> and <code>buildNotifications.enable: true</code>, the core writes a <code>buildNotificationsEndpoint</code> into <code>remoteEntry.json</code>. The runtime subscribes to that endpoint and triggers a refresh when a rebuild finishes, giving you a fast HMR-like experience without rebuilding the host.</p>
+
+      <h2>What Happens Inside <code>build()</code></h2>
+      <p>Under the hood, <code>build()</code> runs three phases (logged verbosely when <code>verbose: true</code>):</p>
+      <ol>
+        <li><strong>Shared externals</strong> — <code>bundleShared</code> groups shared packages by <code>platform</code> (browser / node) and by <code>build</code> mode (<code>default</code>, <code>separate</code>, <code>package</code>). Each group is bundled via the adapter and cached.</li>
+        <li><strong>Exposed modules &amp; mapped paths</strong> — <code>bundleExposedAndMappings</code> bundles every <code>exposes</code> entry plus every shared mapped path from your <code>tsconfig</code>.</li>
+        <li><strong>Artifact writing</strong> — <code>writeFederationInfo</code> emits <code>remoteEntry.json</code>; <code>writeImportMap</code> emits the import map the runtime consumes.</li>
+      </ol>
+      <p>See <a href="artifacts.html">Build Artifacts</a> for the shape of the generated files.</p>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>

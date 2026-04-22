@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Runtime — Angular Adapter</title>
+    <meta
+      name="description"
+      content="The runtime side of the Angular adapter — initFederation, loadRemoteModule, lazy routes, and the optional orchestrator runtime."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/angular-adapter/runtime.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Runtime — Angular Adapter" />
+    <meta
+      property="og:description"
+      content="initFederation, loadRemoteModule and the orchestrator runtime in an Angular host/remote."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/angular-adapter/runtime.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+      <main class="docs-content">
+        <h1>Runtime</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          The Angular adapter doesn't ship its own runtime — it re-exports
+          <code>initFederation</code> and <code>loadRemoteModule</code> from
+          <code>@softarc/native-federation-runtime</code> (on v3 under
+          <code>@angular-architects/native-federation</code>, on v4 under
+          <code>@angular-architects/native-federation-v4</code>). This page
+          covers how the two integrate with an Angular bootstrap and what
+          changes when you opt into the new
+          <a href="../runtime/index.html">orchestrator</a> runtime.
+        </p>
+
+        <nav class="page-toc" aria-label="On this page">
+          <strong>On this page</strong>
+          <ul>
+            <li><a href="#bootstrap">The bootstrap split</a></li>
+            <li><a href="#init">initFederation</a></li>
+            <li><a href="#load">loadRemoteModule</a></li>
+            <li><a href="#manifest">The federation manifest</a></li>
+            <li><a href="#orchestrator">Opting into the orchestrator</a></li>
+          </ul>
+        </nav>
+
+        <h2 id="bootstrap">The Bootstrap Split</h2>
+        <p>
+          Native Federation must wire the import map <em>before</em> Angular
+          evaluates any module that depends on a shared external. The schematic
+          enforces this by splitting <code>main.ts</code> in two:
+        </p>
+        <pre><code>// projects/&lt;project&gt;/src/main.ts
+import { initFederation } from '@angular-architects/native-federation';
+
+initFederation('/assets/federation.manifest.json')
+  .catch(err =&gt; console.error(err))
+  .then(_ =&gt; import('./bootstrap'))
+  .catch(err =&gt; console.error(err));</code></pre>
+        <pre><code>// projects/&lt;project&gt;/src/bootstrap.ts
+// ← whatever your original main.ts contained, e.g.
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app/app.component';
+import { appConfig } from './app/app.config';
+
+bootstrapApplication(AppComponent, appConfig)
+  .catch(err =&gt; console.error(err));</code></pre>
+        <p>
+          The dynamic <code>import('./bootstrap')</code> is mandatory: it forces
+          the bundler to put your Angular code in a separate chunk that's only
+          loaded once the import map is live.
+        </p>
+
+        <h2 id="init">initFederation</h2>
+        <pre><code>initFederation(remotesOrManifest?, options?): Promise&lt;void&gt;</code></pre>
+        <ul>
+          <li>
+            <strong>Host (dynamic).</strong> Pass the manifest URL:
+            <code>initFederation('/assets/federation.manifest.json')</code>.
+          </li>
+          <li>
+            <strong>Host (static).</strong> Pass the remote map inline:
+            <code
+              >initFederation({ mfe1: 'http://localhost:4201/remoteEntry.json'
+              })</code
+            >.
+          </li>
+          <li>
+            <strong>Remote.</strong> Pass a self-map:
+            <code>initFederation({ mfe1: './remoteEntry.json' })</code>. This
+            lets the remote's runtime register its own shared modules so the
+            host can match versions.
+          </li>
+        </ul>
+        <p>
+          The schematic emits the right call for the project type you chose —
+          see <a href="schematics.html#init">Schematics → init</a>.
+        </p>
+
+        <h2 id="load">loadRemoteModule</h2>
+        <pre><code>loadRemoteModule(remoteName, exposedKey): Promise&lt;unknown&gt;</code></pre>
+        <p>
+          Once <code>initFederation</code> resolves, you can lazy-load any
+          exposed module from any registered remote. In an Angular shell this is
+          normal lazy-loading:
+        </p>
+        <pre><code>// projects/shell/src/app/app.routes.ts
+import { Routes } from '@angular/router';
+import { loadRemoteModule } from '@angular-architects/native-federation';
+
+export const APP_ROUTES: Routes = [
+  {
+    path: 'flights',
+    loadComponent: () =&gt;
+      loadRemoteModule('mfe1', './Component').then(m =&gt; m.AppComponent),
+  },
+  {
+    path: 'orders',
+    loadChildren: () =&gt;
+      loadRemoteModule('mfe2', './Routes').then(m =&gt; m.ORDERS_ROUTES),
+  },
+];</code></pre>
+        <p>
+          <code>remoteName</code> matches the <code>name</code> in the remote's
+          <code>federation.config.mjs</code> (or <code>.js</code> on v3 / legacy
+          projects) and the key in the host's manifest. <code>exposedKey</code>
+          matches the key under
+          <code>exposes</code>. The promise resolves to the module's exports —
+          whatever you'd get from a regular dynamic <code>import()</code>.
+        </p>
+
+        <h2 id="manifest">The Federation Manifest</h2>
+        <p>
+          For dynamic hosts, the manifest is just a JSON object mapping remote
+          name → <code>remoteEntry.json</code> URL:
+        </p>
+        <pre><code>{
+  "mfe1": "http://localhost:4201/remoteEntry.json",
+  "mfe2": "https://cdn.example.com/orders/remoteEntry.json"
+}</code></pre>
+        <p>
+          Swap it per environment by deploying a different
+          <code>federation.manifest.json</code> alongside the shell — no rebuild
+          required. The schematic places it under <code>public/</code> if the
+          project has a public folder, otherwise under <code>src/assets/</code>.
+        </p>
+
+        <div class="callout">
+          <p>
+            Manifest URLs may be absolute (production CDN) or relative (local
+            dev or same-origin deploys). For Angular SSR the same manifest is
+            consumed server-side by
+            <code>@softarc/native-federation-node</code>; see
+            <a href="ssr.html">SSR &amp; Hydration</a>.
+          </p>
+        </div>
+
+        <h2 id="orchestrator">Opting into the Orchestrator</h2>
+        <p>
+          The legacy runtime (<code>@softarc/native-federation-runtime</code>,
+          re-exported from the adapter as
+          <code>@angular-architects/native-federation</code> on v3 and
+          <code>@angular-architects/native-federation-v4</code> on v4) is the
+          v3 default and remains fully supported on v4. v4 introduces a more
+          capable runtime — the <strong>orchestrator</strong> — with
+          range-based version selection, share scopes, in-browser caching,
+          configurable storage, and pluggable loggers.
+        </p>
+        <p>
+          On v4 the <code>init</code> schematic generates
+          orchestrator-flavoured bootstraps by default, and
+          <code>update-v4 --orchestrator</code> rewrites an existing
+          <code>main.ts</code> onto the orchestrator. Manually, the migration
+          looks like this:
+        </p>
+        <pre><code>// projects/shell/src/main.ts
+import { initFederation } from '@softarc/native-federation-orchestrator';
+import {
+  useShimImportMap,
+  consoleLogger,
+  globalThisStorageEntry,
+} from '@softarc/native-federation-orchestrator/options';
+
+initFederation('/assets/federation.manifest.json', {
+  ...useShimImportMap({ shimMode: true }),
+  logger: consoleLogger,
+  storage: globalThisStorageEntry,
+  hostRemoteEntry: './remoteEntry.json',
+  logLevel: 'debug',
+})
+  .catch(err =&gt; console.error(err))
+  .then(_ =&gt; import('./bootstrap'))
+  .catch(err =&gt; console.error(err));</code></pre>
+        <p>
+          The biggest behavioural change is that
+          <code>loadRemoteModule</code> is no longer a global export — it's
+          returned from the resolved <code>initFederation</code> promise. That
+          nudges your bootstrap into a controlled flow:
+        </p>
+        <pre><code>// projects/shell/src/main.ts
+import { initFederation, NativeFederationResult } from '@softarc/native-federation-orchestrator';
+
+initFederation('/assets/federation.manifest.json')
+  .then(({ loadRemoteModule }: NativeFederationResult) =&gt;
+    import('./bootstrap').then((m: any) =&gt; m.bootstrap(loadRemoteModule)))
+  .catch(err =&gt; console.error(err));</code></pre>
+        <pre><code>// projects/shell/src/bootstrap.ts
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app/app.component';
+import { appConfig } from './app/app.config';
+import { LoadRemoteModule } from '@softarc/native-federation-orchestrator';
+
+export const bootstrap = (loadRemoteModule: LoadRemoteModule) =&gt;
+  bootstrapApplication(AppComponent, appConfig(loadRemoteModule))
+    .catch(err =&gt; console.error(err));</code></pre>
+        <p>
+          And then pass the loader through Angular's DI so routes can use it:
+        </p>
+        <pre><code>// projects/shell/src/app/app.config.ts
+import { ApplicationConfig, InjectionToken, provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter, Routes } from '@angular/router';
+import { LoadRemoteModule } from '@softarc/native-federation-orchestrator';
+
+export const MODULE_LOADER = new InjectionToken&lt;LoadRemoteModule&gt;('loader');
+
+const routes = (loadRemoteModule: LoadRemoteModule): Routes =&gt; [
+  {
+    path: 'mfe3',
+    loadComponent: () =&gt;
+      loadRemoteModule('mfe3', './Component').then((m: any) =&gt; m.AppComponent),
+  },
+];
+
+export const appConfig = (loadRemoteModule: LoadRemoteModule): ApplicationConfig =&gt; ({
+  providers: [
+    { provide: MODULE_LOADER, useValue: loadRemoteModule },
+    provideZonelessChangeDetection(),
+    provideRouter(routes(loadRemoteModule)),
+  ],
+});</code></pre>
+        <p>
+          Slightly more boilerplate, but the loader is guaranteed to exist by
+          the time anything tries to use it. The full list of orchestrator
+          options lives in the <a href="../runtime/index.html">runtime docs</a>.
+        </p>
+
+        <h2>Related</h2>
+        <ul>
+          <li>
+            <a href="../runtime/index.html">Runtime overview</a> — the
+            orchestrator's full feature set.
+          </li>
+          <li>
+            <a href="ssr.html">SSR &amp; Hydration</a> — initialising federation
+            on the Node side.
+          </li>
+          <li>
+            <a href="migration-v4.html">Migration to v4</a> — switching from the
+            legacy runtime to the orchestrator.
+          </li>
+        </ul>
+      </main>
+    </div>
+
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../../components.js"></script>
+  </body>
+</html>

@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terminology — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="Glossary of Native Federation terms — manifest, remoteEntry.json, remote, host, external, exposed module, shared dependency, build adapter and more."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/terminology.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Terminology — Native Federation Docs" />
+    <meta
+      property="og:description"
+      content="Glossary of Native Federation terms."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/terminology.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../images/favicon.png" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+      <main class="docs-content">
+        <h1>Terminology</h1>
+
+        <p class="doc-lead">
+          A shared vocabulary for working with Native Federation. The same terms
+          show up across the Core builder, the runtime, the orchestrator, and
+          every adapter — this page is the canonical definition of each one.
+        </p>
+
+        <nav class="page-toc" aria-label="On this page">
+          <strong>On this page</strong>
+          <ul>
+            <li><a href="#actors">Actors</a></li>
+            <li><a href="#artifacts">Artifacts</a></li>
+            <li><a href="#sharing">Sharing concepts</a></li>
+            <li><a href="#config">Configuration</a></li>
+            <li><a href="#build">Build &amp; runtime</a></li>
+          </ul>
+        </nav>
+
+        <h2 id="actors">Actors</h2>
+
+        <h3 id="host">Host</h3>
+        <p>
+          The application that loads remotes. Also called the <em>shell</em>. A
+          host is a regular web application built the same way as any other — it
+          just reaches out at runtime to pull in code from separately deployed
+          remotes. From the framework's perspective this looks like ordinary
+          lazy loading; the difference is that the host doesn't know the remotes
+          at compile time. A host has its own
+          <code>federation.config.js</code> (without <code>exposes</code>) and
+          produces its own <code>remoteEntry.json</code>.
+        </p>
+
+        <h3 id="remote">Remote</h3>
+        <p>
+          A separately built and deployed application that publishes one or more
+          EcmaScript modules for hosts (or other remotes) to consume. In
+          micro-frontend terms, a remote represents a subdomain within your
+          architecture — typically one remote per team or bounded context. Each
+          remote has its own <code>name</code>, its own
+          <code>federation.config.js</code>, and its own
+          <code>remoteEntry.json</code>. Names are npm-style:
+          <code>'mfe1'</code>, <code>'@org/mfe1'</code>,
+          <code>'team/mfe1'</code>.
+        </p>
+
+        <h3 id="micro-frontend">Micro Frontend (MFE)</h3>
+        <p>
+          A remote, viewed through the lens of the micro-frontend architecture.
+          The terms are used interchangeably in these docs: every micro frontend
+          is a remote, and in practice every remote in a micro-frontend
+          architecture <em>is</em> the MFE for a team's subdomain.
+        </p>
+
+        <h3 id="runtime">Runtime</h3>
+        <p>
+          The small browser library that boots federation on the host —
+          initializes federation (<code>initFederation</code>), fetches remote
+          manifests, resolves shared dependencies and exposes
+          <code>loadRemoteModule</code>. The default runtime is
+          <code>@softarc/native-federation-runtime</code>. See
+          <a href="runtime/index.html">Runtime</a>.
+        </p>
+
+        <h3 id="orchestrator">Orchestrator</h3>
+        <p>
+          The next-generation browser runtime —
+          <code>@softarc/native-federation-orchestrator</code> — intended to
+          replace the default Runtime as the recommended way to load remotes on
+          the host. It speaks the same <code>remoteEntry.json</code> contract
+          but adds semver-range resolution for shared dependencies and
+          persistent caching of <code>remoteEntry.json</code> in
+          <code>localStorage</code> or <code>sessionStorage</code>. Works in
+          SPAs, plain HTML pages and server-rendered hosts; does not yet have
+          direct SSR support. See
+          <a href="orchestrator/index.html">Orchestrator</a>.
+        </p>
+
+        <h3 id="build-adapter">Build Adapter</h3>
+        <p>
+          A thin shim that plugs a specific bundler (esbuild, Angular CLI, Vite,
+          Rspack, …) into the Core builder. Build adapters implement the
+          <code>NFBuildAdapter</code> contract (<code>setup</code> /
+          <code>build</code> / <code>dispose</code>) and let the Core stay
+          bundler-agnostic. See
+          <a href="core/build-adapters.html">Build Adapters</a> and
+          <a href="adapters/build-your-own.html">Build Your Own Adapter</a>.
+        </p>
+
+        <h2 id="artifacts">Artifacts</h2>
+
+        <h3 id="remote-entry"><code>remoteEntry.json</code></h3>
+        <p>
+          The public contract of a remote — one JSON file written alongside the
+          bundled output by every Native Federation build. It tells hosts
+          exactly what the remote publishes, which packages it expects to share,
+          and where to find the corresponding files. Shape:
+        </p>
+        <pre><code>interface FederationInfo {
+  name: string;
+  exposes: ExposesInfo[];
+  shared: SharedInfo[];
+  chunks?: Record&lt;string, string[]&gt;;
+  buildNotificationsEndpoint?: string;
+}</code></pre>
+        <p>
+          For the exact layout of each field see
+          <a href="core/artifacts.html">Build Artifacts</a>.
+        </p>
+
+        <h3 id="manifest">Manifest</h3>
+        <p>
+          A JSON file on the host that maps every <em>known</em> remote name to
+          the URL of its <code>remoteEntry.json</code>. The host passes a
+          manifest to <code>initFederation</code>; the runtime fetches each
+          listed remote entry and wires everything together.
+        </p>
+        <pre><code>{
+  "mfe1": "http://localhost:3001/remoteEntry.json",
+  "checkout": "https://checkout.example.com/remoteEntry.json"
+}</code></pre>
+        <p>
+          Manifests decouple configuration from code: to point a host at
+          different remotes per environment, you ship a different manifest — no
+          recompilation needed. A manifest can also be passed as an inline
+          object to <code>initFederation</code>.
+        </p>
+        <div class="callout">
+          <p>
+            <strong>Manifest vs. <code>remoteEntry.json</code>.</strong> The
+            <em>manifest</em> lives on the host and says
+            <em>where the remotes are</em>. A
+            <code>remoteEntry.json</code> lives on each remote and says
+            <em>what that remote publishes</em>. Hosts use the manifest to find
+            remotes; the runtime uses each remote's
+            <code>remoteEntry.json</code> to load its modules.
+          </p>
+        </div>
+
+        <h3 id="import-map">Import Map</h3>
+        <p>
+          A
+          <a
+            href="https://html.spec.whatwg.org/multipage/webappapis.html#import-maps"
+            target="_blank"
+            rel="noopener"
+            >W3C-standard browser feature</a
+          >
+          for redirecting bare module specifiers to URLs. Native Federation
+          produces an <code>importmap.json</code> alongside
+          <code>remoteEntry.json</code> in every build. At runtime, the
+          orchestrator merges the import maps of host and remotes, resolves
+          version conflicts, and injects the result into the page so imports
+          like <code>@angular/core</code> resolve to the single chosen file.
+        </p>
+
+        <h3 id="chunk">Chunk (<code>@nf-internal/*</code>)</h3>
+        <p>
+          A shared bit of code the bundler split off from one or more shared
+          externals. Chunks avoid duplicating code that multiple externals have
+          in common. In <code>remoteEntry.json</code> they appear under
+          synthetic package names like <code>@nf-internal/chunk-IXOA6WTM</code>.
+          With <code>features.denseChunking</code> enabled, they move to a
+          dedicated <code>chunks</code> object and each shared entry gets a
+          <code>bundle</code> property linking it to its chunk group.
+        </p>
+
+        <h2 id="sharing">Sharing concepts</h2>
+
+        <h3 id="shared-dependency">Shared Dependency</h3>
+        <p>
+          A package that the host and one or more remotes agree to load
+          <em>once</em> and reuse at runtime instead of each bundling their own
+          copy. Shared dependencies are the whole point of federation: they
+          de-duplicate bytes on the wire and, for stateful libraries, guarantee
+          that every remote talks to the same instance. Declared in
+          <code>federation.config.js</code> under <code>shared</code>, usually
+          via the <code>share</code> or <code>shareAll</code> helpers.
+        </p>
+
+        <h3 id="external">External</h3>
+        <p>
+          A package or mapped path the app bundler is told <em>not</em> to
+          inline — it's left as a bare <code>import 'some-lib'</code> in the
+          emitted code and resolved at runtime by the import map. In Native
+          Federation terms, every shared dependency (and every shared mapped
+          path) ends up on the externals list that is passed to your bundler via
+          <code>federationBuilder.externals</code>. "Shared external" is the
+          same thing viewed from the federation side; "external" is the same
+          thing viewed from your app bundler's side.
+        </p>
+
+        <h3 id="exposed-module">Exposed Module</h3>
+        <p>
+          A module a remote makes available to hosts. Declared under
+          <code>exposes</code> in the remote's
+          <code>federation.config.js</code>:
+        </p>
+        <pre><code>exposes: {
+  './Component': './projects/mfe1/src/bootstrap.ts',
+}</code></pre>
+        <p>
+          The key (<code>./Component</code>) is the public specifier hosts use;
+          the value is the path to the source file. Each exposed module is built
+          into its own ESM bundle and listed in
+          <code>remoteEntry.json</code> under <code>exposes</code>. A host loads
+          it via:
+        </p>
+        <pre><code>await loadRemoteModule({ remoteName: 'mfe1', exposedModule: './Component' });</code></pre>
+
+        <h3 id="secondary-entry-point">Secondary Entry Point</h3>
+        <p>
+          A subpath of an npm package that is importable on its own — for
+          example <code>@angular/core/rxjs-interop</code> or
+          <code>rxjs/operators</code>. The <code>share</code> helper discovers
+          secondaries by reading the package's <code>exports</code> field (or
+          falling back to directory scanning) and, by default, emits a separate
+          shared bundle for each one. Controlled per-package with
+          <code>includeSecondaries</code>.
+        </p>
+
+        <h3 id="shared-mapping">Shared Mapping</h3>
+        <p>
+          A <code>tsconfig.json</code> path mapping that Native Federation
+          treats as a shared library. Monorepo-internal libraries
+          (<code>libs/shared-lib</code>, <code>@org/utils</code>) are usually
+          consumed through <code>tsconfig</code> paths; the Core picks them up
+          automatically and shares them like any other external. Drop unwanted
+          ones with <code>skip</code>.
+        </p>
+
+        <h3 id="singleton">Singleton</h3>
+        <p>
+          A shared-dependency flag that says "only one instance of this package
+          may ever be loaded at runtime". Required for libraries with internal
+          state — Angular, React, <code>zone.js</code>, state stores. When two
+          remotes disagree on the version of a singleton, the orchestrator picks
+          one winner; without <code>singleton: true</code>, each remote is free
+          to run its own copy.
+        </p>
+
+        <h3 id="strict-version">strictVersion</h3>
+        <p>
+          A flag that turns a version mismatch from a warning into a runtime
+          error. With <code>strictVersion: false</code> the orchestrator falls
+          back to a compatible version; with <code>strictVersion: true</code> it
+          throws. Use it when you'd rather fail fast than discover a subtle
+          incompatibility in production.
+        </p>
+
+        <h3 id="required-version">requiredVersion</h3>
+        <p>
+          The semver range a consumer expects of a shared dependency — written
+          into <code>remoteEntry.json</code> so the orchestrator can pick a
+          version that satisfies every remote. Set it to <code>'auto'</code> to
+          have the helper read the actual version from the closest
+          <code>package.json</code> (the recommended default).
+        </p>
+
+        <h3 id="share-scope">Share Scope</h3>
+        <p>
+          A named bucket of shared dependencies. Two remotes share a package
+          only if they use the same share scope (and the same package name).
+          Most apps never set one; it's useful when a single page hosts multiple
+          independently versioned federation graphs that must not
+          cross-contaminate.
+        </p>
+
+        <h3 id="version-mismatch">Version Mismatch</h3>
+        <p>
+          What happens when two remotes declare different versions of the same
+          shared dependency. The orchestrator resolves the conflict using semver
+          and the flags above: it may fall back to a compatible version, pick
+          the higher version (for singletons), or throw
+          (<code>strictVersion</code>).
+        </p>
+
+        <h2 id="config">Configuration</h2>
+
+        <h3 id="federation-config"><code>federation.config.js</code></h3>
+        <p>
+          The single configuration file every host and every remote owns.
+          Describes <code>name</code>, <code>exposes</code>,
+          <code>shared</code>, <code>skip</code>, feature flags, and more.
+          Loaded by the Core at build time via
+          <code>withNativeFederation</code>. See
+          <a href="core/configuration.html"
+            ><code>federation.config.js</code></a
+          >
+          for the complete reference.
+        </p>
+
+        <h3 id="with-native-federation"><code>withNativeFederation</code></h3>
+        <p>
+          The helper you wrap your config in. Applies defaults, prepares the
+          skip list, resolves <code>tsconfig</code> mapped paths, and returns a
+          <code>NormalizedFederationConfig</code> the builder consumes.
+        </p>
+
+        <h3 id="skip-list">Skip list</h3>
+        <p>
+          An array of strings, regular expressions, or predicates that opts
+          specific packages out of sharing. The list you provide is merged with
+          <code>DEFAULT_SKIP_LIST</code> — which already excludes Native
+          Federation's own packages, <code>es-module-shims</code>,
+          <code>tslib/</code> and everything under <code>@types/</code>.
+        </p>
+        <div class="callout">
+          <p>
+            <strong>Skip ≠ exclude.</strong> A skipped package is still bundled
+            into the remote — otherwise the remote couldn't run standalone. Skip
+            only prevents the package from being extracted into a
+            <em>shared</em> bundle.
+          </p>
+        </div>
+
+        <h3 id="feature-flag">Feature Flag</h3>
+        <p>
+          An opt-in behavior toggle under <code>features</code> on the
+          federation config — currently <code>ignoreUnusedDeps</code>,
+          <code>denseChunking</code> and <code>mappingVersion</code>. See
+          <a href="core/configuration.html#features">Feature Flags</a>.
+        </p>
+
+        <h2 id="build">Build &amp; runtime</h2>
+
+        <h3 id="federation-builder"><code>federationBuilder</code></h3>
+        <p>
+          The high-level build-time API. Exposes <code>init</code>,
+          <code>build</code>, <code>close</code> plus accessors for
+          <code>externals</code>, <code>config</code> and
+          <code>federationInfo</code>. Wraps the lower-level
+          <code>buildForFederation</code>, <code>rebuildForFederation</code>,
+          and cache primitives. See
+          <a href="core/build-process.html">Build Process</a>.
+        </p>
+
+        <h3 id="federation-cache">Federation Cache</h3>
+        <p>
+          The content-addressed cache for bundled shared externals. Lives under
+          <code>node_modules/.cache/native-federation/&lt;projectName&gt;</code>
+          and keys entries by a SHA-256 checksum of the package names and
+          versions in each bundle. On a cache hit, the build adapter is never
+          invoked. See <a href="core/caching.html">Caching</a>.
+        </p>
+
+        <h3 id="build-mode">Build mode</h3>
+        <p>
+          Per-shared-entry setting that controls how the Core groups packages
+          for the adapter: <code>'default'</code> (all default externals in one
+          pass), <code>'separate'</code> (one pass per entry),
+          <code>'package'</code> (one pass per package, including its
+          secondaries — required for per-package <code>chunks</code>).
+        </p>
+
+        <h3 id="load-remote-module"><code>loadRemoteModule</code></h3>
+        <p>
+          The runtime function hosts call to load an exposed module from a
+          remote:
+        </p>
+        <pre><code>const mod = await loadRemoteModule({
+  remoteName: 'mfe1',
+  exposedModule: './Component',
+});</code></pre>
+        <p>Accepts an optional type parameter for typed remotes.</p>
+
+        <h3 id="init-federation"><code>initFederation</code></h3>
+        <p>
+          The runtime bootstrap call. On the host, it takes a manifest (inline
+          object or URL) and sets up the import map from every listed remote. On
+          a remote it is usually called parameter-less during its own startup,
+          so the remote can, in turn, act as a host for <em>other</em> remotes.
+        </p>
+      </main>
+    </div>
+
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../components.js"></script>
+  </body>
+</html>

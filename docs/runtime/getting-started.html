@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started — Runtime Docs</title>
+  <meta name="description" content="Install @softarc/native-federation-runtime, add es-module-shims, split your bootstrap, and load your first remote module.">
+  <link rel="canonical" href="https://native-federation.io/docs/runtime/getting-started.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Getting Started — Runtime Docs">
+  <meta property="og:description" content="Install and wire up the classic Native Federation runtime.">
+  <meta property="og:url" content="https://native-federation.io/docs/runtime/getting-started.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>Getting Started with the Runtime</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
+      <p class="doc-lead">This page walks through the minimum setup needed to load remotes in the browser with the classic runtime — install the package, add <code>es-module-shims</code> to your HTML, split your bootstrap, and call <code>initFederation</code> and <code>loadRemoteModule</code>.</p>
+
+      <div class="callout">
+        <p>If you are on Angular, the Angular adapter already wires this up for you — schematics generate the bootstrap split and the correct <code>initFederation</code> call. See <a href="../angular-adapter/runtime.html">Angular Adapter → Runtime</a>. This page is for hosts built with a framework-agnostic or custom stack.</p>
+      </div>
+
+      <nav class="page-toc" aria-label="On this page">
+        <strong>On this page</strong>
+        <ul>
+          <li><a href="#install">1. Install the runtime</a></li>
+          <li><a href="#shim">2. Add es-module-shims to the HTML</a></li>
+          <li><a href="#split">3. Split your bootstrap</a></li>
+          <li><a href="#init">4. Call initFederation</a></li>
+          <li><a href="#load">5. Load a remote module</a></li>
+          <li><a href="#remote">6. On the remote side</a></li>
+        </ul>
+      </nav>
+
+      <h2 id="install">1. Install the runtime</h2>
+      <pre><code>npm i @softarc/native-federation-runtime</code></pre>
+      <p>The runtime has one peer: the build output from <a href="../core/index.html"><code>@softarc/native-federation</code></a> — it consumes the <code>remoteEntry.json</code> your build emits. For Angular projects, install <code>@angular-architects/native-federation</code> instead; it re-exports the same runtime.</p>
+
+      <h2 id="shim">2. Add es-module-shims to the HTML</h2>
+      <p>The runtime injects the import map as a <code>&lt;script type="importmap-shim"&gt;</code>. Browsers ignore that type — <a href="https://github.com/guybedford/es-module-shims" target="_blank" rel="noopener">es-module-shims</a> picks it up and makes <code>importShim()</code> available for the runtime to use when loading modules.</p>
+      <pre><code>&lt;!-- index.html --&gt;
+&lt;script
+  type="module"
+  src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"
+&gt;&lt;/script&gt;
+
+&lt;script type="module" src="./main.js"&gt;&lt;/script&gt;</code></pre>
+      <div class="callout callout-warning">
+        <p>Use <code>type="importmap-shim"</code> (not <code>importmap</code>). The runtime uses the shimmed flavour so that it keeps working after Angular, React or any other framework has already started evaluating modules. If you remove <code>es-module-shims</code>, <code>loadRemoteModule</code> will fall back to native <code>import()</code> — but the injected map will not be honoured, and remote imports will fail.</p>
+      </div>
+
+      <h2 id="split">3. Split your bootstrap</h2>
+      <p>Federation must install the import map <em>before</em> any module that depends on a shared external is evaluated. The idiomatic way to guarantee that is to split <code>main.ts</code> into a tiny entry file that calls <code>initFederation</code> and then dynamically imports the real bootstrap:</p>
+      <pre><code>// src/main.ts
+import { initFederation } from '@softarc/native-federation-runtime';
+
+initFederation({
+  mfe1: 'http://localhost:3001/remoteEntry.json',
+})
+  .catch(err =&gt; console.error(err))
+  .then(() =&gt; import('./bootstrap'))
+  .catch(err =&gt; console.error(err));</code></pre>
+      <pre><code>// src/bootstrap.ts — what main.ts used to contain
+import './app/app';   // or your framework's bootstrap call</code></pre>
+      <p>The dynamic <code>import('./bootstrap')</code> is the important bit: it forces your bundler to emit the real app as a separate chunk that only loads after <code>initFederation</code> resolves. Without the split, the app chunk would evaluate before the import map exists, and any shared dependency would be pinned to the host-bundled copy.</p>
+
+      <h2 id="init">4. Call initFederation</h2>
+      <p><code>initFederation</code> accepts either an inline remotes map or a URL to a manifest JSON. Inline is fine for a fixed topology; a manifest lets you ship the same build to different environments.</p>
+      <pre><code>// Inline — remotes known at build time
+initFederation({
+  mfe1: 'http://localhost:3001/remoteEntry.json',
+  mfe2: 'http://localhost:3002/remoteEntry.json',
+});
+
+// Manifest — remotes resolved at runtime
+initFederation('/assets/federation.manifest.json');</code></pre>
+      <p>The manifest itself is just <code>{ "&lt;remoteName&gt;": "&lt;remoteEntry.json URL&gt;" }</code>. See <a href="init-federation.html"><code>initFederation</code></a> for the full signature, options, and error-handling behaviour.</p>
+
+      <h2 id="load">5. Load a remote module</h2>
+      <p>Once <code>initFederation</code> resolves, any registered remote's exposed modules can be loaded by name. The short form takes a remote name and an exposed key:</p>
+      <pre><code>import { loadRemoteModule } from '@softarc/native-federation-runtime';
+
+const { AppComponent } = await loadRemoteModule('mfe1', './Component');</code></pre>
+      <p>The exposed key is exactly the string under <code>exposes</code> in the remote's <code>federation.config.js</code>. The longer object form adds lazy registration and a fallback value — see <a href="load-remote-module.html"><code>loadRemoteModule</code></a>.</p>
+
+      <h2 id="remote">6. On the remote side</h2>
+      <p>A remote also calls <code>initFederation</code> during its own bootstrap — but passing an empty (or self-referential) remotes map. The purpose is not to load other remotes, but to register the remote's <em>own</em> shared dependencies into the import map so its code resolves them to the bundled versions:</p>
+      <pre><code>// remote src/main.ts
+import { initFederation } from '@softarc/native-federation-runtime';
+
+initFederation({})
+  .catch(err =&gt; console.error(err))
+  .then(() =&gt; import('./bootstrap'))
+  .catch(err =&gt; console.error(err));</code></pre>
+      <p>A remote is still a deployable web app in its own right — it just happens to also expose modules. The same bootstrap split applies.</p>
+
+      <h2>Next</h2>
+      <ul>
+        <li><a href="init-federation.html"><code>initFederation</code></a> — manifest URLs, cache busting, failure modes.</li>
+        <li><a href="load-remote-module.html"><code>loadRemoteModule</code></a> — both call signatures and lazy registration.</li>
+        <li><a href="import-map.html">The Import Map</a> — what actually gets written to the DOM.</li>
+      </ul>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>

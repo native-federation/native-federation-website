@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Localization — Angular Adapter</title>
+    <meta
+      name="description"
+      content="Configure Angular locale data loading with Native Federation — the ignoreUnusedDeps default and the shareAngularLocales fallback."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/angular-adapter/localization.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Localization — Angular Adapter" />
+    <meta
+      property="og:description"
+      content="Loading Angular locale data under Native Federation."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/angular-adapter/localization.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+      <main class="docs-content">
+        <h1>Localization</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          Angular ships per-locale data (numbers, dates, plural rules) under
+          <code>@angular/common/locales</code>. These files don't follow
+          standard package exports, so the share helpers can't pick them up
+          automatically. The Angular adapter has two ways to handle them; new
+          projects get the recommended one by default.
+        </p>
+
+        <h2>Recommended: <code>ignoreUnusedDeps</code></h2>
+        <p>
+          Since adapter v20.0.6, locale data loading is automatic when
+          <code>features.ignoreUnusedDeps</code> is on:
+        </p>
+        <pre><code>export default withNativeFederation({
+  // ...
+  features: {
+    ignoreUnusedDeps: true,
+  },
+});</code></pre>
+        <p>
+          The core scans your entry points and only ships the locale files you
+          actually import — no manual list, no surprises. New v4 projects get
+          this enabled by default.
+        </p>
+        <p>
+          How does it work? <code>withNativeFederation</code> in the Angular
+          adapter strips every <code>@angular/common/locales/*</code> entry from
+          the <em>shared</em> map when <code>ignoreUnusedDeps</code> is off.
+          With the flag on, locale entries are kept and the unused-deps shaking
+          does the right thing on a per-entry basis.
+        </p>
+
+        <h2>Fallback: <code>shareAngularLocales</code></h2>
+        <p>
+          Before v20.0.6, or any time you can't enable
+          <code>ignoreUnusedDeps</code>, declare the locales explicitly:
+        </p>
+        <pre><code>import {
+  withNativeFederation,
+  shareAll,
+  shareAngularLocales,
+} from '@angular-architects/native-federation-v4/config';
+
+export default withNativeFederation({
+  name: 'mfe1',
+  shared: {
+    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
+    ...shareAngularLocales(['en', 'de', 'fr']),
+  },
+});</code></pre>
+        <p>
+          <code>shareAngularLocales</code> generates one shared entry per
+          locale, pre-wiring its package info to
+          <code>node_modules/@angular/common/locales/&lt;locale&gt;.js</code>.
+          The helper was introduced in v19.0.14.
+        </p>
+
+        <h3>Options</h3>
+        <pre><code>shareAngularLocales(keys: string[], opts?: {
+  config?: ExternalConfig;
+  legacy?: boolean;
+})</code></pre>
+        <ul>
+          <li>
+            <strong><code>keys</code></strong> — locale codes to share. Anything
+            available under <code>@angular/common/locales</code>.
+          </li>
+          <li>
+            <strong><code>opts.config</code></strong> — overrides the per-entry
+            shared config. Defaults to
+            <code
+              >{ singleton: true, strictVersion: true, requiredVersion: 'auto'
+              }</code
+            >.
+          </li>
+          <li>
+            <strong><code>opts.legacy</code></strong> — use the old
+            <code>.mjs</code> filenames instead of <code>.js</code>. Only
+            relevant for older <code>@angular/common</code> versions.
+          </li>
+        </ul>
+
+        <h2>Automatic Shell Reloading</h2>
+        <p>
+          The federation dev server pushes Server-Sent Events when a remote
+          finishes (re)building, so the shell can refresh without a manual page
+          reload. See the
+          <a href="builder.html#dev-server">Builder → Dev Server</a> section for
+          the wiring, and the article below for the full pattern:
+        </p>
+
+        <div class="workshop-cta">
+          <h3>Fixing DX Friction: Automatic Shell Reloading</h3>
+          <p>
+            How to subscribe to the federation build-notification stream and
+            trigger a host reload whenever a remote rebuilds.
+          </p>
+          <a
+            href="https://www.angulararchitects.io/en/blog/fixing-dx-friction-automatic-shell-reloading-in-native-federation/"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-primary"
+            >Read the Article</a
+          >
+        </div>
+
+        <h2>Related</h2>
+        <ul>
+          <li>
+            <a href="i18n.html">I18N</a> — Angular's <code>i18n</code> +
+            translation pipeline integration.
+          </li>
+          <li>
+            <a href="configuration.html#locales"
+              >Angular Config → shareAngularLocales</a
+            >.
+          </li>
+          <li>
+            <a href="../core/configuration.html#features"
+              >Core configuration → features</a
+            >
+            — the canonical reference for <code>ignoreUnusedDeps</code>.
+          </li>
+        </ul>
+      </main>
+    </div>
+
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../../components.js"></script>
+  </body>
+</html>

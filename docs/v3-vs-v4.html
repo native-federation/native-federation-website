@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>v3 vs v4 — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="A clear overview of what changed between Native Federation v3 and v4 — packages, ESM, the Orchestrator runtime, Angular compatibility, and repository locations."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.io/docs/v3-vs-v4.html"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="v3 vs v4 — Native Federation Docs" />
+    <meta
+      property="og:description"
+      content="What changed between Native Federation v3 and v4."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.io/docs/v3-vs-v4.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../images/favicon.png" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+      <main class="docs-content">
+        <h1>v3 vs v4</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          Native Federation v4 is a significant upgrade — new packages, full
+          ESM, a new recommended runtime, and a new GitHub home. This page
+          summarises every breaking change and new capability in one place so
+          you know exactly what to expect before diving into a section of the
+          docs.
+        </p>
+
+        <nav class="page-toc" aria-label="On this page">
+          <strong>On this page</strong>
+          <ul>
+            <li><a href="#at-a-glance">At a glance</a></li>
+            <li><a href="#packages">Package names</a></li>
+            <li><a href="#angular-version">Angular version</a></li>
+            <li><a href="#esm">Full ESM</a></li>
+            <li><a href="#runtime">Runtime: Orchestrator vs Classic</a></li>
+            <li><a href="#repositories">Repositories</a></li>
+            <li><a href="#migrating">Migrating</a></li>
+          </ul>
+        </nav>
+
+        <h2 id="repositories">Repositories</h2>
+        <p>
+          v4 moves to a new GitHub organisation. The v3 source stays in the
+          original Angular Architects monorepo.
+        </p>
+
+        <h3 id="v3-repositories">V3 monorepo</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Package</th>
+                <th>Repository</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  Monorepo: core, runtime and adapters (Angular and esbuild)
+                </td>
+                <td>
+                  <a
+                    href="https://github.com/angular-architects/module-federation-plugin/"
+                    target="_blank"
+                    rel="noopener"
+                    >github.com/angular-architects/module-federation-plugin</a
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="v4-repositories">V4 repositories</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Package</th>
+                <th>Repository</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Core</td>
+                <td>
+                  <a
+                    href="https://github.com/native-federation/native-federation-core"
+                    target="_blank"
+                    rel="noopener"
+                    >github.com/native-federation/native-federation-core</a
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>Orchestrator</td>
+                <td>
+                  <a
+                    href="https://github.com/native-federation/orchestrator"
+                    target="_blank"
+                    rel="noopener"
+                    >github.com/native-federation/orchestrator</a
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>Angular adapter</td>
+                <td>
+                  <a
+                    href="https://github.com/native-federation/angular-adapter"
+                    target="_blank"
+                    rel="noopener"
+                    >github.com/native-federation/angular-adapter</a
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>Esbuild adapter</td>
+                <td>
+                  <a
+                    href="https://github.com/native-federation/esbuild-adapter"
+                    target="_blank"
+                    rel="noopener"
+                    >github.com/native-federation/esbuild-adapter</a
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="at-a-glance">At a Glance</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Topic</th>
+                <th>v3</th>
+                <th>v4</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Angular adapter package</td>
+                <td><code>@angular-architects/native-federation</code></td>
+                <td>
+                  <code>@angular-architects/native-federation-v4</code> (beta →
+                  stable with NG22)
+                </td>
+              </tr>
+              <tr>
+                <td>Core package</td>
+                <td><code>@softarc/native-federation</code> (v3.x)</td>
+                <td><code>@softarc/native-federation</code> (v4.x)</td>
+              </tr>
+              <tr>
+                <td>Runtime package</td>
+                <td><code>@softarc/native-federation-runtime</code></td>
+                <td>
+                  <code>@softarc/native-federation-runtime</code> (still
+                  supported) or
+                  <code>@softarc/native-federation-orchestrator</code>
+                  (recommended)
+                </td>
+              </tr>
+              <tr>
+                <td>Module format</td>
+                <td>CommonJS (<code>require</code>)</td>
+                <td>ESM (<code>import</code> / <code>export default</code>)</td>
+              </tr>
+              <tr>
+                <td>Angular version</td>
+                <td>Angular 14–21</td>
+                <td>Angular 20+ (one backwards-compatible major)</td>
+              </tr>
+              <tr>
+                <td>Default browser runtime</td>
+                <td>Classic Runtime</td>
+                <td>Orchestrator (Classic Runtime still supported)</td>
+              </tr>
+              <tr>
+                <td>Builder name (Angular)</td>
+                <td>
+                  <code>@angular-architects/native-federation:build</code>
+                </td>
+                <td>
+                  <code>@angular-architects/native-federation-v4:build</code>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="packages">Package Names</h2>
+        <p>
+          The core packages keep the same name but bump their major version. The
+          Angular adapter is temporarily published under a new name while it
+          stabilises:
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Package</th>
+                <th>v3</th>
+                <th>v4</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Core builder</td>
+                <td><code>@softarc/native-federation@3.x</code></td>
+                <td><code>@softarc/native-federation@4.x</code></td>
+              </tr>
+              <tr>
+                <td>Classic Runtime</td>
+                <td><code>@softarc/native-federation-runtime@3.x</code></td>
+                <td><code>@softarc/native-federation-runtime@4.x</code></td>
+              </tr>
+              <tr>
+                <td>Orchestrator</td>
+                <td>—</td>
+                <td>
+                  <code>@softarc/native-federation-orchestrator@4.x</code>
+                </td>
+              </tr>
+              <tr>
+                <td>Angular adapter</td>
+                <td><code>@angular-architects/native-federation</code></td>
+                <td>
+                  <code>@angular-architects/native-federation-v4</code>
+                  (beta)<br />will become
+                  <code>@angular-architects/native-federation</code> once stable
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="angular-version">Angular Version</h2>
+        <p>
+          The v4 Angular adapter targets <strong>Angular 20 and above</strong>,
+          with one backwards-compatible major. If you are on Angular 14–19 and
+          cannot upgrade Angular yet, stay on v3.
+        </p>
+        <p>
+          The v4 adapter is currently in beta. It will be released as stable
+          alongside Angular 22 (expected May 2025). The beta is published under
+          <code>@angular-architects/native-federation-v4</code> to let you adopt
+          it early without overwriting your existing v3 install.
+        </p>
+
+        <h2 id="esm">Full ESM</h2>
+        <p>
+          v4 drops CommonJS in every package. Two files in your project need to
+          change:
+        </p>
+        <ol>
+          <li>
+            <strong><code>package.json</code></strong> — (optionally) add
+            <code>"type": "module"</code> to mark the workspace as ESM.
+          </li>
+          <li>
+            <strong><code>federation.config.(m)js</code></strong> — switch from
+            <code>require()</code> / <code>module.exports</code> to
+            <code>import</code> / <code>export default</code>, and update the
+            import path to the v4 adapter package.
+          </li>
+        </ol>
+        <div class="callout">
+          <p>
+            The easiest change is to rename the `federation.config.js` to
+            `federation.config.mjs`. — Node will treat that extension as ESM
+            regardless of the package-wide setting.
+          </p>
+        </div>
+        <p>
+          The <a href="migration.html">Migration to v4</a> guide walks through
+          these two changes step by step. The Angular-specific parts are in
+          <a href="angular-adapter/migration-v4.html"
+            >Angular Adapter → Migration to v4</a
+          >.
+        </p>
+
+        <h2 id="runtime">Runtime: Orchestrator vs Classic</h2>
+        <p>
+          v3 shipped one browser runtime: the
+          <strong>Classic Runtime</strong>
+          (<code>@softarc/native-federation-runtime</code>). It resolves shared
+          dependencies at startup, wires a single import map, and loads remotes
+          on demand. Simple and battle-tested.
+        </p>
+        <p>
+          v4 introduces the
+          <strong>Orchestrator</strong>
+          (<code>@softarc/native-federation-orchestrator</code>) as the
+          recommended replacement. It keeps the same
+          <code>remoteEntry.json</code> contract but adds:
+        </p>
+        <ul>
+          <li>
+            <strong>Semver-range resolution</strong> — remotes that declare
+            different version ranges of the same package are reconciled
+            automatically, rather than requiring byte-identical version strings.
+          </li>
+          <li>
+            <strong>Persistent caching</strong> —
+            <code>remoteEntry.json</code> files are cached in
+            <code>localStorage</code> or <code>sessionStorage</code>, so the
+            manifest fetch is skipped on repeat visits.
+          </li>
+          <li>
+            <strong>Share scopes</strong> — fine-grained sharing boundaries for
+            complex multi-team setups.
+          </li>
+        </ul>
+        <p>
+          The Classic Runtime is still fully supported in v4 and remains the
+          right choice when you need SSR on the host or want the simplest
+          possible setup. It is <em>not</em> deprecated — but new v4 projects
+          should prefer the Orchestrator.
+        </p>
+        <div class="callout">
+          <p>
+            The Orchestrator is <strong>client-side only</strong>. If your host
+            renders on the server, keep the Classic Runtime for the SSR path and
+            optionally use the Orchestrator on the browser path.
+          </p>
+        </div>
+
+        <h2 id="migrating">Migrating</h2>
+        <ul>
+          <li>
+            <a href="migration.html">Migration to v4</a> — the
+            framework-agnostic steps (ESM, <code>package.json</code>,
+            <code>federation.config.js</code>).
+          </li>
+          <li>
+            <a href="angular-adapter/migration-v4.html"
+              >Angular Adapter → Migration to v4</a
+            >
+            — Angular-specific steps (builder rename, <code>angular.json</code>,
+            <code>main.ts</code>). Includes the <code>update-v4</code> schematic
+            that automates most of the work.
+          </li>
+        </ul>
+      </main>
+    </div>
+
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../components.js"></script>
+  </body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Reference — Native Federation Core Docs</title>
+  <meta name="description" content="The public API surface of @softarc/native-federation — exports from the main, /config and /domain entry points.">
+  <link rel="canonical" href="https://native-federation.io/docs/core/api-reference.html">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="API Reference — Native Federation Core Docs">
+  <meta property="og:description" content="Public exports of @softarc/native-federation.">
+  <meta property="og:url" content="https://native-federation.io/docs/core/api-reference.html">
+  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
+  <meta property="og:site_name" content="Native Federation">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="../../images/favicon.png">
+  <link rel="apple-touch-icon" href="../../images/favicon.png">
+  <link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+
+  <div class="docs-layout">
+    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+    <main class="docs-content">
+      <h1>API Reference</h1>
+      <div class="version-support">
+        <span class="version-support__label">Applies to</span>
+        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
+        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+      </div>
+      <p class="doc-lead"><code>@softarc/native-federation</code> exposes three import subpaths. The default entry covers the build-time API; <code>/config</code> is the configuration DSL; <code>/domain</code> re-exports the TypeScript contracts so adapter authors can type against them.</p>
+
+      <h2><code>@softarc/native-federation</code></h2>
+      <p>Build-time API — everything you need to drive a federation build.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Export</th><th>Kind</th><th>Summary</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>federationBuilder</code></td>
+              <td>object</td>
+              <td>High-level builder with <code>init</code>, <code>build</code>, <code>close</code> and the <code>externals</code> / <code>config</code> / <code>federationInfo</code> accessors. See <a href="build-process.html">Build Process</a>.</td>
+            </tr>
+            <tr>
+              <td><code>setBuildAdapter(adapter)</code></td>
+              <td>function</td>
+              <td>Register a bundler adapter imperatively. <code>federationBuilder.init</code> calls this for you.</td>
+            </tr>
+            <tr>
+              <td><code>buildForFederation(config, options, externals, signal?)</code></td>
+              <td>function</td>
+              <td>Full build — bundles shared externals, mapped paths and exposed modules, then writes <code>remoteEntry.json</code> and the import map.</td>
+            </tr>
+            <tr>
+              <td><code>rebuildForFederation(config, options, externals, modifiedFiles, signal?)</code></td>
+              <td>function</td>
+              <td>Incremental rebuild. <code>federationBuilder.build</code> dispatches to this after the first full build.</td>
+            </tr>
+            <tr>
+              <td><code>bundleExposedAndMappings(config, options, externals, ...)</code></td>
+              <td>function</td>
+              <td>Bundles just the exposed modules and shared mapped paths.</td>
+            </tr>
+            <tr>
+              <td><code>createFederationCache(cachePath, bundlerCache?)</code></td>
+              <td>function</td>
+              <td>Construct a <code>FederationCache</code> — use this to share cache state across multiple builds.</td>
+            </tr>
+            <tr>
+              <td><code>getExternals(config)</code></td>
+              <td>function</td>
+              <td>Derive the list of externals (package names) from a normalized config.</td>
+            </tr>
+            <tr>
+              <td><code>normalizeFederationOptions(options, cache?)</code></td>
+              <td>function</td>
+              <td>Load and normalize the federation config and options, returning both. The low-level entry the <code>federationBuilder</code> calls internally.</td>
+            </tr>
+            <tr>
+              <td><code>writeFederationInfo(info, options)</code></td>
+              <td>function</td>
+              <td>Write a <code>FederationInfo</code> object to <code>remoteEntry.json</code>.</td>
+            </tr>
+            <tr>
+              <td><code>BuildHelperParams</code></td>
+              <td>type</td>
+              <td>Argument type for <code>federationBuilder.init</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2><code>@softarc/native-federation/config</code></h2>
+      <p>Configuration DSL used inside <code>federation.config.js</code>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Export</th><th>Kind</th><th>Summary</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>withNativeFederation(config)</code></td>
+              <td>function</td>
+              <td>Normalize a user-supplied <code>FederationConfig</code> — applies defaults, prepares the skip list, resolves mapped paths.</td>
+            </tr>
+            <tr>
+              <td><code>shareAll(options, opts?)</code></td>
+              <td>function</td>
+              <td>Share every dependency found in <code>package.json</code>. Accepts <code>overrides</code> for per-package deviation.</td>
+            </tr>
+            <tr>
+              <td><code>share(entries, projectPath?, skipList?)</code></td>
+              <td>function</td>
+              <td>Share a hand-picked set of packages with per-entry options.</td>
+            </tr>
+            <tr>
+              <td><code>findRootTsConfigJson()</code></td>
+              <td>function</td>
+              <td>Locate the root <code>tsconfig.base.json</code> or <code>tsconfig.json</code> for mapped-path resolution.</td>
+            </tr>
+            <tr>
+              <td><code>DEFAULT_SKIP_LIST</code></td>
+              <td>const</td>
+              <td>The baseline skip list <code>withNativeFederation</code> merges with your <code>skip</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2><code>@softarc/native-federation/domain</code></h2>
+      <p>TypeScript contracts — types only. Useful when authoring an adapter or integrating at the type level.</p>
+      <ul>
+        <li><code>FederationConfig</code>, <code>NormalizedFederationConfig</code></li>
+        <li><code>ExternalConfig</code>, <code>NormalizedExternalConfig</code>, <code>SharedExternalsConfig</code>, <code>ShareExternalsOptions</code>, <code>IncludeSecondariesOptions</code></li>
+        <li><code>FederationOptions</code>, <code>NormalizedFederationOptions</code></li>
+        <li><code>NFBuildAdapter</code>, <code>NFBuildAdapterOptions</code>, <code>NFBuildAdapterContext</code>, <code>NFBuildAdapterResult</code>, <code>EntryPoint</code></li>
+        <li><code>FederationInfo</code>, <code>SharedInfo</code>, <code>ExposesInfo</code>, <code>ChunkInfo</code>, <code>ArtifactInfo</code></li>
+        <li><code>FederationCache</code></li>
+        <li><code>SkipList</code>, <code>PreparedSkipList</code></li>
+        <li><code>BuildNotificationOptions</code></li>
+      </ul>
+
+      <h2><code>@softarc/native-federation/internal</code></h2>
+      <p>Utility exports intended for adapter authors — error types, the checksum helper, the logger, a rebuild queue, the file-watcher contract, and the cache-path helper. Treated as semi-public; breaking changes are possible across minor versions.</p>
+
+      <div class="callout">
+        <p>Application developers almost never import from this package directly. Consume an <a href="../adapters/index.html">adapter</a> instead.</p>
+      </div>
+    </main>
+  </div>
+
+  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script src="../../components.js"></script>
+</body>
+</html>
