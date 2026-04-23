@@ -1,72 +1,136 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Angular Config — Angular Adapter</title>
-  <meta name="description" content="What @angular-architects/native-federation-v4/config adds on top of the core federation.config.mjs — Angular skip list, platform inference and locale handling.">
-  <link rel="canonical" href="https://native-federation.io/docs/angular-adapter/configuration.html">
-  <link rel="alternate" type="text/markdown" href="https://native-federation.io/docs/angular-adapter/configuration.md">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Angular Config — Angular Adapter">
-  <meta property="og:description" content="Angular-specific layer over the core federation.config.mjs.">
-  <meta property="og:url" content="https://native-federation.io/docs/angular-adapter/configuration.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../images/favicon.png">
-  <link rel="stylesheet" href="../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Angular Config — Angular Adapter</title>
+    <meta
+      name="description"
+      content="What @angular-architects/native-federation-v4/config adds on top of the core federation.config.mjs — Angular skip list, platform inference and locale handling."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.com/docs/angular-adapter/configuration.html"
+    />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://native-federation.com/docs/angular-adapter/configuration.md"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Angular Config — Angular Adapter" />
+    <meta
+      property="og:description"
+      content="Angular-specific layer over the core federation.config.mjs."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.com/docs/angular-adapter/configuration.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.com/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>Angular Config</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          The Angular adapter re-exports the core's
+          <code>withNativeFederation</code>, <code>share</code> and
+          <code>shareAll</code> from a wrapper at
+          <code>@angular-architects/native-federation-v4/config</code>. The
+          wrappers are thin: same options, same shape, same semantics. They only
+          differ in the Angular-aware defaults they apply. For everything that
+          isn't called out here, refer to the canonical
+          <a href="../core/configuration.html">core configuration reference</a>.
+        </p>
 
-    <main class="docs-content">
-      <h1>Angular Config</h1>
-      <div class="version-support">
-        <span class="version-support__label">Applies to</span>
-        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
-      </div>
-      <p class="doc-lead">The Angular adapter re-exports the core's <code>withNativeFederation</code>, <code>share</code> and <code>shareAll</code> from a wrapper at <code>@angular-architects/native-federation-v4/config</code>. The wrappers are thin: same options, same shape, same semantics. They only differ in the Angular-aware defaults they apply. For everything that isn't called out here, refer to the canonical <a href="../core/configuration.html">core configuration reference</a>.</p>
+        <nav class="page-toc" aria-label="On this page">
+          <strong>On this page</strong>
+          <ul>
+            <li><a href="#imports">Imports</a></li>
+            <li><a href="#with-nf">withNativeFederation differences</a></li>
+            <li><a href="#skip-list">NG_SKIP_LIST</a></li>
+            <li><a href="#platform">Platform inference</a></li>
+            <li>
+              <a href="#locales">shareAngularLocales &amp; locale handling</a>
+            </li>
+            <li><a href="#scaffold">What the schematic generates</a></li>
+          </ul>
+        </nav>
 
-      <nav class="page-toc" aria-label="On this page">
-        <strong>On this page</strong>
-        <ul>
-          <li><a href="#imports">Imports</a></li>
-          <li><a href="#with-nf">withNativeFederation differences</a></li>
-          <li><a href="#skip-list">NG_SKIP_LIST</a></li>
-          <li><a href="#platform">Platform inference</a></li>
-          <li><a href="#locales">shareAngularLocales &amp; locale handling</a></li>
-          <li><a href="#scaffold">What the schematic generates</a></li>
-        </ul>
-      </nav>
-
-      <h2 id="imports">Imports</h2>
-      <pre><code>import {
+        <h2 id="imports">Imports</h2>
+        <pre><code>import {
   withNativeFederation,
   share,
   shareAll,
   shareAngularLocales,
   NG_SKIP_LIST,
 } from '@angular-architects/native-federation-v4/config';</code></pre>
-      <p>All five symbols are Angular-specific exports. Anything else (helpers, types, advanced overrides) lives in the core — import it from <code>@softarc/native-federation/config</code> or <code>@softarc/native-federation/domain</code>.</p>
+        <p>
+          All five symbols are Angular-specific exports. Anything else (helpers,
+          types, advanced overrides) lives in the core — import it from
+          <code>@softarc/native-federation/config</code> or
+          <code>@softarc/native-federation/domain</code>.
+        </p>
 
-      <h2 id="with-nf">What <code>withNativeFederation</code> Adds</h2>
-      <p>The Angular wrapper does three things and then delegates to the core:</p>
-      <ol>
-        <li>If you didn't set <code>platform</code> explicitly, it infers it from your shared dependencies (see <a href="#platform">below</a>).</li>
-        <li>It calls the core's <code>withNativeFederation</code> with your config.</li>
-        <li>If <code>features.ignoreUnusedDeps</code> is <em>off</em>, it strips every <code>@angular/common/locales/*</code> entry from the resulting shared map. This preserves backwards-compatibility with v3 setups where Angular's locale data needed to be pulled in differently.</li>
-      </ol>
-      <p>Everything else — <code>name</code>, <code>exposes</code>, <code>shared</code>, <code>sharedMappings</code>, <code>skip</code>, <code>chunks</code>, <code>features</code>, build modes, … — comes from the core and lives in <code>federation.config.mjs</code>. See the <a href="../core/configuration.html">core configuration reference</a> for the complete schema.</p>
+        <h2 id="with-nf">What <code>withNativeFederation</code> Adds</h2>
+        <p>
+          The Angular wrapper does three things and then delegates to the core:
+        </p>
+        <ol>
+          <li>
+            If you didn't set <code>platform</code> explicitly, it infers it
+            from your shared dependencies (see <a href="#platform">below</a>).
+          </li>
+          <li>
+            It calls the core's <code>withNativeFederation</code> with your
+            config.
+          </li>
+          <li>
+            If <code>features.ignoreUnusedDeps</code> is <em>off</em>, it strips
+            every <code>@angular/common/locales/*</code> entry from the
+            resulting shared map. This preserves backwards-compatibility with v3
+            setups where Angular's locale data needed to be pulled in
+            differently.
+          </li>
+        </ol>
+        <p>
+          Everything else — <code>name</code>, <code>exposes</code>,
+          <code>shared</code>, <code>sharedMappings</code>, <code>skip</code>,
+          <code>chunks</code>, <code>features</code>, build modes, … — comes
+          from the core and lives in <code>federation.config.mjs</code>. See the
+          <a href="../core/configuration.html">core configuration reference</a>
+          for the complete schema.
+        </p>
 
-      <h2 id="skip-list">NG_SKIP_LIST</h2>
-      <p>The Angular <code>share</code> and <code>shareAll</code> default to <code>NG_SKIP_LIST</code> instead of the core's <code>DEFAULT_SKIP_LIST</code>. The list extends the core defaults with packages that should never be shared in an Angular project:</p>
-      <pre><code>export const NG_SKIP_LIST: SkipList = [
+        <h2 id="skip-list">NG_SKIP_LIST</h2>
+        <p>
+          The Angular <code>share</code> and <code>shareAll</code> default to
+          <code>NG_SKIP_LIST</code> instead of the core's
+          <code>DEFAULT_SKIP_LIST</code>. The list extends the core defaults
+          with packages that should never be shared in an Angular project:
+        </p>
+        <pre><code>export const NG_SKIP_LIST: SkipList = [
   ...DEFAULT_SKIP_LIST,
   '@angular-architects/native-federation',
   'zone.js',
@@ -78,46 +142,90 @@
   /^@nx\/angular/,
   pkg =&gt; pkg.startsWith('@angular/') &amp;&amp; !!pkg.match(/\/testing(\/|$)/),
 ];</code></pre>
-      <p>Why these:</p>
-      <ul>
-        <li><strong><code>zone.js</code></strong> patches global APIs and must run once per realm — sharing across remotes corrupts patching.</li>
-        <li><strong><code>@angular/localize</code></strong> entries inject globals at boot and aren't safe to load lazily.</li>
-        <li><strong><code>*/upgrade</code></strong> packages are AngularJS interop and only matter in the host.</li>
-        <li><strong><code>@nx/angular</code></strong> is dev-only.</li>
-        <li><strong>Any <code>@angular/.../testing</code></strong> entry — these are not part of the runtime.</li>
-      </ul>
-      <p>You can pass your own skip list to <code>shareAll</code> or <code>share</code>:</p>
-      <pre><code>shareAll(
+        <p>Why these:</p>
+        <ul>
+          <li>
+            <strong><code>zone.js</code></strong> patches global APIs and must
+            run once per realm — sharing across remotes corrupts patching.
+          </li>
+          <li>
+            <strong><code>@angular/localize</code></strong> entries inject
+            globals at boot and aren't safe to load lazily.
+          </li>
+          <li>
+            <strong><code>*/upgrade</code></strong> packages are AngularJS
+            interop and only matter in the host.
+          </li>
+          <li>
+            <strong><code>@nx/angular</code></strong> is dev-only.
+          </li>
+          <li>
+            <strong>Any <code>@angular/.../testing</code></strong> entry — these
+            are not part of the runtime.
+          </li>
+        </ul>
+        <p>
+          You can pass your own skip list to <code>shareAll</code> or
+          <code>share</code>:
+        </p>
+        <pre><code>shareAll(
   { singleton: true, strictVersion: true, requiredVersion: 'auto' },
   { skipList: [...NG_SKIP_LIST, /^@my-org\//] },
 );</code></pre>
-      <p>For the broader semantics of <code>skip</code> (entry-by-entry exclusion vs. the global skip list), see <a href="../core/configuration.html#skip">core configuration → skip</a>.</p>
+        <p>
+          For the broader semantics of <code>skip</code> (entry-by-entry
+          exclusion vs. the global skip list), see
+          <a href="../core/configuration.html#skip">core configuration → skip</a
+          >.
+        </p>
 
-      <h2 id="platform">Platform Inference</h2>
-      <p>Native Federation builds for either <code>browser</code> (default) or <code>node</code>. The core requires you to set <code>platform</code> explicitly; the Angular wrapper infers it: if any shared dependency starts with <code>@angular/platform-server</code> or <code>@angular/ssr</code>, it sets <code>platform: 'node'</code>. Otherwise it stays on <code>browser</code>.</p>
-      <p>You can always override:</p>
-      <pre><code>export default withNativeFederation({
+        <h2 id="platform">Platform Inference</h2>
+        <p>
+          Native Federation builds for either <code>browser</code> (default) or
+          <code>node</code>. The core requires you to set
+          <code>platform</code> explicitly; the Angular wrapper infers it: if
+          any shared dependency starts with
+          <code>@angular/platform-server</code> or <code>@angular/ssr</code>, it
+          sets <code>platform: 'node'</code>. Otherwise it stays on
+          <code>browser</code>.
+        </p>
+        <p>You can always override:</p>
+        <pre><code>export default withNativeFederation({
   name: 'mfe1',
   platform: 'node',  // ← explicit wins
   shared: { ... },
 });</code></pre>
 
-      <h2 id="locales">shareAngularLocales &amp; Locale Handling</h2>
-      <p>Angular ships per-locale data as separate files under <code>@angular/common/locales</code>. They aren't proper subpath exports, so the standard share helpers can't pick them up. The adapter has two answers:</p>
+        <h2 id="locales">shareAngularLocales &amp; Locale Handling</h2>
+        <p>
+          Angular ships per-locale data as separate files under
+          <code>@angular/common/locales</code>. They aren't proper subpath
+          exports, so the standard share helpers can't pick them up. The adapter
+          has two answers:
+        </p>
 
-      <h3>The recommended path: <code>ignoreUnusedDeps</code></h3>
-      <p>Since adapter v20.0.6, locale loading works out of the box if you opt into <code>ignoreUnusedDeps</code> (the default for new projects):</p>
-      <pre><code>export default withNativeFederation({
+        <h3>The recommended path: <code>ignoreUnusedDeps</code></h3>
+        <p>
+          Since adapter v20.0.6, locale loading works out of the box if you opt
+          into <code>ignoreUnusedDeps</code> (the default for new projects):
+        </p>
+        <pre><code>export default withNativeFederation({
   // ...
   features: {
     ignoreUnusedDeps: true,
   },
 });</code></pre>
-      <p>The core scans your entry points and only ships the locale files you actually import. Nothing extra to configure.</p>
+        <p>
+          The core scans your entry points and only ships the locale files you
+          actually import. Nothing extra to configure.
+        </p>
 
-      <h3>The fallback: <code>shareAngularLocales</code></h3>
-      <p>If you can't enable <code>ignoreUnusedDeps</code> (for example, you're on an older release), declare the locales explicitly:</p>
-      <pre><code>import {
+        <h3>The fallback: <code>shareAngularLocales</code></h3>
+        <p>
+          If you can't enable <code>ignoreUnusedDeps</code> (for example, you're
+          on an older release), declare the locales explicitly:
+        </p>
+        <pre><code>import {
   withNativeFederation,
   shareAll,
   shareAngularLocales,
@@ -130,12 +238,30 @@ export default withNativeFederation({
     ...shareAngularLocales(['en', 'de', 'fr']),
   },
 });</code></pre>
-      <p><code>shareAngularLocales(keys, opts?)</code> generates one shared entry per locale key, pre-wiring the <code>packageInfo.entryPoint</code> at <code>node_modules/@angular/common/locales/&lt;key&gt;.js</code>. Pass <code>opts.config</code> to override the default <code>{ singleton: true, strictVersion: true, requiredVersion: 'auto' }</code>; pass <code>opts.legacy: true</code> to use the old <code>.mjs</code> filenames if your <code>@angular/common</code> still ships them.</p>
-      <p>See <a href="localization.html">Localization</a> for the wider context.</p>
+        <p>
+          <code>shareAngularLocales(keys, opts?)</code> generates one shared
+          entry per locale key, pre-wiring the
+          <code>packageInfo.entryPoint</code> at
+          <code>node_modules/@angular/common/locales/&lt;key&gt;.js</code>. Pass
+          <code>opts.config</code> to override the default
+          <code
+            >{ singleton: true, strictVersion: true, requiredVersion: 'auto'
+            }</code
+          >; pass <code>opts.legacy: true</code> to use the old
+          <code>.mjs</code> filenames if your <code>@angular/common</code> still
+          ships them.
+        </p>
+        <p>
+          See <a href="localization.html">Localization</a> for the wider
+          context.
+        </p>
 
-      <h2 id="scaffold">What the Schematic Generates</h2>
-      <p>For reference, this is the <code>federation.config.mjs</code> that <code>ng add</code> emits for a remote on v4:</p>
-      <pre><code>import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
+        <h2 id="scaffold">What the Schematic Generates</h2>
+        <p>
+          For reference, this is the <code>federation.config.mjs</code> that
+          <code>ng add</code> emits for a remote on v4:
+        </p>
+        <pre><code>import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
 
 export default withNativeFederation({
   name: 'mfe1',
@@ -179,24 +305,71 @@ export default withNativeFederation({
     denseChunking: true,
   },
 });</code></pre>
-      <p>Notable defaults: <code>build: 'package'</code> for the per-package build mode (each external gets its own meta file — see <a href="../core/configuration.html#build-modes">build modes</a>), <code>includeSecondaries.keepAll</code> for <code>@angular/core</code> only (see <a href="#angular-core">below</a>), and <code>denseChunking: true</code> to compress the <code>remoteEntry.json</code>. The schematic doesn't generate an override for <code>@angular/common</code>; only <code>@angular/core</code> gets the <code>keepAll</code> guard out of the box.</p>
+        <p>
+          Notable defaults: <code>build: 'package'</code> for the per-package
+          build mode (each external gets its own meta file — see
+          <a href="../core/configuration.html#build-modes">build modes</a>),
+          <code>includeSecondaries.keepAll</code> for
+          <code>@angular/core</code> only (see
+          <a href="#angular-core">below</a>), and
+          <code>denseChunking: true</code> to compress the
+          <code>remoteEntry.json</code>. The schematic doesn't generate an
+          override for <code>@angular/common</code>; only
+          <code>@angular/core</code> gets the <code>keepAll</code> guard out of
+          the box.
+        </p>
 
-      <h3 id="angular-core">Why <code>keepAll</code> for <code>@angular/core</code>?</h3>
-      <p>With <code>ignoreUnusedDeps</code> on, the core only shares the secondary entry points (e.g. <code>@angular/core/rxjs-interop</code>) that this remote actually imports. That's fine for most packages but <em>dangerous</em> for Angular itself: a different remote might rely on a secondary that this remote omits, and the orchestrator would then load that secondary from a different Angular version, splitting Angular across versions. <code>includeSecondaries: { keepAll: true }</code> forces every Angular secondary to ship from the same package, keeping the framework versioned as a unit.</p>
+        <h3 id="angular-core">
+          Why <code>keepAll</code> for <code>@angular/core</code>?
+        </h3>
+        <p>
+          With <code>ignoreUnusedDeps</code> on, the core only shares the
+          secondary entry points (e.g. <code>@angular/core/rxjs-interop</code>)
+          that this remote actually imports. That's fine for most packages but
+          <em>dangerous</em> for Angular itself: a different remote might rely
+          on a secondary that this remote omits, and the orchestrator would then
+          load that secondary from a different Angular version, splitting
+          Angular across versions.
+          <code>includeSecondaries: { keepAll: true }</code> forces every
+          Angular secondary to ship from the same package, keeping the framework
+          versioned as a unit.
+        </p>
 
-      <h2>Related</h2>
-      <ul>
-        <li><a href="../core/configuration.html">Core: federation.config.mjs reference</a> — the canonical source for every option.</li>
-        <li><a href="../core/sharing.html">Core: Sharing Dependencies</a> — share, shareAll, secondary entry points, the downsides of sharing.</li>
-        <li><a href="localization.html">Localization</a> — locale data in detail.</li>
-      </ul>
-    </main>
-  </div>
+        <h2>Related</h2>
+        <ul>
+          <li>
+            <a href="../core/configuration.html"
+              >Core: federation.config.mjs reference</a
+            >
+            — the canonical source for every option.
+          </li>
+          <li>
+            <a href="../core/sharing.html">Core: Sharing Dependencies</a> —
+            share, shareAll, secondary entry points, the downsides of sharing.
+          </li>
+          <li>
+            <a href="localization.html">Localization</a> — locale data in
+            detail.
+          </li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../../components.js"></script>
-</body>
+    <script src="../../components.js"></script>
+  </body>
 </html>

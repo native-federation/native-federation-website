@@ -1,159 +1,301 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>API Reference — Runtime Docs</title>
-  <meta name="description" content="The public API surface of @softarc/native-federation-runtime — initFederation, loadRemoteModule, registry helpers and type exports.">
-  <link rel="canonical" href="https://native-federation.io/docs/runtime/api-reference.html">
-  <link rel="alternate" type="text/markdown" href="https://native-federation.io/docs/runtime/api-reference.md">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="API Reference — Runtime Docs">
-  <meta property="og:description" content="Public exports of @softarc/native-federation-runtime.">
-  <meta property="og:url" content="https://native-federation.io/docs/runtime/api-reference.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../images/favicon.png">
-  <link rel="stylesheet" href="../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Reference — Runtime Docs</title>
+    <meta
+      name="description"
+      content="The public API surface of @softarc/native-federation-runtime — initFederation, loadRemoteModule, registry helpers and type exports."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.com/docs/runtime/api-reference.html"
+    />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://native-federation.com/docs/runtime/api-reference.md"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="API Reference — Runtime Docs" />
+    <meta
+      property="og:description"
+      content="Public exports of @softarc/native-federation-runtime."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.com/docs/runtime/api-reference.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.com/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>API Reference</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          <code>@softarc/native-federation-runtime</code> exposes a small set of
+          functions and types. Most applications only use
+          <code>initFederation</code> and <code>loadRemoteModule</code>; the
+          lower-level helpers are useful when integrating with custom bootstrap
+          flows, test setups or adapter code.
+        </p>
 
-    <main class="docs-content">
-      <h1>API Reference</h1>
-      <div class="version-support">
-        <span class="version-support__label">Applies to</span>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
-      </div>
-      <p class="doc-lead"><code>@softarc/native-federation-runtime</code> exposes a small set of functions and types. Most applications only use <code>initFederation</code> and <code>loadRemoteModule</code>; the lower-level helpers are useful when integrating with custom bootstrap flows, test setups or adapter code.</p>
+        <h2>Functions</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Export</th>
+                <th>Kind</th>
+                <th>Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <code>initFederation(remotesOrManifestUrl?, options?)</code>
+                </td>
+                <td>function</td>
+                <td>
+                  Main host-side entry point. Loads the host's
+                  <code>remoteEntry.json</code>, fetches every remote's
+                  <code>remoteEntry.json</code>, builds and injects the import
+                  map. Returns the final <code>ImportMap</code>. See
+                  <a href="init-federation.html"><code>initFederation</code></a
+                  >.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>loadRemoteModule(remoteName, exposedModule)</code
+                  ><br /><code>loadRemoteModule(options)</code>
+                </td>
+                <td>function</td>
+                <td>
+                  Dynamically imports an exposed module from a registered
+                  remote. Supports lazy registration via
+                  <code>options.remoteEntry</code> and a
+                  <code>fallback</code> for graceful degradation. See
+                  <a href="load-remote-module.html"
+                    ><code>loadRemoteModule</code></a
+                  >.
+                </td>
+              </tr>
+              <tr>
+                <td><code>fetchAndRegisterRemotes(remotes, options?)</code></td>
+                <td>function</td>
+                <td>
+                  Fetches and registers a batch of remotes in parallel. Honours
+                  <code>throwIfRemoteNotFound</code> and <code>cacheTag</code>.
+                  Returns a merged <code>ImportMap</code>. Called internally by
+                  <code>initFederation</code>.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >fetchAndRegisterRemote(federationInfoUrl,
+                    remoteName?)</code
+                  >
+                </td>
+                <td>function</td>
+                <td>
+                  Fetches and registers a single remote. Computes the remote's
+                  import map and, if the <code>remoteEntry.json</code> includes
+                  a <code>buildNotificationsEndpoint</code>, starts watching for
+                  rebuild events.
+                </td>
+              </tr>
+              <tr>
+                <td><code>processRemoteInfos(remotes, options?)</code></td>
+                <td>function (deprecated)</td>
+                <td>
+                  Legacy alias for <code>fetchAndRegisterRemotes</code>. Kept
+                  for backwards compatibility with v3 call sites.
+                </td>
+              </tr>
+              <tr>
+                <td><code>processHostInfo(hostInfo, relBundlesPath?)</code></td>
+                <td>function</td>
+                <td>
+                  Builds the host's contribution to the import map from a
+                  <code>FederationInfo</code>. Useful in SSR flows that prefer
+                  to load the host's info themselves.
+                  <code>relBundlesPath</code> defaults to <code>'./'</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>mergeImportMaps(a, b)</code></td>
+                <td>function</td>
+                <td>
+                  Shallow-merges two <code>ImportMap</code> values. Second
+                  argument wins on key collisions.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <h2>Functions</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Export</th><th>Kind</th><th>Summary</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>initFederation(remotesOrManifestUrl?, options?)</code></td>
-              <td>function</td>
-              <td>Main host-side entry point. Loads the host's <code>remoteEntry.json</code>, fetches every remote's <code>remoteEntry.json</code>, builds and injects the import map. Returns the final <code>ImportMap</code>. See <a href="init-federation.html"><code>initFederation</code></a>.</td>
-            </tr>
-            <tr>
-              <td><code>loadRemoteModule(remoteName, exposedModule)</code><br /><code>loadRemoteModule(options)</code></td>
-              <td>function</td>
-              <td>Dynamically imports an exposed module from a registered remote. Supports lazy registration via <code>options.remoteEntry</code> and a <code>fallback</code> for graceful degradation. See <a href="load-remote-module.html"><code>loadRemoteModule</code></a>.</td>
-            </tr>
-            <tr>
-              <td><code>fetchAndRegisterRemotes(remotes, options?)</code></td>
-              <td>function</td>
-              <td>Fetches and registers a batch of remotes in parallel. Honours <code>throwIfRemoteNotFound</code> and <code>cacheTag</code>. Returns a merged <code>ImportMap</code>. Called internally by <code>initFederation</code>.</td>
-            </tr>
-            <tr>
-              <td><code>fetchAndRegisterRemote(federationInfoUrl, remoteName?)</code></td>
-              <td>function</td>
-              <td>Fetches and registers a single remote. Computes the remote's import map and, if the <code>remoteEntry.json</code> includes a <code>buildNotificationsEndpoint</code>, starts watching for rebuild events.</td>
-            </tr>
-            <tr>
-              <td><code>processRemoteInfos(remotes, options?)</code></td>
-              <td>function (deprecated)</td>
-              <td>Legacy alias for <code>fetchAndRegisterRemotes</code>. Kept for backwards compatibility with v3 call sites.</td>
-            </tr>
-            <tr>
-              <td><code>processHostInfo(hostInfo, relBundlesPath?)</code></td>
-              <td>function</td>
-              <td>Builds the host's contribution to the import map from a <code>FederationInfo</code>. Useful in SSR flows that prefer to load the host's info themselves. <code>relBundlesPath</code> defaults to <code>'./'</code>.</td>
-            </tr>
-            <tr>
-              <td><code>mergeImportMaps(a, b)</code></td>
-              <td>function</td>
-              <td>Shallow-merges two <code>ImportMap</code> values. Second argument wins on key collisions.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <h2>Types</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Export</th>
+                <th>Kind</th>
+                <th>Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>InitFederationOptions</code></td>
+                <td>interface</td>
+                <td>
+                  <code>{ cacheTag?: string }</code> — options accepted by
+                  <code>initFederation</code>. <code>cacheTag</code> is appended
+                  as <code>?t=&lt;cacheTag&gt;</code> to every metadata request.
+                </td>
+              </tr>
+              <tr>
+                <td><code>ProcessRemoteInfoOptions</code></td>
+                <td>interface</td>
+                <td>
+                  Extends <code>InitFederationOptions</code> with
+                  <code>throwIfRemoteNotFound: boolean</code>. Drives the
+                  strict/forgiving error behaviour in
+                  <code>fetchAndRegisterRemotes</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>LoadRemoteModuleOptions&lt;T&gt;</code></td>
+                <td>interface</td>
+                <td>
+                  Long-form options for <code>loadRemoteModule</code>:
+                  <code>remoteEntry?</code>, <code>remoteName?</code>,
+                  <code>exposedModule</code>, <code>fallback?</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>ImportMap</code></td>
+                <td>interface</td>
+                <td>
+                  The browser import-map shape:
+                  <code>{ imports: Imports; scopes: Scopes }</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>Imports</code></td>
+                <td>alias</td>
+                <td>
+                  <code>Record&lt;string, string&gt;</code> — bare-specifier to
+                  URL.
+                </td>
+              </tr>
+              <tr>
+                <td><code>Scopes</code></td>
+                <td>alias</td>
+                <td>
+                  <code>Record&lt;string, Imports&gt;</code> — scope URL prefix
+                  to scoped imports.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <h2>Types</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Export</th><th>Kind</th><th>Summary</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>InitFederationOptions</code></td>
-              <td>interface</td>
-              <td><code>{ cacheTag?: string }</code> — options accepted by <code>initFederation</code>. <code>cacheTag</code> is appended as <code>?t=&lt;cacheTag&gt;</code> to every metadata request.</td>
-            </tr>
-            <tr>
-              <td><code>ProcessRemoteInfoOptions</code></td>
-              <td>interface</td>
-              <td>Extends <code>InitFederationOptions</code> with <code>throwIfRemoteNotFound: boolean</code>. Drives the strict/forgiving error behaviour in <code>fetchAndRegisterRemotes</code>.</td>
-            </tr>
-            <tr>
-              <td><code>LoadRemoteModuleOptions&lt;T&gt;</code></td>
-              <td>interface</td>
-              <td>Long-form options for <code>loadRemoteModule</code>: <code>remoteEntry?</code>, <code>remoteName?</code>, <code>exposedModule</code>, <code>fallback?</code>.</td>
-            </tr>
-            <tr>
-              <td><code>ImportMap</code></td>
-              <td>interface</td>
-              <td>The browser import-map shape: <code>{ imports: Imports; scopes: Scopes }</code>.</td>
-            </tr>
-            <tr>
-              <td><code>Imports</code></td>
-              <td>alias</td>
-              <td><code>Record&lt;string, string&gt;</code> — bare-specifier to URL.</td>
-            </tr>
-            <tr>
-              <td><code>Scopes</code></td>
-              <td>alias</td>
-              <td><code>Record&lt;string, Imports&gt;</code> — scope URL prefix to scoped imports.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <h2>Constants</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Export</th>
+                <th>Kind</th>
+                <th>Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>BUILD_NOTIFICATIONS_ENDPOINT</code></td>
+                <td>const</td>
+                <td>
+                  <code
+                    >'/@angular-architects/native-federation:build-notifications'</code
+                  >. The SSE path the Angular dev server exposes for
+                  <code>federation-rebuild-complete</code> events. Mostly of
+                  interest to adapter authors.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <h2>Constants</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Export</th><th>Kind</th><th>Summary</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code>BUILD_NOTIFICATIONS_ENDPOINT</code></td>
-              <td>const</td>
-              <td><code>'/@angular-architects/native-federation:build-notifications'</code>. The SSE path the Angular dev server exposes for <code>federation-rebuild-complete</code> events. Mostly of interest to adapter authors.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h2>Global state</h2>
-      <p>The runtime stores its registries on <code>globalThis.__NATIVE_FEDERATION__</code>:</p>
-      <pre><code>type NfCache = {
+        <h2>Global state</h2>
+        <p>
+          The runtime stores its registries on
+          <code>globalThis.__NATIVE_FEDERATION__</code>:
+        </p>
+        <pre><code>type NfCache = {
   externals:             Map&lt;string, string&gt;;  // "pkg@version" -&gt; URL
   remoteNamesToRemote:   Map&lt;string, Remote&gt;;   // remoteName    -&gt; info + baseUrl
   baseUrlToRemoteNames:  Map&lt;string, string&gt;;   // baseUrl       -&gt; remoteName
 };</code></pre>
-      <p>These are not exported directly, but the object exists for tooling interop — in particular for <code>@angular-architects/module-federation</code>'s shared-scope helpers to enumerate externals when mixing classic Module Federation and Native Federation remotes on the same page.</p>
+        <p>
+          These are not exported directly, but the object exists for tooling
+          interop — in particular for
+          <code>@angular-architects/module-federation</code>'s shared-scope
+          helpers to enumerate externals when mixing classic Module Federation
+          and Native Federation remotes on the same page.
+        </p>
 
-      <h2>Source &amp; versioning</h2>
-      <p>The classic runtime's public surface has not changed in shape since the Native Federation 2.x line — v3 simply stabilized it, and v4 ships it unchanged for backwards compatibility while promoting the <a href="../orchestrator/index.html">Orchestrator</a> as the recommended runtime. The package is distributed as ESM only (<code>"type": "module"</code>), matching Native Federation 4's ESM-first posture.</p>
-    </main>
-  </div>
+        <h2>Source &amp; versioning</h2>
+        <p>
+          The classic runtime's public surface has not changed in shape since
+          the Native Federation 2.x line — v3 simply stabilized it, and v4 ships
+          it unchanged for backwards compatibility while promoting the
+          <a href="../orchestrator/index.html">Orchestrator</a> as the
+          recommended runtime. The package is distributed as ESM only (<code
+            >"type": "module"</code
+          >), matching Native Federation 4's ESM-first posture.
+        </p>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../../components.js"></script>
-</body>
+    <script src="../../components.js"></script>
+  </body>
 </html>

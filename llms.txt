@@ -13,76 +13,76 @@ The ecosystem is split into four layers:
 
 ## Getting Started
 
-- [Architecture Overview](https://native-federation.io/docs/architecture.md): how hosts, remotes, the builder, and the runtime fit together
-- [The Mental Model](https://native-federation.io/docs/mental-model.md): core concepts for reasoning about Native Federation
-- [Terminology](https://native-federation.io/docs/terminology.md): glossary of host, remote, shared, exposed, import map, etc.
-- [Example Repo](https://native-federation.io/docs/example.md): pointer to the reference implementation
-- [v3 vs v4](https://native-federation.io/docs/v3-vs-v4.md): what changed between majors
-- [Migration to v4](https://native-federation.io/docs/migration.md): upgrade steps from v3
+- [Architecture Overview](https://native-federation.com/docs/architecture.md): how hosts, remotes, the builder, and the runtime fit together
+- [The Mental Model](https://native-federation.com/docs/mental-model.md): core concepts for reasoning about Native Federation
+- [Terminology](https://native-federation.com/docs/terminology.md): glossary of host, remote, shared, exposed, import map, etc.
+- [Example Repo](https://native-federation.com/docs/example.md): pointer to the reference implementation
+- [v3 vs v4](https://native-federation.com/docs/v3-vs-v4.md): what changed between majors
+- [Migration to v4](https://native-federation.com/docs/migration.md): upgrade steps from v3
 
 ## Orchestrator
 
-- [Overview](https://native-federation.io/docs/orchestrator/index.md): what the orchestrator solves and when to use it
-- [Getting Started](https://native-federation.io/docs/orchestrator/getting-started.md)
-- [Architecture](https://native-federation.io/docs/orchestrator/architecture.md): internal design and extension points
-- [Configuration](https://native-federation.io/docs/orchestrator/configuration.md): every config option
-- [Version Resolver](https://native-federation.io/docs/orchestrator/version-resolver.md): how shared-dependency version conflicts are resolved
+- [Overview](https://native-federation.com/docs/orchestrator/index.md): what the orchestrator solves and when to use it
+- [Getting Started](https://native-federation.com/docs/orchestrator/getting-started.md)
+- [Architecture](https://native-federation.com/docs/orchestrator/architecture.md): internal design and extension points
+- [Configuration](https://native-federation.com/docs/orchestrator/configuration.md): every config option
+- [Version Resolver](https://native-federation.com/docs/orchestrator/version-resolver.md): how shared-dependency version conflicts are resolved
 
 ## Core (@softarc/native-federation)
 
-- [Overview](https://native-federation.io/docs/core/index.md): what the core package does and its public surface
-- [Getting Started](https://native-federation.io/docs/core/getting-started.md): install, minimal config, wire the builder
-- [federation.config.mjs](https://native-federation.io/docs/core/configuration.md): every option on `withNativeFederation`
-- [Sharing Dependencies](https://native-federation.io/docs/core/sharing.md): `share`, `shareAll`, secondary entry points
-- [Build Process](https://native-federation.io/docs/core/build-process.md): the `federationBuilder` lifecycle including watch mode
-- [Caching](https://native-federation.io/docs/core/caching.md): how the builder caches shared bundles
-- [Build Adapters](https://native-federation.io/docs/core/build-adapters.md): the `NFBuildAdapter` contract
-- [Build Artifacts](https://native-federation.io/docs/core/artifacts.md): `remoteEntry.json` and the generated import map
-- [API Reference](https://native-federation.io/docs/core/api-reference.md): exported functions and types
+- [Overview](https://native-federation.com/docs/core/index.md): what the core package does and its public surface
+- [Getting Started](https://native-federation.com/docs/core/getting-started.md): install, minimal config, wire the builder
+- [federation.config.mjs](https://native-federation.com/docs/core/configuration.md): every option on `withNativeFederation`
+- [Sharing Dependencies](https://native-federation.com/docs/core/sharing.md): `share`, `shareAll`, secondary entry points
+- [Build Process](https://native-federation.com/docs/core/build-process.md): the `federationBuilder` lifecycle including watch mode
+- [Caching](https://native-federation.com/docs/core/caching.md): how the builder caches shared bundles
+- [Build Adapters](https://native-federation.com/docs/core/build-adapters.md): the `NFBuildAdapter` contract
+- [Build Artifacts](https://native-federation.com/docs/core/artifacts.md): `remoteEntry.json` and the generated import map
+- [API Reference](https://native-federation.com/docs/core/api-reference.md): exported functions and types
 
 ## Runtime
 
-- [Overview](https://native-federation.io/docs/runtime/index.md)
-- [Getting Started](https://native-federation.io/docs/runtime/getting-started.md)
-- [initFederation](https://native-federation.io/docs/runtime/init-federation.md): bootstrap the host
-- [loadRemoteModule](https://native-federation.io/docs/runtime/load-remote-module.md): resolve and import a remote module at runtime
-- [The Import Map](https://native-federation.io/docs/runtime/import-map.md): how the runtime builds and injects the import map
-- [API Reference](https://native-federation.io/docs/runtime/api-reference.md)
+- [Overview](https://native-federation.com/docs/runtime/index.md)
+- [Getting Started](https://native-federation.com/docs/runtime/getting-started.md)
+- [initFederation](https://native-federation.com/docs/runtime/init-federation.md): bootstrap the host
+- [loadRemoteModule](https://native-federation.com/docs/runtime/load-remote-module.md): resolve and import a remote module at runtime
+- [The Import Map](https://native-federation.com/docs/runtime/import-map.md): how the runtime builds and injects the import map
+- [API Reference](https://native-federation.com/docs/runtime/api-reference.md)
 
 ## Adapters
 
-- [Overview](https://native-federation.io/docs/adapters/index.md): which adapters exist and when to use each
-- [Build Your Own](https://native-federation.io/docs/adapters/build-your-own.md): implement `NFBuildAdapter` for a new bundler
+- [Overview](https://native-federation.com/docs/adapters/index.md): which adapters exist and when to use each
+- [Build Your Own](https://native-federation.com/docs/adapters/build-your-own.md): implement `NFBuildAdapter` for a new bundler
 
 ## esbuild Adapter
 
-- [Overview](https://native-federation.io/docs/adapters/esbuild/index.md)
-- [Getting Started](https://native-federation.io/docs/adapters/esbuild/getting-started.md)
-- [Builder](https://native-federation.io/docs/adapters/esbuild/builder.md)
-- [Adapter Configuration](https://native-federation.io/docs/adapters/esbuild/configuration.md)
-- [React & CJS Interop](https://native-federation.io/docs/adapters/esbuild/react-interop.md): working with CommonJS and React ecosystems
+- [Overview](https://native-federation.com/docs/adapters/esbuild/index.md)
+- [Getting Started](https://native-federation.com/docs/adapters/esbuild/getting-started.md)
+- [Builder](https://native-federation.com/docs/adapters/esbuild/builder.md)
+- [Adapter Configuration](https://native-federation.com/docs/adapters/esbuild/configuration.md)
+- [React & CJS Interop](https://native-federation.com/docs/adapters/esbuild/react-interop.md): working with CommonJS and React ecosystems
 
 ## Angular Adapter
 
-- [Overview](https://native-federation.io/docs/angular-adapter/index.md)
-- [Getting Started](https://native-federation.io/docs/angular-adapter/getting-started.md)
-- [Builder](https://native-federation.io/docs/angular-adapter/builder.md): the Angular CLI builder
-- [Schematics](https://native-federation.io/docs/angular-adapter/schematics.md): `ng add` and generators
-- [Angular Config](https://native-federation.io/docs/angular-adapter/configuration.md)
-- [Runtime](https://native-federation.io/docs/angular-adapter/runtime.md): Angular-specific runtime helpers
-- [SSR & Hydration](https://native-federation.io/docs/angular-adapter/ssr.md)
-- [I18N](https://native-federation.io/docs/angular-adapter/i18n.md): Angular internationalization integration
-- [Localization](https://native-federation.io/docs/angular-adapter/localization.md)
-- [Custom Builder](https://native-federation.io/docs/angular-adapter/custom-builder.md)
-- [Migration to v4](https://native-federation.io/docs/angular-adapter/migration-v4.md)
+- [Overview](https://native-federation.com/docs/angular-adapter/index.md)
+- [Getting Started](https://native-federation.com/docs/angular-adapter/getting-started.md)
+- [Builder](https://native-federation.com/docs/angular-adapter/builder.md): the Angular CLI builder
+- [Schematics](https://native-federation.com/docs/angular-adapter/schematics.md): `ng add` and generators
+- [Angular Config](https://native-federation.com/docs/angular-adapter/configuration.md)
+- [Runtime](https://native-federation.com/docs/angular-adapter/runtime.md): Angular-specific runtime helpers
+- [SSR & Hydration](https://native-federation.com/docs/angular-adapter/ssr.md)
+- [I18N](https://native-federation.com/docs/angular-adapter/i18n.md): Angular internationalization integration
+- [Localization](https://native-federation.com/docs/angular-adapter/localization.md)
+- [Custom Builder](https://native-federation.com/docs/angular-adapter/custom-builder.md)
+- [Migration to v4](https://native-federation.com/docs/angular-adapter/migration-v4.md)
 
 ## Guides
 
-- [SSR & Hydration](https://native-federation.io/docs/ssr-hydration.md): general SSR patterns
-- [Native & Module Federation](https://native-federation.io/docs/native-and-module-federation.md): interop and differences
-- [Component Libs](https://native-federation.io/docs/component-libs.md): sharing component libraries
+- [SSR & Hydration](https://native-federation.com/docs/ssr-hydration.md): general SSR patterns
+- [Native & Module Federation](https://native-federation.com/docs/native-and-module-federation.md): interop and differences
+- [Component Libs](https://native-federation.com/docs/component-libs.md): sharing component libraries
 
 ## Reference
 
-- [FAQ](https://native-federation.io/docs/faq.md): common questions and pitfalls
+- [FAQ](https://native-federation.com/docs/faq.md): common questions and pitfalls
 

@@ -1,54 +1,84 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>initFederation — Runtime Docs</title>
-  <meta name="description" content="initFederation — how the host discovers remotes, builds the import map, and handles manifest URLs, cache busting and remote load errors.">
-  <link rel="canonical" href="https://native-federation.io/docs/runtime/init-federation.html">
-  <link rel="alternate" type="text/markdown" href="https://native-federation.io/docs/runtime/init-federation.md">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="initFederation — Runtime Docs">
-  <meta property="og:description" content="The host-side entry point to the classic Native Federation runtime.">
-  <meta property="og:url" content="https://native-federation.io/docs/runtime/init-federation.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../images/favicon.png">
-  <link rel="stylesheet" href="../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>initFederation — Runtime Docs</title>
+    <meta
+      name="description"
+      content="initFederation — how the host discovers remotes, builds the import map, and handles manifest URLs, cache busting and remote load errors."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.com/docs/runtime/init-federation.html"
+    />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://native-federation.com/docs/runtime/init-federation.md"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="initFederation — Runtime Docs" />
+    <meta
+      property="og:description"
+      content="The host-side entry point to the classic Native Federation runtime."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.com/docs/runtime/init-federation.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.com/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1><code>initFederation</code></h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          <code>initFederation</code> is the one call a host needs to make
+          before any remote can be loaded. It fetches the host's own
+          <code>remoteEntry.json</code>, fetches every configured remote's
+          <code>remoteEntry.json</code> in parallel, merges everything into a
+          single import map and injects it into the DOM.
+        </p>
 
-    <main class="docs-content">
-      <h1><code>initFederation</code></h1>
-      <div class="version-support">
-        <span class="version-support__label">Applies to</span>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
-      </div>
-      <p class="doc-lead"><code>initFederation</code> is the one call a host needs to make before any remote can be loaded. It fetches the host's own <code>remoteEntry.json</code>, fetches every configured remote's <code>remoteEntry.json</code> in parallel, merges everything into a single import map and injects it into the DOM.</p>
+        <nav class="page-toc" aria-label="On this page">
+          <strong>On this page</strong>
+          <ul>
+            <li><a href="#signature">Signature</a></li>
+            <li><a href="#flow">The initialization flow</a></li>
+            <li><a href="#inline">Inline remotes</a></li>
+            <li><a href="#manifest">Manifest URL</a></li>
+            <li>
+              <a href="#cache-tag">Cache busting with <code>cacheTag</code></a>
+            </li>
+            <li><a href="#errors">Remote load errors</a></li>
+            <li><a href="#hot-reload">Hot reload watching</a></li>
+            <li><a href="#remote-side">Calling it from a remote</a></li>
+          </ul>
+        </nav>
 
-      <nav class="page-toc" aria-label="On this page">
-        <strong>On this page</strong>
-        <ul>
-          <li><a href="#signature">Signature</a></li>
-          <li><a href="#flow">The initialization flow</a></li>
-          <li><a href="#inline">Inline remotes</a></li>
-          <li><a href="#manifest">Manifest URL</a></li>
-          <li><a href="#cache-tag">Cache busting with <code>cacheTag</code></a></li>
-          <li><a href="#errors">Remote load errors</a></li>
-          <li><a href="#hot-reload">Hot reload watching</a></li>
-          <li><a href="#remote-side">Calling it from a remote</a></li>
-        </ul>
-      </nav>
-
-      <h2 id="signature">Signature</h2>
-      <pre><code>function initFederation(
+        <h2 id="signature">Signature</h2>
+        <pre><code>function initFederation(
   remotesOrManifestUrl?: Record&lt;string, string&gt; | string,
   options?: InitFederationOptions,
 ): Promise&lt;ImportMap&gt;;
@@ -56,63 +86,145 @@
 interface InitFederationOptions {
   cacheTag?: string;
 }</code></pre>
-      <p>The first argument is either an inline <code>{ remoteName: remoteEntryUrl }</code> map or a URL string that resolves to such a map (a manifest). If you pass nothing, the runtime still loads the host's own <code>remoteEntry.json</code> — useful when a project only needs its own shared deps registered (this is the shape a remote uses).</p>
-      <p>The returned promise resolves to the final merged <a href="import-map.html"><code>ImportMap</code></a> that was written into the DOM.</p>
+        <p>
+          The first argument is either an inline
+          <code>{ remoteName: remoteEntryUrl }</code> map or a URL string that
+          resolves to such a map (a manifest). If you pass nothing, the runtime
+          still loads the host's own <code>remoteEntry.json</code> — useful when
+          a project only needs its own shared deps registered (this is the shape
+          a remote uses).
+        </p>
+        <p>
+          The returned promise resolves to the final merged
+          <a href="import-map.html"><code>ImportMap</code></a> that was written
+          into the DOM.
+        </p>
 
-      <h2 id="flow">The initialization flow</h2>
-      <p>On every call the runtime does exactly this, in order:</p>
-      <ol>
-        <li>If the first argument is a string, fetch it and <code>JSON.parse</code> it into a remotes record.</li>
-        <li>Fetch the host's <strong><code>./remoteEntry.json</code></strong> — the host's build output must be served at the same origin as the host page itself.</li>
-        <li>Build the host's import map: every <code>shared[]</code> entry becomes a root import keyed by package name.</li>
-        <li>Kick off one <code>fetchAndRegisterRemote</code> promise per remote, in parallel. Each one:
-          <ul>
-            <li>fetches the remote's <code>remoteEntry.json</code>;</li>
-            <li>registers the remote in the global registry;</li>
-            <li>adds exposed modules as root imports (<code>&lt;remoteName&gt;/&lt;exposedKey&gt;</code>);</li>
-            <li>adds shared deps and chunks under a scope keyed by the remote's base URL.</li>
-          </ul>
-        </li>
-        <li>Merge all successful maps into one <code>ImportMap</code>.</li>
-        <li>Inject that map as <code>&lt;script type="importmap-shim"&gt;</code> via <code>document.head.appendChild</code>.</li>
-      </ol>
-      <p>The injection goes through a <code>TrustedTypes</code> policy called <code>native-federation</code> when the browser has Trusted Types enabled, so the runtime plays nicely with strict CSPs. See <a href="import-map.html#trusted-types">The Import Map → Trusted Types</a>.</p>
+        <h2 id="flow">The initialization flow</h2>
+        <p>On every call the runtime does exactly this, in order:</p>
+        <ol>
+          <li>
+            If the first argument is a string, fetch it and
+            <code>JSON.parse</code> it into a remotes record.
+          </li>
+          <li>
+            Fetch the host's <strong><code>./remoteEntry.json</code></strong> —
+            the host's build output must be served at the same origin as the
+            host page itself.
+          </li>
+          <li>
+            Build the host's import map: every <code>shared[]</code> entry
+            becomes a root import keyed by package name.
+          </li>
+          <li>
+            Kick off one <code>fetchAndRegisterRemote</code> promise per remote,
+            in parallel. Each one:
+            <ul>
+              <li>fetches the remote's <code>remoteEntry.json</code>;</li>
+              <li>registers the remote in the global registry;</li>
+              <li>
+                adds exposed modules as root imports
+                (<code>&lt;remoteName&gt;/&lt;exposedKey&gt;</code>);
+              </li>
+              <li>
+                adds shared deps and chunks under a scope keyed by the remote's
+                base URL.
+              </li>
+            </ul>
+          </li>
+          <li>Merge all successful maps into one <code>ImportMap</code>.</li>
+          <li>
+            Inject that map as
+            <code>&lt;script type="importmap-shim"&gt;</code> via
+            <code>document.head.appendChild</code>.
+          </li>
+        </ol>
+        <p>
+          The injection goes through a <code>TrustedTypes</code> policy called
+          <code>native-federation</code> when the browser has Trusted Types
+          enabled, so the runtime plays nicely with strict CSPs. See
+          <a href="import-map.html#trusted-types"
+            >The Import Map → Trusted Types</a
+          >.
+        </p>
 
-      <h2 id="inline">Inline remotes</h2>
-      <p>If you know which remotes you need at build time, pass them directly:</p>
-      <pre><code>import { initFederation } from '@softarc/native-federation-runtime';
+        <h2 id="inline">Inline remotes</h2>
+        <p>
+          If you know which remotes you need at build time, pass them directly:
+        </p>
+        <pre><code>import { initFederation } from '@softarc/native-federation-runtime';
 
 await initFederation({
   mfe1: 'http://localhost:3001/remoteEntry.json',
   mfe2: 'https://cdn.example.com/orders/remoteEntry.json',
 });</code></pre>
-      <p>The key is the <strong>remote name</strong> you will pass to <code>loadRemoteModule</code>. It does <em>not</em> have to match the <code>name</code> field inside the remote's <code>remoteEntry.json</code> — the key you supply here wins. If you leave it out (via <code>fetchAndRegisterRemote</code>) the name falls back to <code>remoteEntry.name</code>.</p>
+        <p>
+          The key is the <strong>remote name</strong> you will pass to
+          <code>loadRemoteModule</code>. It does <em>not</em> have to match the
+          <code>name</code> field inside the remote's
+          <code>remoteEntry.json</code> — the key you supply here wins. If you
+          leave it out (via <code>fetchAndRegisterRemote</code>) the name falls
+          back to <code>remoteEntry.name</code>.
+        </p>
 
-      <h2 id="manifest">Manifest URL</h2>
-      <p>Pass a string to defer the remotes map to runtime:</p>
-      <pre><code>await initFederation('/assets/federation.manifest.json');</code></pre>
-      <p>The manifest is just JSON mapping remote names to <code>remoteEntry.json</code> URLs:</p>
-      <pre><code>{
+        <h2 id="manifest">Manifest URL</h2>
+        <p>Pass a string to defer the remotes map to runtime:</p>
+        <pre><code>await initFederation('/assets/federation.manifest.json');</code></pre>
+        <p>
+          The manifest is just JSON mapping remote names to
+          <code>remoteEntry.json</code> URLs:
+        </p>
+        <pre><code>{
   "mfe1": "http://localhost:3001/remoteEntry.json",
   "mfe2": "https://cdn.example.com/orders/remoteEntry.json"
 }</code></pre>
-      <p>Ship a different manifest per environment to re-point remotes without rebuilding the host. Relative URLs are resolved by the browser against the page, so <code>./remoteEntry.json</code> and absolute URLs both work.</p>
+        <p>
+          Ship a different manifest per environment to re-point remotes without
+          rebuilding the host. Relative URLs are resolved by the browser against
+          the page, so <code>./remoteEntry.json</code> and absolute URLs both
+          work.
+        </p>
 
-      <h2 id="cache-tag">Cache busting with <code>cacheTag</code></h2>
-      <p>If you set <code>options.cacheTag</code>, the runtime appends <code>?t=&lt;cacheTag&gt;</code> (or <code>&amp;t=...</code> when the URL already has a query string) to <em>every</em> network request it makes — the manifest URL, the host <code>remoteEntry.json</code>, and every remote <code>remoteEntry.json</code>:</p>
-      <pre><code>await initFederation('/assets/federation.manifest.json', {
+        <h2 id="cache-tag">Cache busting with <code>cacheTag</code></h2>
+        <p>
+          If you set <code>options.cacheTag</code>, the runtime appends
+          <code>?t=&lt;cacheTag&gt;</code> (or <code>&amp;t=...</code> when the
+          URL already has a query string) to <em>every</em> network request it
+          makes — the manifest URL, the host <code>remoteEntry.json</code>, and
+          every remote <code>remoteEntry.json</code>:
+        </p>
+        <pre><code>await initFederation('/assets/federation.manifest.json', {
   cacheTag: BUILD_HASH,
 });</code></pre>
-      <p>Use a deployment-stable value — a build hash, a git SHA, a CI run ID. It only affects metadata fetches; the actual module bundles are loaded through the import map and have their own hashed filenames.</p>
+        <p>
+          Use a deployment-stable value — a build hash, a git SHA, a CI run ID.
+          It only affects metadata fetches; the actual module bundles are loaded
+          through the import map and have their own hashed filenames.
+        </p>
 
-      <div class="callout">
-        <p><code>cacheTag</code> is the <em>only</em> option the classic runtime exposes. There is no persistent cache, no logger injection and no storage layer — those belong to the <a href="../orchestrator/index.html">Orchestrator</a>.</p>
-      </div>
+        <div class="callout">
+          <p>
+            <code>cacheTag</code> is the <em>only</em> option the classic
+            runtime exposes. There is no persistent cache, no logger injection
+            and no storage layer — those belong to the
+            <a href="../orchestrator/index.html">Orchestrator</a>.
+          </p>
+        </div>
 
-      <h2 id="errors">Remote load errors</h2>
-      <p>If a single remote fails to load (network error, 404, invalid JSON), <code>initFederation</code> does <strong>not</strong> fail the whole operation. It logs the error to <code>console.error</code> and continues with the remotes that did load. The rationale is that one flaky remote should not bring the host down.</p>
-      <p>If you need strict behaviour, call <code>fetchAndRegisterRemotes</code> directly with <code>throwIfRemoteNotFound: true</code>:</p>
-      <pre><code>import {
+        <h2 id="errors">Remote load errors</h2>
+        <p>
+          If a single remote fails to load (network error, 404, invalid JSON),
+          <code>initFederation</code> does <strong>not</strong> fail the whole
+          operation. It logs the error to <code>console.error</code> and
+          continues with the remotes that did load. The rationale is that one
+          flaky remote should not bring the host down.
+        </p>
+        <p>
+          If you need strict behaviour, call
+          <code>fetchAndRegisterRemotes</code> directly with
+          <code>throwIfRemoteNotFound: true</code>:
+        </p>
+        <pre><code>import {
   initFederation,
   fetchAndRegisterRemotes,
 } from '@softarc/native-federation-runtime';
@@ -121,33 +233,83 @@ await fetchAndRegisterRemotes(
   { mfe1: 'http://localhost:3001/remoteEntry.json' },
   { throwIfRemoteNotFound: true },
 );</code></pre>
-      <p>Note that this only changes behaviour for <em>remote</em> load errors. If the <em>host's</em> own <code>remoteEntry.json</code> cannot be fetched or parsed, <code>initFederation</code> rejects — no fallback.</p>
+        <p>
+          Note that this only changes behaviour for <em>remote</em> load errors.
+          If the <em>host's</em> own <code>remoteEntry.json</code> cannot be
+          fetched or parsed, <code>initFederation</code> rejects — no fallback.
+        </p>
 
-      <h2 id="hot-reload">Hot reload watching</h2>
-      <p>If a remote's <code>remoteEntry.json</code> contains a <code>buildNotificationsEndpoint</code> field, <code>fetchAndRegisterRemote</code> opens an <code>EventSource</code> on it. When the dev server emits <code>{ type: 'federation-rebuild-complete' }</code>, the runtime calls <code>window.location.reload()</code>. This is how Angular's <code>ng serve</code> integration triggers a reload after a federation rebuild.</p>
-      <p>In production builds the endpoint is not written to <code>remoteEntry.json</code>, so no SSE connection is opened. You do not need to configure anything on the runtime side — it is purely a function of the build output.</p>
+        <h2 id="hot-reload">Hot reload watching</h2>
+        <p>
+          If a remote's <code>remoteEntry.json</code> contains a
+          <code>buildNotificationsEndpoint</code> field,
+          <code>fetchAndRegisterRemote</code> opens an
+          <code>EventSource</code> on it. When the dev server emits
+          <code>{ type: 'federation-rebuild-complete' }</code>, the runtime
+          calls <code>window.location.reload()</code>. This is how Angular's
+          <code>ng serve</code> integration triggers a reload after a federation
+          rebuild.
+        </p>
+        <p>
+          In production builds the endpoint is not written to
+          <code>remoteEntry.json</code>, so no SSE connection is opened. You do
+          not need to configure anything on the runtime side — it is purely a
+          function of the build output.
+        </p>
 
-      <h2 id="remote-side">Calling it from a remote</h2>
-      <p>A remote calls <code>initFederation</code> too — usually with an empty remotes map:</p>
-      <pre><code>// remote src/main.ts
+        <h2 id="remote-side">Calling it from a remote</h2>
+        <p>
+          A remote calls <code>initFederation</code> too — usually with an empty
+          remotes map:
+        </p>
+        <pre><code>// remote src/main.ts
 initFederation({})
   .catch(err =&gt; console.error(err))
   .then(() =&gt; import('./bootstrap'));</code></pre>
-      <p>This loads the remote's own <code>remoteEntry.json</code> and registers its shared dependencies at the root of the import map, so the remote's code resolves <code>@angular/core</code>, <code>rxjs</code> and friends to the bundled versions when running the remote directly. If the remote is only ever loaded through a host, this call can be omitted — the host's <code>initFederation</code> will register the remote's shared deps under a scope instead.</p>
+        <p>
+          This loads the remote's own <code>remoteEntry.json</code> and
+          registers its shared dependencies at the root of the import map, so
+          the remote's code resolves <code>@angular/core</code>,
+          <code>rxjs</code> and friends to the bundled versions when running the
+          remote directly. If the remote is only ever loaded through a host,
+          this call can be omitted — the host's <code>initFederation</code> will
+          register the remote's shared deps under a scope instead.
+        </p>
 
-      <h2>Related</h2>
-      <ul>
-        <li><a href="load-remote-module.html"><code>loadRemoteModule</code></a> — the companion call used from routes/components.</li>
-        <li><a href="import-map.html">The Import Map</a> — what <code>initFederation</code> writes to <code>document.head</code>.</li>
-        <li><a href="api-reference.html">API Reference</a> — <code>fetchAndRegisterRemote</code>, <code>processHostInfo</code> and the lower-level building blocks.</li>
-      </ul>
-    </main>
-  </div>
+        <h2>Related</h2>
+        <ul>
+          <li>
+            <a href="load-remote-module.html"><code>loadRemoteModule</code></a>
+            — the companion call used from routes/components.
+          </li>
+          <li>
+            <a href="import-map.html">The Import Map</a> — what
+            <code>initFederation</code> writes to <code>document.head</code>.
+          </li>
+          <li>
+            <a href="api-reference.html">API Reference</a> —
+            <code>fetchAndRegisterRemote</code>,
+            <code>processHostInfo</code> and the lower-level building blocks.
+          </li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../../components.js"></script>
-</body>
+    <script src="../../components.js"></script>
+  </body>
 </html>

@@ -1,66 +1,130 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blog Series — Native Federation Docs</title>
-  <meta name="description" content="The Micro Frontends with Modern Angular blog series — in-depth articles covering Native Federation and Micro Frontend architecture patterns.">
-  <link rel="canonical" href="https://native-federation.io/docs/documentation.html">
-  <link rel="alternate" type="text/markdown" href="https://native-federation.io/docs/documentation.md">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Blog Series — Native Federation Docs">
-  <meta property="og:description" content="The Micro Frontends with Modern Angular blog series.">
-  <meta property="og:url" content="https://native-federation.io/docs/documentation.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../images/favicon.png">
-  <link rel="apple-touch-icon" href="../images/favicon.png">
-  <link rel="stylesheet" href="../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blog Series — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="The Micro Frontends with Modern Angular blog series — in-depth articles covering Native Federation and Micro Frontend architecture patterns."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.com/docs/documentation.html"
+    />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://native-federation.com/docs/documentation.md"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Blog Series — Native Federation Docs" />
+    <meta
+      property="og:description"
+      content="The Micro Frontends with Modern Angular blog series."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.com/docs/documentation.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.com/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../images/favicon.png" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>Blog Series</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          The comprehensive "Micro Frontends with Modern Angular" article series
+          covering Native Federation and Micro Frontend architecture with
+          Angular.
+        </p>
 
-    <main class="docs-content">
-      <h1>Blog Series</h1>
-      <div class="version-support">
-        <span class="version-support__label">Applies to</span>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
-      </div>
-      <p class="doc-lead">The comprehensive "Micro Frontends with Modern Angular" article series covering Native Federation and Micro Frontend architecture with Angular.</p>
+        <h2>Article Series</h2>
+        <p>
+          The comprehensive article series on Angular Architects covers
+          everything you need to know about building Micro Frontends with
+          Angular:
+        </p>
 
-      <h2>Article Series</h2>
-      <p>The comprehensive article series on Angular Architects covers everything you need to know about building Micro Frontends with Angular:</p>
+        <div class="workshop-cta">
+          <h3>The Microfrontend Revolution</h3>
+          <p>
+            A multi-part article series covering Module Federation concepts,
+            configuration, advanced patterns, and production strategies. Thanks
+            to the shared API, these articles apply equally to Native
+            Federation.
+          </p>
+          <a
+            href="https://www.angulararchitects.io/en/aktuelles/the-microfrontend-revolution-part-2-module-federation-with-angular/"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-primary"
+            >Read the Series</a
+          >
+        </div>
 
-      <div class="workshop-cta">
-        <h3>The Microfrontend Revolution</h3>
-        <p>A multi-part article series covering Module Federation concepts, configuration, advanced patterns, and production strategies. Thanks to the shared API, these articles apply equally to Native Federation.</p>
-        <a href="https://www.angulararchitects.io/en/aktuelles/the-microfrontend-revolution-part-2-module-federation-with-angular/" target="_blank" rel="noopener" class="btn btn-primary">Read the Series</a>
-      </div>
+        <div class="callout">
+          <p>
+            Although these articles were originally written for Module
+            Federation, they fully apply to Native Federation thanks to the
+            identical API. Simply use imports from
+            <code>@angular-architects/native-federation</code> instead.
+          </p>
+        </div>
 
-      <div class="callout">
-        <p>Although these articles were originally written for Module Federation, they fully apply to Native Federation thanks to the identical API. Simply use imports from <code>@angular-architects/native-federation</code> instead.</p>
-      </div>
+        <h2>Quick Links</h2>
+        <ul>
+          <li><a href="example.html">Working Example</a></li>
+          <li><a href="tutorial.html">Step-by-Step Tutorial</a></li>
+          <li><a href="faq.html">Frequently Asked Questions</a></li>
+          <li><a href="mental-model.html">The Mental Model</a></li>
+          <li>
+            <a
+              href="https://github.com/native-federation"
+              target="_blank"
+              rel="noopener"
+              >GitHub Repository</a
+            >
+          </li>
+        </ul>
+      </main>
+    </div>
 
-      <h2>Quick Links</h2>
-      <ul>
-        <li><a href="example.html">Working Example</a></li>
-        <li><a href="tutorial.html">Step-by-Step Tutorial</a></li>
-        <li><a href="faq.html">Frequently Asked Questions</a></li>
-        <li><a href="mental-model.html">The Mental Model</a></li>
-        <li><a href="https://github.com/native-federation" target="_blank" rel="noopener">GitHub Repository</a></li>
-      </ul>
-    </main>
-  </div>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
-
-  <script src="../components.js"></script>
-</body>
+    <script src="../components.js"></script>
+  </body>
 </html>

@@ -1,62 +1,156 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>React &amp; CommonJS Interop — esbuild Adapter</title>
-  <meta name="description" content="CommonJS interop for the esbuild adapter — React fileReplacements, compensateExports, shareAll overrides and the Shadow-DOM custom-element pattern.">
-  <link rel="canonical" href="https://native-federation.io/docs/adapters/esbuild/react-interop.html">
-  <link rel="alternate" type="text/markdown" href="https://native-federation.io/docs/adapters/esbuild/react-interop.md">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="React &amp; CommonJS Interop — esbuild Adapter">
-  <meta property="og:description" content="The React-specific knobs in the esbuild adapter: fileReplacements, compensateExports, shareAll overrides, Shadow DOM.">
-  <meta property="og:url" content="https://native-federation.io/docs/adapters/esbuild/react-interop.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../../images/favicon.png">
-  <link rel="stylesheet" href="../../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React &amp; CommonJS Interop — esbuild Adapter</title>
+    <meta
+      name="description"
+      content="CommonJS interop for the esbuild adapter — React fileReplacements, compensateExports, shareAll overrides and the Shadow-DOM custom-element pattern."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.com/docs/adapters/esbuild/react-interop.html"
+    />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://native-federation.com/docs/adapters/esbuild/react-interop.md"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:title"
+      content="React &amp; CommonJS Interop — esbuild Adapter"
+    />
+    <meta
+      property="og:description"
+      content="The React-specific knobs in the esbuild adapter: fileReplacements, compensateExports, shareAll overrides, Shadow DOM."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.com/docs/adapters/esbuild/react-interop.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.com/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../../images/favicon.png" />
+    <link rel="stylesheet" href="../../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+      <main class="docs-content">
+        <h1>React &amp; CommonJS Interop</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          Most of the React-specific plumbing in the esbuild adapter exists
+          because React still ships as CommonJS. This page collects every knob
+          you might need — the built-in CommonJS plugin,
+          <code>fileReplacements</code>, <code>compensateExports</code>, the
+          <code>shareAll</code> overrides, the <code>skip</code> list, and the
+          Shadow-DOM custom-element pattern.
+        </p>
 
-    <main class="docs-content">
-      <h1>React &amp; CommonJS Interop</h1>
-      <div class="version-support">
-        <span class="version-support__label">Applies to</span>
-        <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
-      </div>
-      <p class="doc-lead">Most of the React-specific plumbing in the esbuild adapter exists because React still ships as CommonJS. This page collects every knob you might need — the built-in CommonJS plugin, <code>fileReplacements</code>, <code>compensateExports</code>, the <code>shareAll</code> overrides, the <code>skip</code> list, and the Shadow-DOM custom-element pattern.</p>
+        <h2>The CommonJS Plugin (Automatic)</h2>
+        <p>
+          Every <strong>node-modules</strong> bundle is built with
+          <a
+            href="https://www.npmjs.com/package/@chialab/esbuild-plugin-commonjs"
+            target="_blank"
+            rel="noopener"
+            ><code>@chialab/esbuild-plugin-commonjs</code></a
+          >, and the adapter defines <code>process.env.NODE_ENV</code> (<code
+            >"development"</code
+          >
+          or <code>"production"</code> based on <code>dev</code>). For most CJS
+          libraries this is enough — the plugin converts
+          <code>module.exports</code> / <code>exports.*</code> patterns to ESM
+          named exports and you import them as normal.
+        </p>
+        <p>
+          There is no opt-out and no configuration: the node-modules bundle is
+          deliberately opaque so that <em>shared</em> dependencies always come
+          out of the build shaped the same way, regardless of what the host app
+          does.
+        </p>
 
-      <h2>The CommonJS Plugin (Automatic)</h2>
-      <p>Every <strong>node-modules</strong> bundle is built with <a href="https://www.npmjs.com/package/@chialab/esbuild-plugin-commonjs" target="_blank" rel="noopener"><code>@chialab/esbuild-plugin-commonjs</code></a>, and the adapter defines <code>process.env.NODE_ENV</code> (<code>"development"</code> or <code>"production"</code> based on <code>dev</code>). For most CJS libraries this is enough — the plugin converts <code>module.exports</code> / <code>exports.*</code> patterns to ESM named exports and you import them as normal.</p>
-      <p>There is no opt-out and no configuration: the node-modules bundle is deliberately opaque so that <em>shared</em> dependencies always come out of the build shaped the same way, regardless of what the host app does.</p>
+        <h2>Why React Needs Extra Work</h2>
+        <p>
+          React's entry points (<code>react/index.js</code>,
+          <code>react/jsx-runtime.js</code>, <code>react-dom/index.js</code>)
+          are tiny CJS wrappers that <code>require()</code> a pre-bundled file
+          under <code>cjs/</code>, choosing development or production at runtime
+          via <code>process.env.NODE_ENV</code>. Three things make that
+          problematic for a federation bundle:
+        </p>
+        <ol>
+          <li>
+            The <code>require()</code> picks the dev/prod file dynamically —
+            esbuild can't tree-shake the branch it doesn't need.
+          </li>
+          <li>
+            React's named exports (<code>useState</code>,
+            <code>useEffect</code>, …) are attached to
+            <code>module.exports</code> inside the <code>cjs/</code> file. Going
+            through the wrapper layer can lose them after conversion, depending
+            on how each consumer imports them.
+          </li>
+          <li>
+            React's submodules (<code>react-dom/client</code>,
+            <code>react/jsx-runtime</code>, …) must share identity with the main
+            module at runtime, or you get <em>Invalid Hook Call</em> errors
+            across the federation boundary.
+          </li>
+        </ol>
+        <p>
+          The adapter has three mechanisms for this — a default, a fallback, and
+          a core-level knob.
+        </p>
 
-      <h2>Why React Needs Extra Work</h2>
-      <p>React's entry points (<code>react/index.js</code>, <code>react/jsx-runtime.js</code>, <code>react-dom/index.js</code>) are tiny CJS wrappers that <code>require()</code> a pre-bundled file under <code>cjs/</code>, choosing development or production at runtime via <code>process.env.NODE_ENV</code>. Three things make that problematic for a federation bundle:</p>
-      <ol>
-        <li>The <code>require()</code> picks the dev/prod file dynamically — esbuild can't tree-shake the branch it doesn't need.</li>
-        <li>React's named exports (<code>useState</code>, <code>useEffect</code>, …) are attached to <code>module.exports</code> inside the <code>cjs/</code> file. Going through the wrapper layer can lose them after conversion, depending on how each consumer imports them.</li>
-        <li>React's submodules (<code>react-dom/client</code>, <code>react/jsx-runtime</code>, …) must share identity with the main module at runtime, or you get <em>Invalid Hook Call</em> errors across the federation boundary.</li>
-      </ol>
-      <p>The adapter has three mechanisms for this — a default, a fallback, and a core-level knob.</p>
-
-      <h2>Default: <code>compensateExports</code></h2>
-      <p>Out of the box, <code>EsBuildAdapterConfig.compensateExports</code> defaults to <code>[/react/]</code>. Modules matching this list go through the core's <strong>export-compensation pass</strong>: the adapter parses the bundled output with <code>acorn</code>, detects named <code>exports.*</code> assignments and default exports, and writes a small re-export shim so named ESM imports resolve correctly regardless of how the CJS side wrote them.</p>
-      <p>For most React apps this default is all you need. Leave it alone unless you are sharing another CJS library with the same export shape and want it compensated too:</p>
-      <pre><code>adapterConfig: {
+        <h2>Default: <code>compensateExports</code></h2>
+        <p>
+          Out of the box,
+          <code>EsBuildAdapterConfig.compensateExports</code> defaults to
+          <code>[/react/]</code>. Modules matching this list go through the
+          core's <strong>export-compensation pass</strong>: the adapter parses
+          the bundled output with <code>acorn</code>, detects named
+          <code>exports.*</code> assignments and default exports, and writes a
+          small re-export shim so named ESM imports resolve correctly regardless
+          of how the CJS side wrote them.
+        </p>
+        <p>
+          For most React apps this default is all you need. Leave it alone
+          unless you are sharing another CJS library with the same export shape
+          and want it compensated too:
+        </p>
+        <pre><code>adapterConfig: {
   plugins: [],
   compensateExports: [/react/, /some-legacy-cjs-lib/],
 }</code></pre>
 
-      <h2>Fallback: <code>fileReplacements</code></h2>
-      <p>When the wrapper dance still gives you hook errors, or when you want a fully pre-bundled React build for production, point the entry points directly at React's <code>cjs/</code> files. The adapter already ships this replacement map internally — reuse it verbatim or adapt per environment:</p>
-      <pre><code>const isDev = process.argv.includes('--dev');
+        <h2>Fallback: <code>fileReplacements</code></h2>
+        <p>
+          When the wrapper dance still gives you hook errors, or when you want a
+          fully pre-bundled React build for production, point the entry points
+          directly at React's <code>cjs/</code> files. The adapter already ships
+          this replacement map internally — reuse it verbatim or adapt per
+          environment:
+        </p>
+        <pre><code>const isDev = process.argv.includes('--dev');
 
 const reactDev = {
   'node_modules/react/index.js':
@@ -90,11 +184,21 @@ await runEsBuildBuilder('federation.config.js', {
     fileReplacements: isDev ? reactDev : reactProd,
   },
 });</code></pre>
-      <p>This feeds the pre-bundled React straight into esbuild and skips the dynamic <code>require()</code> entirely. Combine it with the default <code>compensateExports</code> and the named-export story is airtight.</p>
+        <p>
+          This feeds the pre-bundled React straight into esbuild and skips the
+          dynamic <code>require()</code> entirely. Combine it with the default
+          <code>compensateExports</code> and the named-export story is airtight.
+        </p>
 
-      <h2><code>shareAll</code> Overrides</h2>
-      <p>On the core side, <code>react</code> and <code>react-dom</code> need to be shared as singletons with their <em>secondary</em> entry points kept together. This is what ensures <code>react-dom/client</code> resolves to the same React as <code>react</code> itself on every host and every remote:</p>
-      <pre><code>shared: {
+        <h2><code>shareAll</code> Overrides</h2>
+        <p>
+          On the core side, <code>react</code> and <code>react-dom</code> need
+          to be shared as singletons with their <em>secondary</em> entry points
+          kept together. This is what ensures
+          <code>react-dom/client</code> resolves to the same React as
+          <code>react</code> itself on every host and every remote:
+        </p>
+        <pre><code>shared: {
   ...shareAll({
     singleton: true,
     strictVersion: true,
@@ -116,21 +220,41 @@ await runEsBuildBuilder('federation.config.js', {
     }
   }),
 }</code></pre>
-      <p><code>includeSecondaries: { keepAll: true }</code> is the important part — without it, submodules like <code>react-dom/client</code> are dropped from the shared set and load a second React copy, which breaks hooks across the federation boundary.</p>
+        <p>
+          <code>includeSecondaries: { keepAll: true }</code> is the important
+          part — without it, submodules like <code>react-dom/client</code> are
+          dropped from the shared set and load a second React copy, which breaks
+          hooks across the federation boundary.
+        </p>
 
-      <h2>Skip the Server Exports</h2>
-      <p>React DOM's package also exposes server-rendering entry points that the core will otherwise try to bundle for the browser. Skip them:</p>
-      <pre><code>skip: [
+        <h2>Skip the Server Exports</h2>
+        <p>
+          React DOM's package also exposes server-rendering entry points that
+          the core will otherwise try to bundle for the browser. Skip them:
+        </p>
+        <pre><code>skip: [
   'react-dom/server',
   'react-dom/server.node',
   'react-dom/server.browser',
   'react-dom/test-utils',
 ]</code></pre>
-      <p>(If you actually want SSR, set up a separate build with <code>platform: 'node'</code> — but that is out of scope for the browser remote.)</p>
+        <p>
+          (If you actually want SSR, set up a separate build with
+          <code>platform: 'node'</code> — but that is out of scope for the
+          browser remote.)
+        </p>
 
-      <h2>Custom Element + Shadow DOM</h2>
-      <p>Remotes are consumed by the host through a plain tag (<code>&lt;my-react-app&gt;&lt;/my-react-app&gt;</code>), so the idiomatic way to expose a React tree is as a custom element whose <code>connectedCallback</code> mounts a React root, and whose <code>disconnectedCallback</code> unmounts it. Attaching a Shadow DOM scopes the remote's styles so they can't leak into the host page — and can't be overwritten by it:</p>
-      <pre><code>import { StrictMode } from 'react';
+        <h2>Custom Element + Shadow DOM</h2>
+        <p>
+          Remotes are consumed by the host through a plain tag
+          (<code>&lt;my-react-app&gt;&lt;/my-react-app&gt;</code>), so the
+          idiomatic way to expose a React tree is as a custom element whose
+          <code>connectedCallback</code> mounts a React root, and whose
+          <code>disconnectedCallback</code> unmounts it. Attaching a Shadow DOM
+          scopes the remote's styles so they can't leak into the host page — and
+          can't be overwritten by it:
+        </p>
+        <pre><code>import { StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { styles } from './styles';
 import { TodoApp } from './TodoApp';
@@ -160,23 +284,52 @@ class MyReactAppElement extends HTMLElement {
 if (!customElements.get('my-react-app')) {
   customElements.define('my-react-app', MyReactAppElement);
 }</code></pre>
-      <p>The entry point in your <code>federation.config.js</code>'s <code>exposes</code> map points at this file, and the host page simply renders <code>&lt;my-react-app&gt;</code>. No React in the host; no CSS leakage in either direction.</p>
+        <p>
+          The entry point in your <code>federation.config.js</code>'s
+          <code>exposes</code> map points at this file, and the host page simply
+          renders <code>&lt;my-react-app&gt;</code>. No React in the host; no
+          CSS leakage in either direction.
+        </p>
 
-      <h2>Checklist</h2>
-      <ul>
-        <li>Keep the default <code>compensateExports: [/react/]</code>.</li>
-        <li>Share <code>react</code> and <code>react-dom</code> as <em>singletons</em> with <code>includeSecondaries: { keepAll: true }</code>.</li>
-        <li>Skip <code>react-dom/server*</code> and <code>react-dom/test-utils</code>.</li>
-        <li>Expose a custom element with Shadow DOM so the remote is drop-in on any host.</li>
-        <li>If you still hit hook errors or missing named exports, add the React <code>fileReplacements</code> map above.</li>
-      </ul>
-    </main>
-  </div>
+        <h2>Checklist</h2>
+        <ul>
+          <li>Keep the default <code>compensateExports: [/react/]</code>.</li>
+          <li>
+            Share <code>react</code> and <code>react-dom</code> as
+            <em>singletons</em> with
+            <code>includeSecondaries: { keepAll: true }</code>.
+          </li>
+          <li>
+            Skip <code>react-dom/server*</code> and
+            <code>react-dom/test-utils</code>.
+          </li>
+          <li>
+            Expose a custom element with Shadow DOM so the remote is drop-in on
+            any host.
+          </li>
+          <li>
+            If you still hit hook errors or missing named exports, add the React
+            <code>fileReplacements</code> map above.
+          </li>
+        </ul>
+      </main>
+    </div>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
 
-  <script src="../../../components.js"></script>
-</body>
+    <script src="../../../components.js"></script>
+  </body>
 </html>

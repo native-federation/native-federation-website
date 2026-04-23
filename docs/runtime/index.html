@@ -1,95 +1,243 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Runtime — Native Federation Docs</title>
-  <meta name="description" content="The Native Federation Runtime — the classic browser-side library that reads remoteEntry.json files, builds an import map, and loads remote modules on demand.">
-  <link rel="canonical" href="https://native-federation.io/docs/runtime/index.html">
-  <link rel="alternate" type="text/markdown" href="https://native-federation.io/docs/runtime/index.md">
-  <meta name="robots" content="index, follow">
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="Runtime — Native Federation Docs">
-  <meta property="og:description" content="The classic browser-side Native Federation runtime.">
-  <meta property="og:url" content="https://native-federation.io/docs/runtime/index.html">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" type="image/png" href="../../images/favicon.png">
-  <link rel="apple-touch-icon" href="../../images/favicon.png">
-  <link rel="stylesheet" href="../../styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Runtime — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="The Native Federation Runtime — the classic browser-side library that reads remoteEntry.json files, builds an import map, and loads remote modules on demand."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.com/docs/runtime/index.html"
+    />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://native-federation.com/docs/runtime/index.md"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Runtime — Native Federation Docs" />
+    <meta
+      property="og:description"
+      content="The classic browser-side Native Federation runtime."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.com/docs/runtime/index.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.com/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
 
-  <div class="docs-layout">
-    <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
-
-    <main class="docs-content">
-      <h1>Runtime</h1>
-      <div class="version-support">
-        <span class="version-support__label">Applies to</span>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v3</span></label>
-        <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
-      </div>
-      <p class="doc-lead">The runtime — <code>@softarc/native-federation-runtime</code> — is the small browser-side library that reads <code>remoteEntry.json</code> files, constructs an ES&nbsp;module import map, injects it into the DOM, and resolves <code>loadRemoteModule()</code> calls against it. It is the classic Native Federation runtime: one version of each shared dependency, wired up on startup, and loaded on demand.</p>
-
-      <div class="callout callout-warning">
-        <p>
-          <strong>Classic runtime — not the default in v4.</strong><br />
-          This runtime is the default runtime in Native Federation <strong>v3</strong> and is what <code>@angular-architects/native-federation</code> re-exports out of the box. It is the <em>legacy</em> runtime going forward: in <strong>v4</strong> the recommended browser runtime is the new
-          <a href="../orchestrator/index.html">Orchestrator</a> (<code>@softarc/native-federation-orchestrator</code>), which adds semver-range resolution, persistent caching and share scopes on top of the same <code>remoteEntry.json</code> contract.
-          <br /><br />
-          The classic runtime is still supported — and still the right choice when you need raw simplicity, SSR compatibility on the host, or a drop-in v3 behaviour. If you are starting a new v4 project, prefer the Orchestrator.
+      <main class="docs-content">
+        <h1>Runtime</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          The runtime — <code>@softarc/native-federation-runtime</code> — is the
+          small browser-side library that reads
+          <code>remoteEntry.json</code> files, constructs an ES&nbsp;module
+          import map, injects it into the DOM, and resolves
+          <code>loadRemoteModule()</code> calls against it. It is the classic
+          Native Federation runtime: one version of each shared dependency,
+          wired up on startup, and loaded on demand.
         </p>
-      </div>
 
-      <h2>What the Runtime Does</h2>
-      <p>Given a list of remotes (or a manifest URL that resolves to one), the runtime:</p>
-      <ul>
-        <li>Loads the host's own <code>remoteEntry.json</code> and registers its shared dependencies at the root of the import map.</li>
-        <li>Fetches each remote's <code>remoteEntry.json</code> in parallel and registers:
-          <ul>
-            <li>the remote's <strong>exposed modules</strong> as root imports keyed by <code>&lt;remoteName&gt;/&lt;exposedKey&gt;</code>;</li>
-            <li>the remote's <strong>shared dependencies</strong> under a <strong>scope</strong> keyed by the remote's base URL.</li>
-          </ul>
-        </li>
-        <li>Merges everything into a single import map and injects it as a <code>&lt;script type="importmap-shim"&gt;</code> into <code>document.head</code> — so it needs <a href="https://github.com/guybedford/es-module-shims" target="_blank" rel="noopener">es-module-shims</a> in the page.</li>
-        <li>Exposes a <code>loadRemoteModule()</code> helper that performs a dynamic <code>import()</code> (through <code>importShim</code>) against that import map.</li>
-        <li>Optionally opens a Server-Sent Events connection to a remote's <code>buildNotificationsEndpoint</code> to reload the page when the remote rebuilds (dev only).</li>
-      </ul>
+        <div class="callout callout-warning">
+          <p>
+            <strong>Classic runtime — not the default in v4.</strong><br />
+            This runtime is the default runtime in Native Federation
+            <strong>v3</strong> and is what
+            <code>@angular-architects/native-federation</code> re-exports out of
+            the box. It is the <em>legacy</em> runtime going forward: in
+            <strong>v4</strong> the recommended browser runtime is the new
+            <a href="../orchestrator/index.html">Orchestrator</a>
+            (<code>@softarc/native-federation-orchestrator</code>), which adds
+            semver-range resolution, persistent caching and share scopes on top
+            of the same <code>remoteEntry.json</code> contract. <br /><br />
+            The classic runtime is still supported — and still the right choice
+            when you need raw simplicity, SSR compatibility on the host, or a
+            drop-in v3 behaviour. If you are starting a new v4 project, prefer
+            the Orchestrator.
+          </p>
+        </div>
 
-      <h2>What the Runtime Does <em>Not</em> Do</h2>
-      <p>The classic runtime is deliberately thin. Things that are <strong>not</strong> handled here (and are reasons to reach for the <a href="../orchestrator/index.html">Orchestrator</a> in v4):</p>
-      <ul>
-        <li><strong>No semver-range resolution.</strong> Each shared dependency gets one URL per <em>scope</em>. If two remotes share different versions of <code>rxjs</code> they simply each keep their own — the runtime does not compare ranges or pick a common version. The first URL registered under a given <code>packageName@version</code> wins for the external lookup (see <a href="import-map.html#externals">Externals registry</a>).</li>
-        <li><strong>No share scopes.</strong> There is a single implicit scope per remote base URL; there is no <code>shareScope</code> concept.</li>
-        <li><strong>No persistent caching.</strong> Every page load re-fetches every <code>remoteEntry.json</code>. You can append a query string via <a href="init-federation.html#cache-tag"><code>cacheTag</code></a> for cache-busting, but there is no <code>localStorage</code>/<code>sessionStorage</code> layer.</li>
-        <li><strong>No pluggable storage or logger.</strong> Errors go to <code>console.error</code>; state lives on <code>globalThis.__NATIVE_FEDERATION__</code>.</li>
-      </ul>
-      <p>If any of those matter to you, look at the <a href="../orchestrator/index.html">Orchestrator</a>.</p>
+        <h2>What the Runtime Does</h2>
+        <p>
+          Given a list of remotes (or a manifest URL that resolves to one), the
+          runtime:
+        </p>
+        <ul>
+          <li>
+            Loads the host's own <code>remoteEntry.json</code> and registers its
+            shared dependencies at the root of the import map.
+          </li>
+          <li>
+            Fetches each remote's <code>remoteEntry.json</code> in parallel and
+            registers:
+            <ul>
+              <li>
+                the remote's <strong>exposed modules</strong> as root imports
+                keyed by <code>&lt;remoteName&gt;/&lt;exposedKey&gt;</code>;
+              </li>
+              <li>
+                the remote's <strong>shared dependencies</strong> under a
+                <strong>scope</strong> keyed by the remote's base URL.
+              </li>
+            </ul>
+          </li>
+          <li>
+            Merges everything into a single import map and injects it as a
+            <code>&lt;script type="importmap-shim"&gt;</code> into
+            <code>document.head</code> — so it needs
+            <a
+              href="https://github.com/guybedford/es-module-shims"
+              target="_blank"
+              rel="noopener"
+              >es-module-shims</a
+            >
+            in the page.
+          </li>
+          <li>
+            Exposes a <code>loadRemoteModule()</code> helper that performs a
+            dynamic <code>import()</code> (through <code>importShim</code>)
+            against that import map.
+          </li>
+          <li>
+            Optionally opens a Server-Sent Events connection to a remote's
+            <code>buildNotificationsEndpoint</code> to reload the page when the
+            remote rebuilds (dev only).
+          </li>
+        </ul>
 
-      <h2>Where It Fits</h2>
-      <p>The runtime is the consumer of the artifacts that <a href="../core/index.html">Core</a> emits. The contract between build and runtime is the <a href="../core/artifacts.html"><code>remoteEntry.json</code></a> file — the runtime does not care which bundler produced it. For how the runtime relates to the other layers, see the <a href="../architecture.html">Architecture Overview</a>.</p>
+        <h2>What the Runtime Does <em>Not</em> Do</h2>
+        <p>
+          The classic runtime is deliberately thin. Things that are
+          <strong>not</strong> handled here (and are reasons to reach for the
+          <a href="../orchestrator/index.html">Orchestrator</a> in v4):
+        </p>
+        <ul>
+          <li>
+            <strong>No semver-range resolution.</strong> Each shared dependency
+            gets one URL per <em>scope</em>. If two remotes share different
+            versions of <code>rxjs</code> they simply each keep their own — the
+            runtime does not compare ranges or pick a common version. The first
+            URL registered under a given <code>packageName@version</code> wins
+            for the external lookup (see
+            <a href="import-map.html#externals">Externals registry</a>).
+          </li>
+          <li>
+            <strong>No share scopes.</strong> There is a single implicit scope
+            per remote base URL; there is no <code>shareScope</code> concept.
+          </li>
+          <li>
+            <strong>No persistent caching.</strong> Every page load re-fetches
+            every <code>remoteEntry.json</code>. You can append a query string
+            via
+            <a href="init-federation.html#cache-tag"><code>cacheTag</code></a>
+            for cache-busting, but there is no <code>localStorage</code>/<code
+              >sessionStorage</code
+            >
+            layer.
+          </li>
+          <li>
+            <strong>No pluggable storage or logger.</strong> Errors go to
+            <code>console.error</code>; state lives on
+            <code>globalThis.__NATIVE_FEDERATION__</code>.
+          </li>
+        </ul>
+        <p>
+          If any of those matter to you, look at the
+          <a href="../orchestrator/index.html">Orchestrator</a>.
+        </p>
 
-      <h2>In this section</h2>
-      <ul>
-        <li><a href="getting-started.html">Getting Started</a> — install the package, add <code>es-module-shims</code>, split your bootstrap.</li>
-        <li><a href="init-federation.html"><code>initFederation</code></a> — how the host sets federation up: manifest vs. inline map, cache busting, error handling.</li>
-        <li><a href="load-remote-module.html"><code>loadRemoteModule</code></a> — both call signatures, lazy remote registration and fallbacks.</li>
-        <li><a href="import-map.html">The Import Map</a> — how imports and scopes are constructed, how externals are deduplicated, <code>importmap-shim</code>, and Trusted Types.</li>
-        <li><a href="api-reference.html">API Reference</a> — the complete public surface of <code>@softarc/native-federation-runtime</code>.</li>
-      </ul>
+        <h2>Where It Fits</h2>
+        <p>
+          The runtime is the consumer of the artifacts that
+          <a href="../core/index.html">Core</a> emits. The contract between
+          build and runtime is the
+          <a href="../core/artifacts.html"><code>remoteEntry.json</code></a>
+          file — the runtime does not care which bundler produced it. For how
+          the runtime relates to the other layers, see the
+          <a href="../architecture.html">Architecture Overview</a>.
+        </p>
 
-      <div class="callout">
-        <p>If you are an Angular user, you will normally consume the runtime through <code>@angular-architects/native-federation</code>, which re-exports <code>initFederation</code> and <code>loadRemoteModule</code> unchanged. See <a href="../angular-adapter/runtime.html">Angular Adapter → Runtime</a> for the Angular-specific bootstrap split.</p>
-      </div>
-    </main>
-  </div>
+        <h2>In this section</h2>
+        <ul>
+          <li>
+            <a href="getting-started.html">Getting Started</a> — install the
+            package, add <code>es-module-shims</code>, split your bootstrap.
+          </li>
+          <li>
+            <a href="init-federation.html"><code>initFederation</code></a> — how
+            the host sets federation up: manifest vs. inline map, cache busting,
+            error handling.
+          </li>
+          <li>
+            <a href="load-remote-module.html"><code>loadRemoteModule</code></a>
+            — both call signatures, lazy remote registration and fallbacks.
+          </li>
+          <li>
+            <a href="import-map.html">The Import Map</a> — how imports and
+            scopes are constructed, how externals are deduplicated,
+            <code>importmap-shim</code>, and Trusted Types.
+          </li>
+          <li>
+            <a href="api-reference.html">API Reference</a> — the complete public
+            surface of <code>@softarc/native-federation-runtime</code>.
+          </li>
+        </ul>
 
-  <button class="sidebar-toggle" aria-label="Toggle documentation menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
+        <div class="callout">
+          <p>
+            If you are an Angular user, you will normally consume the runtime
+            through <code>@angular-architects/native-federation</code>, which
+            re-exports <code>initFederation</code> and
+            <code>loadRemoteModule</code> unchanged. See
+            <a href="../angular-adapter/runtime.html"
+              >Angular Adapter → Runtime</a
+            >
+            for the Angular-specific bootstrap split.
+          </p>
+        </div>
+      </main>
+    </div>
 
-  <script src="../../components.js"></script>
-</body>
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../../components.js"></script>
+  </body>
 </html>
