@@ -1,0 +1,5 @@
+# robots.txt for https://native-federation.com/
+# LLM-friendly documentation index: https://native-federation.com/llms.txt
+
+User-agent: *
+Allow: /
