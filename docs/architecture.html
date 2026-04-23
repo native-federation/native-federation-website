@@ -175,6 +175,47 @@
           </li>
         </ul>
 
+        <h2>Build Steps</h2>
+        <p>
+          At a very high level, building a Native Federation micro frontend goes
+          through five stages. The Core orchestrates; the Adapter does the
+          actual bundling.
+        </p>
+        <ol>
+          <li>
+            <strong>Init &amp; normalize</strong> — the Core loads
+            <code>federation.config.(m)js</code>, merges it with the project's
+            <code>FederationOptions</code> and <code>package.json</code>, and
+            registers the Adapter.
+          </li>
+          <li>
+            <strong>Compute externals</strong> — derive the list of shared
+            packages and <code>tsconfig</code> path mappings that the host
+            bundler must leave unresolved, so the browser can later wire them
+            through the import map.
+          </li>
+          <li>
+            <strong>Bundle shared dependencies</strong> — split shared entries
+            by platform (<code>browser</code> / <code>node</code>) and bundling
+            strategy (<code>default</code> / <code>package</code> /
+            <code>separate</code>), then hand each group to the Adapter. Results
+            are checksum-cached so unchanged externals are reused on the next
+            build.
+          </li>
+          <li>
+            <strong>Bundle exposed modules &amp; mapped paths</strong> — compile
+            every <code>exposes</code> entry plus any monorepo-internal
+            libraries referenced via <code>paths</code>, again via the Adapter.
+          </li>
+          <li>
+            <strong>Emit federation artifacts</strong> — write
+            <code>remoteEntry.json</code> (name, shared metadata, exposes,
+            chunks) and <code>importmap.json</code> into the project's
+            <code>dist</code> folder. These two files are the full contract the
+            Runtime / Orchestrator consumes.
+          </li>
+        </ol>
+
         <h2>A Full Build-to-Runtime Trace</h2>
         <ol>
           <li>

@@ -1,249 +1,511 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Native Federation — Micro Frontends with Web Standards</title>
-  <meta name="description" content="Native Federation is a browser-native implementation of Module Federation for building Micro Frontends using web standards like ESM and Import Maps.">
-  <link rel="canonical" href="https://native-federation.io/">
-  <meta name="robots" content="index, follow">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Native Federation — Micro Frontends with Web Standards</title>
+    <meta
+      name="description"
+      content="Native Federation is a browser-native implementation of Module Federation for building Micro Frontends using web standards like ESM and Import Maps."
+    />
+    <link rel="canonical" href="https://native-federation.io/" />
+    <meta name="robots" content="index, follow" />
 
-  <!-- Open Graph -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Native Federation — Micro Frontends with Web Standards">
-  <meta property="og:description" content="A browser-native implementation of Module Federation for building Micro Frontends using web standards like ESM and Import Maps.">
-  <meta property="og:url" content="https://native-federation.io/">
-  <meta property="og:image" content="https://native-federation.io/images/sujet-dark.jpg">
-  <meta property="og:site_name" content="Native Federation">
-  <meta property="og:locale" content="en_US">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Native Federation — Micro Frontends with Web Standards"
+    />
+    <meta
+      property="og:description"
+      content="A browser-native implementation of Module Federation for building Micro Frontends using web standards like ESM and Import Maps."
+    />
+    <meta property="og:url" content="https://native-federation.io/" />
+    <meta
+      property="og:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta property="og:locale" content="en_US" />
 
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Native Federation — Micro Frontends with Web Standards">
-  <meta name="twitter:description" content="A browser-native implementation of Module Federation for building Micro Frontends using web standards like ESM and Import Maps.">
-  <meta name="twitter:image" content="https://native-federation.io/images/sujet-dark.jpg">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Native Federation — Micro Frontends with Web Standards"
+    />
+    <meta
+      name="twitter:description"
+      content="A browser-native implementation of Module Federation for building Micro Frontends using web standards like ESM and Import Maps."
+    />
+    <meta
+      name="twitter:image"
+      content="https://native-federation.io/images/sujet-dark.jpg"
+    />
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="images/favicon.png">
-  <link rel="apple-touch-icon" href="images/favicon.png">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="images/favicon.png" />
+    <link rel="apple-touch-icon" href="images/favicon.png" />
 
-  <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css" />
 
-  <!-- JSON-LD -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Native Federation",
-    "description": "A browser-native implementation of Module Federation for building Micro Frontends using web standards.",
-    "applicationCategory": "DeveloperApplication",
-    "operatingSystem": "Web",
-    "url": "https://native-federation.io/",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
-  }
-  </script>
-</head>
-<body>
-
-  <!-- Hero -->
-  <section class="hero">
-    <div class="hero-content">
-      <div class="hero-badge">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        Open Source &middot; Browser-Native
-      </div>
-      <img src="images/logo-neu3.png" alt="Native Federation Logo" class="hero-logo" width="120" height="120">
-      <h1>Micro Frontends with Web Standards</h1>
-      <p class="hero-tagline">Native Federation brings the proven mental model of webpack Module Federation to the browser — built on ESM and Import Maps, independent of any specific build tool.</p>
-      <div class="hero-actions">
-        <a href="docs/tutorial.html" class="btn btn-primary">Get Started</a>
-        <a href="https://github.com/native-federation" target="_blank" rel="noopener" class="btn btn-secondary">
-          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          View on GitHub
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Core Features -->
-  <section class="section">
-    <div class="section-header">
-      <span class="section-label">Features</span>
-      <h2>Why Native Federation?</h2>
-      <p>A future-proof approach to Micro Frontends that leverages web standards instead of being tied to a specific bundler.</p>
-    </div>
-
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Native Federation",
+        "description": "A browser-native implementation of Module Federation for building Micro Frontends using web standards.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web",
+        "url": "https://native-federation.io/",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+  </head>
+  <body>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+          Open Source &middot; Browser-Native
         </div>
-        <h3>Module Federation Mental Model</h3>
-        <p>Uses the same proven mental model from webpack Module Federation — hosts, remotes, and shared dependencies — making migration straightforward.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        <img
+          src="images/logo-neu3.png"
+          alt="Native Federation Logo"
+          class="hero-logo"
+          width="120"
+          height="120"
+        />
+        <h1>Micro Frontends with Web Standards</h1>
+        <p class="hero-tagline">
+          Native Federation brings the proven mental model of webpack Module
+          Federation to the browser — built on ESM and Import Maps, independent
+          of any specific build tool.
+        </p>
+        <div class="hero-actions">
+          <a href="docs/tutorial.html" class="btn btn-primary">Get Started</a>
+          <a
+            href="https://github.com/native-federation"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-secondary"
+          >
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+              />
+            </svg>
+            View on GitHub
+          </a>
         </div>
-        <h3>Built on Web Standards</h3>
-        <p>Leverages ESM and Import Maps — emerging web standards — making it independent of build tools like webpack, ensuring long-term compatibility.</p>
+      </div>
+    </section>
+
+    <!-- Core Features -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-label">Features</span>
+        <h2>Why Native Federation?</h2>
+        <p>
+          A future-proof approach to Micro Frontends that leverages web
+          standards instead of being tied to a specific bundler.
+        </p>
       </div>
 
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <h3>Module Federation Mental Model</h3>
+          <p>
+            Uses the same proven mental model from webpack Module Federation —
+            hosts, remotes, and shared dependencies — making migration
+            straightforward.
+          </p>
         </div>
-        <h3>Blazing Fast Builds</h3>
-        <p>The reference implementation uses the fast esbuild bundler and caches already-built shared dependencies for maximum performance.</p>
-      </div>
 
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M2 12h20" />
+              <path
+                d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"
+              />
+            </svg>
+          </div>
+          <h3>Built on Web Standards</h3>
+          <p>
+            Leverages ESM and Import Maps — emerging web standards — making it
+            independent of build tools like webpack, ensuring long-term
+            compatibility.
+          </p>
         </div>
-        <h3>Same Familiar API</h3>
-        <p>Uses the same API and schematics as the Module Federation plugin. Switch by simply changing your import paths — no new concepts to learn.</p>
-      </div>
 
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+          </div>
+          <h3>Blazing Fast Builds</h3>
+          <p>
+            The reference implementation uses the fast esbuild bundler and
+            caches already-built shared dependencies for maximum performance.
+          </p>
         </div>
-        <h3>Shared Dependencies</h3>
-        <p>Intelligently share libraries at runtime. Automatic version negotiation prevents duplicates while handling mismatches gracefully.</p>
-      </div>
 
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+              <path
+                d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"
+              />
+            </svg>
+          </div>
+          <h3>Same Familiar API</h3>
+          <p>
+            Uses the same API and schematics as the Module Federation plugin.
+            Switch by simply changing your import paths — no new concepts to
+            learn.
+          </p>
         </div>
-        <h3>Works with Angular CLI &amp; Nx</h3>
-        <p>Successfully tested with both Angular CLI projects and Nx workspaces. Use <code>ng update</code> for seamless upgrades.</p>
-      </div>
-    </div>
-  </section>
 
-  <!-- Angular Binding -->
-  <section class="section section-alt">
-    <div class="section-header">
-      <span class="section-label">Angular Binding</span>
-      <h2>First-Class Angular Integration</h2>
-      <p>Native Federation for Angular delegates directly to Angular's esbuild-based ApplicationBuilder, keeping in lockstep with Angular's own innovations.</p>
-    </div>
-
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon accent">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 4.5v9L12 21l-9-4.5v-9L12 3z"/></svg>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
+              />
+            </svg>
+          </div>
+          <h3>Shared Dependencies</h3>
+          <p>
+            Intelligently share libraries at runtime. Automatic version
+            negotiation prevents duplicates while handling mismatches
+            gracefully.
+          </p>
         </div>
-        <h3>esbuild ApplicationBuilder</h3>
-        <p>Since 17.1, Native Federation uses Angular CLI's esbuild-based ApplicationBuilder and Dev Server to stay in sync with all performance improvements from the Angular team.</p>
-      </div>
 
-      <div class="feature-card">
-        <div class="feature-icon accent">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M9 12l2 2 4-4"/></svg>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"
+              />
+            </svg>
+          </div>
+          <h3>Works with Angular CLI &amp; Nx</h3>
+          <p>
+            Successfully tested with both Angular CLI projects and Nx
+            workspaces. Use <code>ng update</code> for seamless upgrades.
+          </p>
         </div>
-        <h3>SSR &amp; Incremental Hydration</h3>
-        <p>Full support for Angular's Server-Side Rendering and Incremental Hydration since version 18, enabling better performance and SEO.</p>
+      </div>
+    </section>
+
+    <!-- Angular Binding -->
+    <section class="section section-alt">
+      <div class="section-header">
+        <span class="section-label">Angular Binding</span>
+        <h2>First-Class Angular Integration</h2>
+        <p>
+          Native Federation for Angular delegates directly to Angular's
+          esbuild-based ApplicationBuilder, keeping in lockstep with Angular's
+          own innovations.
+        </p>
       </div>
 
-      <div class="feature-card">
-        <div class="feature-icon accent">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon accent">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M12 3l9 4.5v9L12 21l-9-4.5v-9L12 3z" />
+            </svg>
+          </div>
+          <h3>esbuild ApplicationBuilder</h3>
+          <p>
+            Since 17.1, Native Federation uses Angular CLI's esbuild-based
+            ApplicationBuilder and Dev Server to stay in sync with all
+            performance improvements from the Angular team.
+          </p>
         </div>
-        <h3>I18N &amp; Localization</h3>
-        <p>Angular I18N support since 19.0.13, with localization improvements in 20.0.6 including the <code>ignoreUnusedDeps</code> feature for simplified locale loading.</p>
-      </div>
-    </div>
-  </section>
 
-  <!-- Versions -->
-  <section class="section">
-    <div class="section-header">
-      <span class="section-label">Compatibility</span>
-      <h2>Version Alignment</h2>
-      <p>Native Federation follows Angular's version numbers for easy compatibility. Use the matching version for your Angular project.</p>
-    </div>
+        <div class="feature-card">
+          <div class="feature-icon accent">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+          </div>
+          <h3>SSR &amp; Incremental Hydration</h3>
+          <p>
+            Full support for Angular's Server-Side Rendering and Incremental
+            Hydration since version 18, enabling better performance and SEO.
+          </p>
+        </div>
 
-    <div style="max-width: 560px; margin: 0 auto;">
-      <table class="version-table">
-        <thead>
-          <tr>
-            <th>Angular Version</th>
-            <th>Native Federation</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>Angular 21.x</td><td><code>21.x</code></td></tr>
-          <tr><td>Angular 20.1.x</td><td><code>20.1.x</code></td></tr>
-          <tr><td>Angular 20.0.x</td><td><code>20.0.x</code></td></tr>
-          <tr><td>Angular 19.x</td><td><code>19.x</code></td></tr>
-          <tr><td>Angular 18.2.x</td><td><code>18.2.x</code></td></tr>
-          <tr><td>Angular 18.1.x</td><td><code>18.1.x</code></td></tr>
-          <tr><td>Angular 18.0.x</td><td><code>18.x</code></td></tr>
-          <tr><td>Angular 17.1</td><td><code>17.1.x</code></td></tr>
-          <tr><td>Angular 17.x</td><td><code>17.x</code></td></tr>
-          <tr><td>Angular 16.2.x</td><td><code>16.2.x</code></td></tr>
-          <tr><td>Angular 16.1.x</td><td><code>16.1.x</code></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+        <div class="feature-card">
+          <div class="feature-icon accent">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path
+                d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"
+              />
+            </svg>
+          </div>
+          <h3>I18N &amp; Localization</h3>
+          <p>
+            Angular I18N support since 19.0.13, with localization improvements
+            in 20.0.6 including the <code>ignoreUnusedDeps</code> feature for
+            simplified locale loading.
+          </p>
+        </div>
+      </div>
+    </section>
 
-  <!-- Install -->
-  <section class="section section-alt">
-    <div class="install-banner">
-      <div>
-        <h3>Ready to get started?</h3>
-        <p>Install Native Federation and set up your first Micro Frontend in minutes.</p>
+    <!-- Versions -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-label">Compatibility</span>
+        <h2>Version Alignment</h2>
+        <p>
+          Native Federation follows Angular's version numbers for easy
+          compatibility. Use the matching version for your Angular project.
+        </p>
       </div>
-      <div class="install-code">
-        <span>npm i @angular-architects/native-federation -D</span>
-        <button class="copy-btn" aria-label="Copy install command" onclick="navigator.clipboard.writeText('npm i @angular-architects/native-federation -D')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        </button>
-      </div>
-    </div>
-  </section>
 
-  <!-- Credits -->
-  <section class="section">
-    <div class="section-header">
-      <span class="section-label">Community</span>
-      <h2>Standing on the Shoulders of Giants</h2>
-      <p>Native Federation builds on the work and ideas of many talented people across the JavaScript ecosystem.</p>
-    </div>
+      <div style="max-width: 560px; margin: 0 auto">
+        <table class="version-table">
+          <thead>
+            <tr>
+              <th>Angular Version</th>
+              <th>Native Federation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Angular 21.x</td>
+              <td><code>21.x</code></td>
+            </tr>
+            <tr>
+              <td>Angular 20.1.x</td>
+              <td><code>20.1.x</code></td>
+            </tr>
+            <tr>
+              <td>Angular 20.0.x</td>
+              <td><code>20.0.x</code></td>
+            </tr>
+            <tr>
+              <td>Angular 19.x</td>
+              <td><code>19.x</code></td>
+            </tr>
+            <tr>
+              <td>Angular 18.2.x</td>
+              <td><code>18.2.x</code></td>
+            </tr>
+            <tr>
+              <td>Angular 18.1.x</td>
+              <td><code>18.1.x</code></td>
+            </tr>
+            <tr>
+              <td>Angular 18.0.x</td>
+              <td><code>18.x</code></td>
+            </tr>
+            <tr>
+              <td>Angular 17.1</td>
+              <td><code>17.1.x</code></td>
+            </tr>
+            <tr>
+              <td>Angular 17.x</td>
+              <td><code>17.x</code></td>
+            </tr>
+            <tr>
+              <td>Angular 16.2.x</td>
+              <td><code>16.2.x</code></td>
+            </tr>
+            <tr>
+              <td>Angular 16.1.x</td>
+              <td><code>16.1.x</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-    <div class="credits-list">
-      <div class="credit-item">
-        <strong>Zack Jackson</strong>
-        <p>Initially conceived the idea of Module Federation and its successful mental model.</p>
+    <!-- Install -->
+    <section class="section section-alt">
+      <div class="install-banner">
+        <div>
+          <h3>Ready to get started?</h3>
+          <p>
+            Install Native Federation and set up your first Micro Frontend in
+            minutes.
+          </p>
+        </div>
+        <div class="install-code">
+          <span>npm i @angular-architects/native-federation -D</span>
+          <button
+            class="copy-btn"
+            aria-label="Copy install command"
+            onclick="
+              navigator.clipboard.writeText(
+                'npm i @angular-architects/native-federation -D',
+              )
+            "
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+          </button>
+        </div>
       </div>
-      <div class="credit-item">
-        <strong>Tobias Koppers</strong>
-        <p>Helped make Module Federation a first-class citizen of webpack.</p>
-      </div>
-      <div class="credit-item">
-        <strong>The Nx Team &amp; Colum Ferry</strong>
-        <p>Seamlessly integrated webpack Module Federation into Nx, helping spread the word.</p>
-      </div>
-      <div class="credit-item">
-        <strong>Angular CLI Team</strong>
-        <p>Alan Agius, Charles Lyding, and the team for their work on the esbuild builder for Angular.</p>
-      </div>
-      <div class="credit-item">
-        <strong>Florian Rappl</strong>
-        <p>Contributed to early discussions around Module Federation and its evolution.</p>
-      </div>
-      <div class="credit-item">
-        <strong>Michael Egger-Zikes</strong>
-        <p>Contributed to Module Federation efforts and brought in valuable feedback.</p>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <script src="components.js"></script>
-</body>
+    <!-- Credits -->
+    <section class="section">
+      <div class="section-header">
+        <span class="section-label">Community</span>
+        <h2>Standing on the Shoulders of Giants</h2>
+        <p>
+          Native Federation builds on the work and ideas of many talented people
+          across the JavaScript ecosystem.
+        </p>
+      </div>
+
+      <div class="credits-list">
+        <div class="credit-item">
+          <strong>Zack Jackson</strong>
+          <p>
+            Initially conceived the idea of Module Federation and its successful
+            mental model.
+          </p>
+        </div>
+        <div class="credit-item">
+          <strong>Tobias Koppers</strong>
+          <p>Helped make Module Federation a first-class citizen of webpack.</p>
+        </div>
+        <div class="credit-item">
+          <strong>The Nx Team &amp; Colum Ferry</strong>
+          <p>
+            Seamlessly integrated webpack Module Federation into Nx, helping
+            spread the word.
+          </p>
+        </div>
+        <div class="credit-item">
+          <strong>Angular CLI Team</strong>
+          <p>
+            Alan Agius, Charles Lyding, and the team for their work on the
+            esbuild builder for Angular.
+          </p>
+        </div>
+        <div class="credit-item">
+          <strong>Florian Rappl</strong>
+          <p>
+            Contributed to early discussions around Module Federation and its
+            evolution.
+          </p>
+        </div>
+        <div class="credit-item">
+          <strong>Michael Egger-Zikes</strong>
+          <p>
+            Contributed to Module Federation efforts and brought in valuable
+            feedback.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <script src="components.js"></script>
+  </body>
 </html>
