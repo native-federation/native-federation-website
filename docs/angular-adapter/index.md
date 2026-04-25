@@ -10,6 +10,8 @@ The Angular adapter — published as `@angular-architects/native-federation-v4` 
 
 > **Note:** This section covers the v4 Angular adapter (Angular 20+, currently in beta as `@angular-architects/native-federation-v4`). For a full overview of what changed since v3 — packages, ESM, Angular version support — see [v3 vs v4](../v3-vs-v4.md).
 
+> **Try the Angular playground** — runnable hosts, remotes and SSR examples on GitHub: [native-federation/angular-examples](https://github.com/native-federation/angular-examples).
+
 ## What's in the Box
 
 | Piece | Entry point | Purpose |
