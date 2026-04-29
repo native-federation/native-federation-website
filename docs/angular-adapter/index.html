@@ -12,6 +12,11 @@
       rel="canonical"
       href="https://native-federation.com/docs/angular-adapter/index.html"
     />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://native-federation.com/docs/angular-adapter/index.md"
+    />
     <meta name="robots" content="index, follow" />
     <meta property="og:type" content="article" />
     <meta
@@ -44,8 +49,12 @@
         <h1>Angular Adapter</h1>
         <div class="version-support">
           <span class="version-support__label">Applies to</span>
-          <label class="version-check"><input type="checkbox" disabled><span>v3</span></label>
-          <label class="version-check version-check--active"><input type="checkbox" disabled checked><span>v4</span></label>
+          <label class="version-check"
+            ><input type="checkbox" disabled /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
         </div>
         <p class="doc-lead">
           The Angular adapter — published as
@@ -61,8 +70,32 @@
         </p>
 
         <div class="callout">
-          <p>This section covers the v4 Angular adapter (Angular 20+, currently in beta as <code>@angular-architects/native-federation-v4</code>). For a full overview of what changed since v3 — packages, ESM, Angular version support — see <a href="../v3-vs-v4.html">v3 vs v4</a>.</p>
+          <p>
+            This section covers the v4 Angular adapter (Angular 20+, currently
+            in beta as <code>@angular-architects/native-federation-v4</code>).
+            For a full overview of what changed since v3 — packages, ESM,
+            Angular version support — see
+            <a href="../v3-vs-v4.html">v3 vs v4</a>.
+          </p>
         </div>
+
+        <a
+          class="playground-banner"
+          href="https://github.com/native-federation/angular-examples"
+          target="_blank"
+          rel="noopener"
+        >
+          <div>
+            <span class="playground-banner__title"
+              >Try the Angular playground</span
+            >
+            <p class="playground-banner__desc">
+              Runnable hosts, remotes and SSR examples on GitHub — clone and
+              experiment locally.
+            </p>
+          </div>
+          <span class="playground-banner__cta">Open on GitHub →</span>
+        </a>
 
         <h2>What's in the Box</h2>
         <div class="table-wrap">
@@ -262,6 +295,18 @@
           </p>
         </div>
 
+        <h2>Example repositories</h2>
+        <ul>
+          <li>
+            <a
+              href="https://github.com/native-federation/angular-examples"
+              target="_blank"
+              rel="noopener"
+              >Explore all of our Angular examples</a
+            >
+          </li>
+        </ul>
+
         <h2>Prerequisites</h2>
         <ul>
           <li>
@@ -300,5 +345,9 @@
     </button>
 
     <script src="../../components.js"></script>
+    <script
+      async
+      src="https://scripts.simpleanalyticscdn.com/latest.js"
+    ></script>
   </body>
 </html>
