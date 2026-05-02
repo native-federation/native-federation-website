@@ -361,9 +361,11 @@
 
         <h3 id="feature-flag">Feature Flag</h3>
         <p>
-          An opt-in behavior toggle under <code>features</code> on the
-          federation config — currently <code>ignoreUnusedDeps</code>,
-          <code>denseChunking</code> and <code>mappingVersion</code>. See
+          A behavior toggle under <code>features</code> on the federation
+          config — currently <code>ignoreUnusedDeps</code> (opt-out, default
+          <code>true</code>), <code>mappingVersion</code> (opt-out, default
+          <code>true</code>) and <code>denseChunking</code> (opt-in, default
+          <code>false</code>). See
           <a href="core/configuration.html#features">Feature Flags</a>.
         </p>
 

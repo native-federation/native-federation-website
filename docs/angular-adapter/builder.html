@@ -332,6 +332,25 @@
                 </td>
               </tr>
               <tr>
+                <td><code>integrity</code></td>
+                <td><code>boolean</code></td>
+                <td><code>false</code></td>
+                <td>
+                  Forwards to the core's
+                  <a href="../core/build-process.html"
+                    ><code>integrity</code> option</a
+                  >
+                  — emit SRI hashes for every shared external, exposed module
+                  and chunk under a top-level <code>integrity</code> map in
+                  <code>remoteEntry.json</code>. The orchestrator copies these
+                  onto the import map so the browser can verify each module
+                  before executing it. See
+                  <a href="../orchestrator/security.html#subresource-integrity"
+                    >Subresource Integrity</a
+                  >.
+                </td>
+              </tr>
+              <tr>
                 <td><code>baseHref</code></td>
                 <td><code>string</code></td>
                 <td>—</td>

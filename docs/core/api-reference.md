@@ -42,16 +42,23 @@ Configuration DSL used inside `federation.config.js`.
 TypeScript contracts — types only. Useful when authoring an adapter or integrating at the type level.
 
 - `FederationConfig`, `NormalizedFederationConfig`
-- `ExternalConfig`, `NormalizedExternalConfig`, `SharedExternalsConfig`, `ShareExternalsOptions`, `IncludeSecondariesOptions`
+- `ExternalConfig`, `NormalizedExternalConfig`, `SharedExternalsConfig`, `ShareExternalsOptions`, `ShareAllExternalsOptions`, `IncludeSecondariesOptions`
 - `FederationOptions`, `NormalizedFederationOptions`
 - `NFBuildAdapter`, `NFBuildAdapterOptions`, `NFBuildAdapterContext`, `NFBuildAdapterResult`, `EntryPoint`
-- `FederationInfo`, `SharedInfo`, `ExposesInfo`, `ChunkInfo`, `ArtifactInfo`
+- `FederationInfo`, `SharedInfo`, `ExposesInfo`, `ChunkInfo`, `ArtifactInfo`, `IntegrityMap`
 - `FederationCache`
 - `SkipList`, `PreparedSkipList`
-- `BuildNotificationOptions`
+- `BuildNotificationOptions`, `BuildNotificationType`
 
 ## `@softarc/native-federation/internal`
 
-Utility exports intended for adapter authors — error types, the checksum helper, the logger, a rebuild queue, the file-watcher contract, and the cache-path helper. Treated as semi-public; breaking changes are possible across minor versions.
+Utility exports intended for adapter authors. Treated as semi-public; breaking changes are possible across minor versions. Includes:
+
+- error types and `AbortedError`,
+- the `hashFile` checksum helper and `getChecksum` / `getDefaultCachePath` cache helpers,
+- the `logger` and `setLogLevel`,
+- the `RebuildQueue` plus the `createBuildResultMap` / `lookupInResultMap` / `popFromResultMap` helpers,
+- the `NfFileWatcher` contract and the `createNfWatcher` / `syncNfFileWatcher` implementations,
+- the `writeImportMap`, `prepareSkipList` and `isInSkipList` helpers used by the build pipeline.
 
 > **Note:** Application developers almost never import from this package directly. Consume an [adapter](../adapters/index.md) instead.

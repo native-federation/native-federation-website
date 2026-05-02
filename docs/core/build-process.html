@@ -234,6 +234,22 @@ await federationBuilder.close();</code></pre>
                   runtime to reload on rebuild.
                 </td>
               </tr>
+              <tr>
+                <td><code>integrity</code></td>
+                <td><code>boolean</code></td>
+                <td>no</td>
+                <td>
+                  Emit SRI hashes for every shared external, exposed module and
+                  chunk under a top-level <code>integrity</code> map in
+                  <code>remoteEntry.json</code>. The orchestrator copies these
+                  onto the import map so the browser (or
+                  <code>es-module-shims</code>) can verify each module before
+                  executing it. See
+                  <a href="../orchestrator/security.html#subresource-integrity"
+                    >Subresource Integrity</a
+                  >. Default <code>false</code>.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>

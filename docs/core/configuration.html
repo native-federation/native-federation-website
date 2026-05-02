@@ -211,7 +211,7 @@ export default withNativeFederation({
                 </td>
                 <td>see below</td>
                 <td>
-                  Opt-in feature flags — <a href="#features">details below</a>.
+                  Feature flags — <a href="#features">details below</a>.
                 </td>
               </tr>
             </tbody>
@@ -492,8 +492,10 @@ shared: {
 
         <h2 id="features">Feature Flags</h2>
         <p>
-          All feature flags live under <code>features</code> on the config. None
-          of them change behavior unless explicitly set.
+          All feature flags live under <code>features</code> on the config.
+          <code>ignoreUnusedDeps</code> and <code>mappingVersion</code> are on
+          by default (opt-out); <code>denseChunking</code> is off by default
+          (opt-in).
         </p>
         <div class="table-wrap">
           <table>
@@ -526,10 +528,17 @@ shared: {
               </tr>
               <tr>
                 <td><code>mappingVersion</code></td>
-                <td><code>false</code></td>
+                <td><code>true</code></td>
                 <td>
-                  Emits version information for shared mapped paths
-                  (monorepo-internal libraries).
+                  Emits a real semver for every shared mapped path
+                  (monorepo-internal library) — picked up from the nearest
+                  <code>package.json</code> walking up from the entry file to
+                  the workspace root. Also sets
+                  <code>requiredVersion: '~&lt;version&gt;'</code> and
+                  <code>strictVersion: true</code> on the resulting shared
+                  entry, so version mismatches across remotes are detected at
+                  runtime. Set to <code>false</code> to fall back to the
+                  unversioned <code>version: ''</code> shape.
                 </td>
               </tr>
             </tbody>

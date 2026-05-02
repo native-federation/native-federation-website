@@ -89,12 +89,7 @@ shared: share({
 
 ### `requiredVersion: 'auto'`
 
-With `'auto'`, the helper looks up the version in the closest `package.json`. This helps resolve unmet peer dependencies and is the recommended default. You can also flip it on globally with `setInferVersion(true)`:
-
-```js
-import { setInferVersion } from '@softarc/native-federation/config';
-setInferVersion(true);
-```
+With `'auto'`, the helper looks up the version in the closest `package.json`. This helps resolve unmet peer dependencies and is the recommended default.
 
 ## Secondary Entry Points
 

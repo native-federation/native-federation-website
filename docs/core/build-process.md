@@ -62,6 +62,7 @@ await federationBuilder.close();
 | `verbose` | `boolean` | no | Verbose logging. |
 | `cacheExternalArtifacts` | `boolean` | no | Cache built shared externals across builds (default `true`). |
 | `buildNotifications` | `BuildNotificationOptions` | no | Configures the dev-only notification endpoint that tells the runtime to reload on rebuild. |
+| `integrity` | `boolean` | no | Emit SRI hashes for every shared external, exposed module and chunk under a top-level `integrity` map in `remoteEntry.json`. The orchestrator copies these onto the import map so the browser (or `es-module-shims`) can verify each module before executing it. See [Subresource Integrity](../orchestrator/security.md#subresource-integrity). Default `false`. |
 
 ## Incremental Builds
 

@@ -234,42 +234,14 @@ initFederation('http://example.org/manifest.json', {
           the CSP allowlist does not include <code>nfo</code> or when a
           <code>default</code> policy is already in place site-wide.
         </p>
-
-        <h3>Caveats</h3>
-        <ul>
-          <li>
-            <strong>Default policy.</strong> The orchestrator does not register
-            a <code>default</code> policy. If your host uses one, the host's
-            <code>default</code> policy is also consulted whenever a raw string
-            reaches a sink — make sure it is compatible with the import-map and
-            remote-URL data the orchestrator produces, or override the relevant
-            functions.
-          </li>
-          <li>
-            <strong
-              >Custom <code>setImportMapFn</code> /
-              <code>loadModuleFn</code>.</strong
-            >
-            The Trusted Types policy is only active inside the orchestrator's
-            <em>default</em> implementations. When you supply your own functions
-            you are responsible for producing trusted values yourself; setting
-            <code>trustedTypesPolicyName: false</code> documents that intent.
-          </li>
-          <li>
-            <strong>Browser support.</strong> Trusted Types is part of the 2026
-            Baseline (Chromium 83+, WebKit 26+, Gecko 148+). On older browsers
-            the orchestrator's policy wrapper is a no-op, so existing
-            deployments keep working without modification.
-          </li>
-          <li>
-            <strong>Policy ≠ sanitizer.</strong> Trusted Types makes sinks
+        <p>
+            <strong>Important: policy ≠ sanitizer.</strong> <br /> Trusted Types makes sinks
             structurally safe by funnelling all writes through a single,
             auditable choke point. The validators shipped with the orchestrator
             only check shape (JSON structure, URL protocol) — they are not a
             substitute for end-to-end controls on which manifests and remote
             origins your host trusts in the first place.
           </li>
-        </ul>
 
         <h2 id="subresource-integrity">Subresource Integrity</h2>
         <p>
@@ -475,37 +447,6 @@ await initRemoteEntry('http://example.org/late-mfe/remoteEntry.json', {
   name: 'team/late-mfe',
   integrity: 'sha384-…',
 });</code></pre>
-
-        <h3>Caveats</h3>
-        <ul>
-          <li>
-            <strong>Opt-in semantics.</strong> Resources without a configured
-            hash are <em>not</em> verified. There is no global "strict
-            integrity" switch — if you want every fetch to be pinned, configure
-            a hash on every entry.
-          </li>
-          <li>
-            <strong>Supported algorithms.</strong> <code>sha256-</code>,
-            <code>sha384-</code>, and <code>sha512-</code> are accepted,
-            matching the SRI spec. The build-side default
-            (<code>@softarc/native-federation</code>) is
-            <code>sha384-</code>.
-          </li>
-          <li>
-            <strong>Trust root.</strong> Module hashes only protect the page if
-            the <code>remoteEntry.json</code> that publishes them is itself
-            trusted. Pin the manifest (or the host's own remoteEntry) at the top
-            so an attacker who tampers with <code>remoteEntry.json</code> cannot
-            also rewrite the hashes inside it.
-          </li>
-          <li>
-            <strong>JSON bytes, not the parsed value.</strong> The manifest and
-            remote-entry hashes are computed over the exact response bytes.
-            Re-serialising the JSON (whitespace, key order) at the origin will
-            invalidate the hash — pin the file you publish, not a regenerated
-            copy.
-          </li>
-        </ul>
 
         <h2>See also</h2>
         <ul>

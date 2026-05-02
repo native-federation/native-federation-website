@@ -81,6 +81,7 @@
   exposes: ExposesInfo[];
   shared: SharedInfo[];
   chunks?: Record&lt;string, string[]&gt;;
+  integrity?: Record&lt;string, string&gt;;   // SRI hash per outFileName when built with integrity: true
   buildNotificationsEndpoint?: string;
 }
 
@@ -175,6 +176,34 @@ type SharedInfo = {
           groups whose dependencies aren't part of the final import map.
         </p>
 
+        <h2>Integrity map</h2>
+        <p>
+          When the build runs with <code>integrity: true</code> on
+          <code>FederationOptions</code>, the core hashes every emitted shared
+          external, exposed module and chunk and writes the digests under a
+          top-level <code>integrity</code> map keyed by <code>outFileName</code>:
+        </p>
+        <pre><code>{
+  "name": "mfe1",
+  "shared": [ /* … */ ],
+  "exposes": [ /* … */ ],
+  "integrity": {
+    "angular-core-VFK9A2LE.js": "sha384-…",
+    "component-Q4XS7K1T.js":    "sha384-…",
+    "chunk-IXOA6WTM.js":        "sha384-…"
+  }
+}</code></pre>
+        <p>
+          The orchestrator resolves each entry to an absolute URL and emits it
+          under the <code>integrity</code> block of the import map it injects,
+          so the browser (or <code>es-module-shims</code>) can verify each
+          module's bytes before executing it. See
+          <a href="../orchestrator/security.html#subresource-integrity"
+            >Subresource Integrity</a
+          >
+          for the end-to-end trust chain.
+        </p>
+
         <h2>Federation Cache</h2>
         <p>
           The in-memory counterpart to the on-disk cache is a
@@ -183,6 +212,7 @@ type SharedInfo = {
         <pre><code>type FederationCache&lt;TBundlerCache = unknown&gt; = {
   externals: SharedInfo[];
   chunks?: Record&lt;string, string[]&gt;;
+  integrity?: Record&lt;string, string&gt;;
   bundlerCache: TBundlerCache;
   cachePath: string;
 };</code></pre>

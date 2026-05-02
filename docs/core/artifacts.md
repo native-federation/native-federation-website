@@ -31,12 +31,13 @@ interface FederationInfo {
   exposes: ExposesInfo[];
   shared: SharedInfo[];
   chunks?: Record<string, string[]>;
+  integrity?: Record<string, string>;
   buildNotificationsEndpoint?: string;
 }
 
 interface ExposesInfo {
-  key: string;              // e.g. './component'
-  outFileName: string;      // path relative to remoteEntry.json
+  key: string; // e.g. './component'
+  outFileName: string; // path relative to remoteEntry.json
   dev?: { entryPoint: string };
 }
 
@@ -47,7 +48,7 @@ type SharedInfo = {
   singleton: boolean;
   strictVersion: boolean;
   outFileName: string;
-  bundle?: string;          // present when denseChunking is enabled
+  bundle?: string; // present when denseChunking is enabled
   shareScope?: string;
   dev?: { entryPoint: string };
 };
@@ -58,9 +59,7 @@ type SharedInfo = {
 ```json
 {
   "name": "mfe1",
-  "exposes": [
-    { "key": "./component", "outFileName": "component-Q4XS7K1T.js" }
-  ],
+  "exposes": [{ "key": "./component", "outFileName": "component-Q4XS7K1T.js" }],
   "shared": [
     {
       "packageName": "@angular/core",
@@ -100,7 +99,11 @@ When `features.denseChunking` is enabled, chunks move off the `shared` array and
 ```json
 {
   "shared": [
-    { "packageName": "@angular/core", "bundle": "browser-shared", "outFileName": "..." }
+    {
+      "packageName": "@angular/core",
+      "bundle": "browser-shared",
+      "outFileName": "..."
+    }
   ],
   "chunks": {
     "browser-shared": ["chunk-AB12.js", "chunk-CD34.js"]
@@ -110,6 +113,29 @@ When `features.denseChunking` is enabled, chunks move off the `shared` array and
 
 Each shared entry gets a `bundle` property pointing at its chunk bundle by name. The result is a smaller, more cache-friendly `remoteEntry.json` — and the runtime can skip entire chunk groups whose dependencies aren't part of the final import map.
 
+## Integrity map
+
+When the build runs with `integrity: true` on `FederationOptions`, the core hashes every emitted shared external, exposed module and chunk and writes the digests under a top-level `integrity` map keyed by `outFileName`:
+
+```json
+{
+  "name": "mfe1",
+  "shared": [
+    /* … */
+  ],
+  "exposes": [
+    /* … */
+  ],
+  "integrity": {
+    "angular-core-VFK9A2LE.js": "sha384-…",
+    "component-Q4XS7K1T.js": "sha384-…",
+    "chunk-IXOA6WTM.js": "sha384-…"
+  }
+}
+```
+
+The orchestrator resolves each entry to an absolute URL and emits it under the `integrity` block of the import map it injects, so the browser (or `es-module-shims`) can verify each module's bytes before executing it. See [Subresource Integrity](../orchestrator/security.md#subresource-integrity) for the end-to-end trust chain.
+
 ## Federation Cache
 
 The in-memory counterpart to the on-disk cache is a `FederationCache`, passed through the whole build pipeline:
@@ -118,6 +144,7 @@ The in-memory counterpart to the on-disk cache is a `FederationCache`, passed th
 type FederationCache<TBundlerCache = unknown> = {
   externals: SharedInfo[];
   chunks?: Record<string, string[]>;
+  integrity?: Record<string, string>;
   bundlerCache: TBundlerCache;
   cachePath: string;
 };

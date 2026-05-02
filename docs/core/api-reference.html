@@ -250,6 +250,7 @@
             <code>ExternalConfig</code>, <code>NormalizedExternalConfig</code>,
             <code>SharedExternalsConfig</code>,
             <code>ShareExternalsOptions</code>,
+            <code>ShareAllExternalsOptions</code>,
             <code>IncludeSecondariesOptions</code>
           </li>
           <li>
@@ -264,20 +265,44 @@
           <li>
             <code>FederationInfo</code>, <code>SharedInfo</code>,
             <code>ExposesInfo</code>, <code>ChunkInfo</code>,
-            <code>ArtifactInfo</code>
+            <code>ArtifactInfo</code>, <code>IntegrityMap</code>
           </li>
           <li><code>FederationCache</code></li>
           <li><code>SkipList</code>, <code>PreparedSkipList</code></li>
-          <li><code>BuildNotificationOptions</code></li>
+          <li>
+            <code>BuildNotificationOptions</code>,
+            <code>BuildNotificationType</code>
+          </li>
         </ul>
 
         <h2><code>@softarc/native-federation/internal</code></h2>
         <p>
-          Utility exports intended for adapter authors — error types, the
-          checksum helper, the logger, a rebuild queue, the file-watcher
-          contract, and the cache-path helper. Treated as semi-public; breaking
-          changes are possible across minor versions.
+          Utility exports intended for adapter authors. Treated as semi-public;
+          breaking changes are possible across minor versions. Includes:
         </p>
+        <ul>
+          <li>error types and <code>AbortedError</code>,</li>
+          <li>
+            the <code>hashFile</code> checksum helper and
+            <code>getChecksum</code> / <code>getDefaultCachePath</code> cache
+            helpers,
+          </li>
+          <li>the <code>logger</code> and <code>setLogLevel</code>,</li>
+          <li>
+            the <code>RebuildQueue</code> plus the
+            <code>createBuildResultMap</code> / <code>lookupInResultMap</code> /
+            <code>popFromResultMap</code> helpers,
+          </li>
+          <li>
+            the <code>NfFileWatcher</code> contract and the
+            <code>createNfWatcher</code> / <code>syncNfFileWatcher</code>
+            implementations,
+          </li>
+          <li>
+            the <code>writeImportMap</code>, <code>prepareSkipList</code> and
+            <code>isInSkipList</code> helpers used by the build pipeline.
+          </li>
+        </ul>
 
         <div class="callout">
           <p>
