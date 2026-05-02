@@ -89,7 +89,9 @@
     name?: string;
     url: string;
     cacheTag?: string;
+    integrity?: string;
   };
+  manifestIntegrity?: string;
 };</code></pre>
 
         <div class="table-wrap">
@@ -120,6 +122,29 @@
                   refetches. Use this to bust caches after a host redeploy.
                 </td>
               </tr>
+              <tr>
+                <td><code>hostRemoteEntry.integrity</code></td>
+                <td><em>none</em></td>
+                <td>
+                  SRI hash (<code>sha256-…</code>, <code>sha384-…</code>,
+                  <code>sha512-…</code>) verified against the response bytes of
+                  the host <code>remoteEntry.json</code> before it is parsed.
+                  See
+                  <a href="security.html#subresource-integrity"
+                    >Security — Subresource Integrity</a
+                  >.
+                </td>
+              </tr>
+              <tr>
+                <td><code>manifestIntegrity</code></td>
+                <td><em>none</em></td>
+                <td>
+                  SRI hash for the manifest URL passed as the first argument to
+                  <code>initFederation</code>. When set, the orchestrator hashes
+                  the response bytes and rejects with <code>NFError</code> on
+                  mismatch.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -128,8 +153,38 @@
         <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
 
 initFederation('http://example.org/manifest.json', {
-  hostRemoteEntry: { url: './remoteEntry.json', cacheTag: 'v1.2.3' },
+  manifestIntegrity: 'sha384-…',
+  hostRemoteEntry: {
+    url: './remoteEntry.json',
+    cacheTag: 'v1.2.3',
+    integrity: 'sha384-…',
+  },
 });</code></pre>
+
+        <p>
+          Per-remote pinning lives in the manifest itself — entries can be
+          either the existing string form or a <code>{ url, integrity }</code>
+          object, and the two forms can coexist:
+        </p>
+        <pre><code>{
+  "team/mfe1": "https://mfe1.example.org/remoteEntry.json",
+  "team/mfe2": {
+    "url": "https://mfe2.example.org/remoteEntry.json",
+    "integrity": "sha384-…"
+  }
+}</code></pre>
+
+        <div class="callout">
+          <p>
+            See
+            <a href="security.html#subresource-integrity"
+              >Security — Subresource Integrity</a
+            >
+            for the full trust chain (manifest →
+            <code>remoteEntry.json</code> → modules) and the supported hash
+            algorithms.
+          </p>
+        </div>
 
         <h2 id="import-map">2. Import-map implementation</h2>
         <p>
@@ -153,9 +208,10 @@ initFederation('http://example.org/manifest.json', {
         </p>
 
         <pre><code>type ImportMapOptions = {
-  loadModuleFn?:   (url: string) =&gt; Promise&lt;unknown&gt;;
-  setImportMapFn?: (importMap: ImportMap, opts?: { override?: boolean }) =&gt; Promise&lt;ImportMap&gt;;
+  loadModuleFn?:    (url: string) =&gt; Promise&lt;unknown&gt;;
+  setImportMapFn?:  (importMap: ImportMap, opts?: { override?: boolean }) =&gt; Promise&lt;ImportMap&gt;;
   reloadBrowserFn?: () =&gt; void;
+  trustedTypesPolicyName?: string | false;
 };</code></pre>
 
         <div class="table-wrap">
@@ -193,6 +249,20 @@ initFederation('http://example.org/manifest.json', {
                   Override for custom reload UX.
                 </td>
               </tr>
+              <tr>
+                <td><code>trustedTypesPolicyName</code></td>
+                <td><code>'nfo'</code></td>
+                <td>
+                  Name of the
+                  <a href="security.html#trusted-types">Trusted Types</a>
+                  policy that wraps import-map content and dynamic-import URLs
+                  in the default <code>setImportMapFn</code> and
+                  <code>loadModuleFn</code>. Pass <code>false</code> to opt out
+                  (e.g. when the host owns its own Trusted Types pipeline). No
+                  effect on browsers that do not support Trusted Types — the
+                  wrapper falls back to a transparent pass-through.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -216,6 +286,9 @@ initFederation('http://example.org/manifest.json', {
   // Option 3 — custom
   loadModuleFn: (url) =&gt; customImport(url),
   setImportMapFn: replaceInDOM('importmap'),
+
+  // Option 4 — rename the Trusted Types policy to match a stricter CSP allowlist
+  trustedTypesPolicyName: 'my-app-nfo',
 });</code></pre>
 
         <div class="callout">
@@ -223,6 +296,17 @@ initFederation('http://example.org/manifest.json', {
             <code>useShimImportMap</code> is required for dynamic init — native
             import maps can be committed to the DOM only once, while
             es-module-shims accepts additional maps at runtime.
+          </p>
+        </div>
+
+        <div class="callout">
+          <p>
+            See
+            <a href="security.html#trusted-types"
+              >Security — Trusted Types</a
+            >
+            for the recommended CSP header and how the orchestrator interacts
+            with a host-defined policy.
           </p>
         </div>
 
@@ -598,6 +682,11 @@ const { loadRemoteModule } = await initFederation(manifest, {
             >
             — Which shows a bit more in-depth how the orchestrator can be
             configured.
+          </li>
+          <li>
+            <a href="security.html">Security &amp; Subresource Integrity</a> —
+            CSP setup for the built-in Trusted Types policy and the SRI trust
+            chain (manifest → <code>remoteEntry.json</code> → modules).
           </li>
           <li>
             <a href="version-resolver.html">Version Resolver</a> — how the

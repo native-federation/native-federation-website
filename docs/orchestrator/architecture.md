@@ -33,8 +33,8 @@ The manifest maps remote names to `remoteEntry.json` URLs. Nothing else. It's th
 
 ```json
 {
-  "shopping-cart":  "https://example.cdn/shopping-cart/1.0.1/remoteEntry.json",
-  "user-profile":   "https://example.cdn/user-profile/1.3.2/remoteEntry.json",
+  "shopping-cart": "https://example.cdn/shopping-cart/1.0.1/remoteEntry.json",
+  "user-profile": "https://example.cdn/user-profile/1.3.2/remoteEntry.json",
   "payment-widget": "https://example.cdn/payment-widget/2.3.1/remoteEntry.json"
 }
 ```
@@ -50,9 +50,7 @@ Every remote publishes one `remoteEntry.json`. It lists the modules the remote e
 ```json
 {
   "name": "team/remote1",
-  "exposes": [
-    { "key": "./comp-a", "outFileName": "component-a.js" }
-  ],
+  "exposes": [{ "key": "./comp-a", "outFileName": "component-a.js" }],
   "shared": [
     {
       "packageName": "dep-a",
@@ -60,7 +58,8 @@ Every remote publishes one `remoteEntry.json`. It lists the modules the remote e
       "version": "1.2.3",
       "requiredVersion": "~1.2.1",
       "strictVersion": false,
-      "singleton": true
+      "singleton": true,
+      "bundle": "browser-dep-a"
     },
     {
       "packageName": "dep-b",
@@ -70,23 +69,35 @@ Every remote publishes one `remoteEntry.json`. It lists the modules the remote e
       "strictVersion": true,
       "singleton": false
     }
-  ]
+  ],
+  "chunks": {
+    "browser-dep-a": ["chunk-ABCD1234.js"],
+    "mapping-or-exposed": []
+  },
+  "integrity": {
+    "component-a.js": "sha384-…",
+    "dep-a.js": "sha384-…",
+    "dep-b.js": "sha384-…",
+    "chunk-ABCD1234.js": "sha384-…"
+  }
 }
 ```
 
+The optional `integrity` map (added by `@softarc/native-federation` when built with `integrity: true`) carries an SRI hash per emitted file, keyed by `outFileName`. The orchestrator resolves these to absolute URLs and emits them under the `integrity` block of the generated import map — see [Security — Subresource Integrity](security.md#subresource-integrity) for the end-to-end trust chain.
+
 #### Shared external properties
 
-| Property | Description |
-| --- | --- |
-| `version` | The actual version this remote ships. |
-| `requiredVersion` | The range this remote is willing to accept from a shared copy — the basis for compatibility checks. |
-| `strictVersion` | When `true`, the remote refuses incompatible shared versions and gets its own scoped copy instead of a warning. |
-| `singleton` | When `true`, the dependency is a candidate for sharing across remotes. When `false`, it is always scoped to this remote. |
-| `shareScope` | Group externals into logical clusters; the special `"strict"` scope enables exact-version sharing. See [shareScope](version-resolver.md#share-scopes). |
-| `packageName` | The import specifier remotes use (e.g. `'react'`). |
-| `outFileName` | File name, relative to the remote's scope URL. |
-| `bundle` | Optional name of the shared bundle this external belongs to — the key the orchestrator uses to look up sibling chunk files in the shared-chunks cache (v4 opt-in). |
-| `dev` | Optional dev-mode metadata (original source path, etc). |
+| Property          | Description                                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `version`         | The actual version this remote ships.                                                                                                                              |
+| `requiredVersion` | The range this remote is willing to accept from a shared copy — the basis for compatibility checks.                                                                |
+| `strictVersion`   | When `true`, the remote refuses incompatible shared versions and gets its own scoped copy instead of a warning.                                                    |
+| `singleton`       | When `true`, the dependency is a candidate for sharing across remotes. When `false`, it is always scoped to this remote.                                           |
+| `shareScope`      | Group externals into logical clusters; the special `"strict"` scope enables exact-version sharing. See [shareScope](version-resolver.md#share-scopes).             |
+| `packageName`     | The import specifier remotes use (e.g. `'react'`).                                                                                                                 |
+| `outFileName`     | File name, relative to the remote's scope URL.                                                                                                                     |
+| `bundle`          | Optional name of the shared bundle this external belongs to — the key the orchestrator uses to look up sibling chunk files in the shared-chunks cache (v4 opt-in). |
+| `dev`             | Optional dev-mode metadata (original source path, etc).                                                                                                            |
 
 ## Internal caches
 
@@ -101,7 +112,7 @@ A plain map of remote name → scope URL + exposed modules:
   "shopping-cart": {
     "scopeUrl": "https://ecommerce-team.com/",
     "exposes": [
-      { "moduleName": "./CartButton",  "file": "cart-button.js" },
+      { "moduleName": "./CartButton", "file": "cart-button.js" },
       { "moduleName": "./CartSummary", "file": "cart-summary.js" }
     ]
   }
@@ -126,8 +137,20 @@ Dependencies with `singleton: true` become _shared externals_. The cache groups 
             "host": false,
             "action": "share",
             "remotes": [
-              { "file": "dep-a.js", "name": "team/mfe1", "requiredVersion": "~1.2.1", "strictVersion": false, "cached": true  },
-              { "file": "dep-a.js", "name": "team/mfe2", "requiredVersion": "~1.2.1", "strictVersion": false, "cached": false }
+              {
+                "file": "dep-a.js",
+                "name": "team/mfe1",
+                "requiredVersion": "~1.2.1",
+                "strictVersion": false,
+                "cached": true
+              },
+              {
+                "file": "dep-a.js",
+                "name": "team/mfe2",
+                "requiredVersion": "~1.2.1",
+                "strictVersion": false,
+                "cached": false
+              }
             ]
           },
           {
@@ -135,7 +158,13 @@ Dependencies with `singleton: true` become _shared externals_. The cache groups 
             "host": false,
             "action": "skip",
             "remotes": [
-              { "file": "dep-a.js", "name": "team/mfe2", "requiredVersion": "^1.2.1", "strictVersion": true, "cached": false }
+              {
+                "file": "dep-a.js",
+                "name": "team/mfe2",
+                "requiredVersion": "^1.2.1",
+                "strictVersion": true,
+                "cached": false
+              }
             ]
           }
         ]
@@ -192,7 +221,7 @@ All four caches feed into a single import map that the orchestrator commits to t
 {
   "imports": {
     // Exposed modules, addressable as "<remoteName>/<key>"
-    "shopping-cart/./CartButton":  "https://ecommerce-team.com/cart-button.js",
+    "shopping-cart/./CartButton": "https://ecommerce-team.com/cart-button.js",
     "shopping-cart/./CartSummary": "https://ecommerce-team.com/cart-summary.js",
 
     // Globally shared externals
@@ -212,26 +241,32 @@ All four caches feed into a single import map that the orchestrator commits to t
     "https://example.org/mfe2/": {
       "dep-c": "https://example.org/mfe1/dep-c.js"
     }
+  },
+  "integrity": {
+    // Only present for URLs whose remoteEntry.json published a hash
+    "https://ecommerce-team.com/cart-button.js": "sha384-…",
+    "https://example.org/mfe1/dep-a.js": "sha384-…"
   }
 }
 ```
 
-Four patterns fall out of this structure:
+Five patterns fall out of this structure:
 
 - **Global sharing** via `imports` — one download for every consumer.
 - **Scoped isolation** via `scopes` — a specific remote gets its own copy without disturbing anyone else.
 - **Scope groups** — the same URL reused in several `scopes` entries. Import maps don't have a first-class "group of scopes" concept, so the orchestrator emulates it by writing the same file under each member scope. From the browser's perspective it's still one download (the URL is identical), but each remote resolves the import inside its own scope.
 - **Shared chunks** — when a v4 remote opts into chunked shared externals, each chunk sibling is registered inside the owning remote's scope under an internal specifier (e.g. `@nf-internal/chunk-IXOA6WTM`). Dynamic imports emitted by the bundler inside a shared package then resolve to the right sibling file without polluting the global `imports`.
+- **Tamper-evident loads** via the optional [`integrity` block](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap#integrity) — populated only for URLs whose `remoteEntry.json` carried an SRI hash, fully enforced under `useShimImportMap` and honored natively by browsers that have shipped the import-map `integrity` key (part of the import-maps spec, browser support is rolling out). URLs without a hash are simply omitted, matching the SRI spec. See [Security — Subresource Integrity](security.md#subresource-integrity).
 
 ## Caching & performance
 
 Resolved metadata is worth keeping around. Between page loads, the orchestrator can remember which remotes it already knows about and which shared versions it already picked, so a navigation-triggered reload doesn't re-fetch `remoteEntry.json` files the browser already cached in its HTTP cache.
 
-| Storage | Lifetime | Best for |
-| --- | --- | --- |
-| **Memory** (`globalThisStorageEntry`, default) | Single page load | SPAs, development, testing |
-| **sessionStorage** | Browser session | Multi-page server-rendered hosts — the main use case |
-| **localStorage** | Until cleared | Aggressive caching across browser restarts; accept some staleness |
+| Storage                                        | Lifetime         | Best for                                                          |
+| ---------------------------------------------- | ---------------- | ----------------------------------------------------------------- |
+| **Memory** (`globalThisStorageEntry`, default) | Single page load | SPAs, development, testing                                        |
+| **sessionStorage**                             | Browser session  | Multi-page server-rendered hosts — the main use case              |
+| **localStorage**                               | Until cleared    | Aggressive caching across browser restarts; accept some staleness |
 
 On top of storage choice, the resolver applies four optimization strategies:
 
@@ -248,11 +283,11 @@ An e-commerce host with three independently-owned remotes:
 
 ```html
 <script type="application/json" id="mfe-manifest">
-{
-  "product-catalog": "https://catalog-team.com/remoteEntry.json",
-  "shopping-cart":   "https://cart-team.com/remoteEntry.json",
-  "user-account":    "https://account-team.com/remoteEntry.json"
-}
+  {
+    "product-catalog": "https://catalog-team.com/remoteEntry.json",
+    "shopping-cart": "https://cart-team.com/remoteEntry.json",
+    "user-account": "https://account-team.com/remoteEntry.json"
+  }
 </script>
 ```
 
@@ -275,4 +310,5 @@ What you get:
 - [The orchestrator docs](https://github.com/native-federation/orchestrator/blob/main/docs/architecture.md) — The orchestrator docs regarding native-federation's architecture.
 - [Version Resolver](version-resolver.md) — the algorithm behind `share` / `skip` / `scope` decisions.
 - [Configuration](configuration.md) — every option that changes the behavior described above.
+- [Security & Subresource Integrity](security.md) — the Trusted Types policy that wraps the DOM sinks shown above and the SRI trust chain across the manifest, every `remoteEntry.json`, and the import map.
 - [v3 vs v4](../v3-vs-v4.md) — how the orchestrator compares to the classic `@softarc/native-federation-runtime`.

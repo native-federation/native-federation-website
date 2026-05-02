@@ -141,6 +141,7 @@
         { href: 'orchestrator/architecture.html', label: 'Architecture', id: 'orchestrator/architecture' },
         { href: 'orchestrator/configuration.html', label: 'Configuration', id: 'orchestrator/configuration' },
         { href: 'orchestrator/version-resolver.html', label: 'Version Resolver', id: 'orchestrator/version-resolver' },
+        { href: 'orchestrator/security.html', label: 'Security & SRI', id: 'orchestrator/security' },
       ]},
       { section: 'Core', items: [
         { href: 'core/index.html', label: 'Overview', id: 'core' },

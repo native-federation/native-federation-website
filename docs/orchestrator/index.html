@@ -73,7 +73,7 @@
 
         <h2>What makes it different</h2>
         <p>
-          Compared to the classic runtime, the orchestrator adds three things:
+          Compared to the classic runtime, the orchestrator adds four things:
         </p>
         <ul>
           <li>
@@ -94,6 +94,15 @@
             <strong>A zero-setup quickstart bundle.</strong> For HTML-only
             hosts, a single <code>&lt;script&gt;</code> tag reads a manifest out
             of the DOM and wires everything up — no npm install, no build step.
+          </li>
+          <li>
+            <strong>Built-in Trusted Types &amp; SRI.</strong> The two DOM sinks
+            (the injected <code>&lt;script type="importmap"&gt;</code> and the
+            dynamic <code>import()</code>) flow through a vetted Trusted Types
+            policy, and every artifact the orchestrator touches — the manifest,
+            every <code>remoteEntry.json</code>, every JavaScript module — can
+            be pinned against an SRI hash. See
+            <a href="security.html">Security</a>.
           </li>
         </ul>
 
@@ -148,6 +157,11 @@
             dependencies are resolved across scopes, the
             <code>shareScope</code> mechanism, the strict scope, and dynamic
             init.
+          </li>
+          <li>
+            <a href="security.html">Security &amp; Subresource Integrity</a> —
+            CSP setup for the built-in Trusted Types policy and the SRI trust
+            chain (manifest → <code>remoteEntry.json</code> → modules).
           </li>
         </ul>
 

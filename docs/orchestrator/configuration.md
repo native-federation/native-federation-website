@@ -24,7 +24,9 @@ type HostOptions = {
     name?: string;
     url: string;
     cacheTag?: string;
+    integrity?: string;
   };
+  manifestIntegrity?: string;
 };
 ```
 
@@ -32,6 +34,8 @@ type HostOptions = {
 | --- | --- | --- |
 | `hostRemoteEntry` | `false` | Adds a host `remoteEntry.json` that takes precedence during shared-version resolution. Can be a URL, the full object form, or `false` to disable. |
 | `hostRemoteEntry.cacheTag` | _none_ | Opaque string appended as a query parameter — the orchestrator treats a new `cacheTag` as a different file and refetches. Use this to bust caches after a host redeploy. |
+| `hostRemoteEntry.integrity` | _none_ | SRI hash (`sha256-…`, `sha384-…`, `sha512-…`) verified against the response bytes of the host `remoteEntry.json` before it is parsed. See [Security — Subresource Integrity](security.md#subresource-integrity). |
+| `manifestIntegrity` | _none_ | SRI hash for the manifest URL passed as the first argument to `initFederation`. When set, the orchestrator hashes the response bytes and rejects with `NFError` on mismatch. |
 
 ### Example
 
@@ -39,9 +43,28 @@ type HostOptions = {
 import { initFederation } from '@softarc/native-federation-orchestrator';
 
 initFederation('http://example.org/manifest.json', {
-  hostRemoteEntry: { url: './remoteEntry.json', cacheTag: 'v1.2.3' },
+  manifestIntegrity: 'sha384-…',
+  hostRemoteEntry: {
+    url: './remoteEntry.json',
+    cacheTag: 'v1.2.3',
+    integrity: 'sha384-…',
+  },
 });
 ```
+
+Per-remote pinning lives in the manifest itself — entries can be either the existing string form or a `{ url, integrity }` object, and the two forms can coexist:
+
+```json
+{
+  "team/mfe1": "https://mfe1.example.org/remoteEntry.json",
+  "team/mfe2": {
+    "url": "https://mfe2.example.org/remoteEntry.json",
+    "integrity": "sha384-…"
+  }
+}
+```
+
+> See [Security — Subresource Integrity](security.md#subresource-integrity) for the full trust chain (manifest → `remoteEntry.json` → modules) and the supported hash algorithms.
 
 ## 2. Import-map implementation
 
@@ -49,9 +72,10 @@ The orchestrator commits a standard [import map](https://caniuse.com/import-maps
 
 ```ts
 type ImportMapOptions = {
-  loadModuleFn?:   (url: string) => Promise<unknown>;
-  setImportMapFn?: (importMap: ImportMap, opts?: { override?: boolean }) => Promise<ImportMap>;
+  loadModuleFn?:    (url: string) => Promise<unknown>;
+  setImportMapFn?:  (importMap: ImportMap, opts?: { override?: boolean }) => Promise<ImportMap>;
   reloadBrowserFn?: () => void;
+  trustedTypesPolicyName?: string | false;
 };
 ```
 
@@ -60,6 +84,7 @@ type ImportMapOptions = {
 | `setImportMapFn` | `replaceInDOM('importmap')` | How to commit an import map — by default, replaces any existing `<script type="importmap">` in the DOM. |
 | `loadModuleFn` | `url => import(url)` | How a module is actually imported. Override when you need the shim loader or custom instrumentation. |
 | `reloadBrowserFn` | `() => window.location.reload()` | Called when the SSE dev feature detects a rebuilt remote. Override for custom reload UX. |
+| `trustedTypesPolicyName` | `'nfo'` | Name of the [Trusted Types](security.md#trusted-types) policy that wraps import-map content and dynamic-import URLs in the default `setImportMapFn` and `loadModuleFn`. Pass `false` to opt out (e.g. when the host owns its own Trusted Types pipeline). No effect on browsers that do not support Trusted Types — the wrapper falls back to a transparent pass-through. |
 
 ### Two ready-made presets
 
@@ -82,8 +107,13 @@ initFederation('http://example.org/manifest.json', {
   // Option 3 — custom
   loadModuleFn: (url) => customImport(url),
   setImportMapFn: replaceInDOM('importmap'),
+
+  // Option 4 — rename the Trusted Types policy to match a stricter CSP allowlist
+  trustedTypesPolicyName: 'my-app-nfo',
 });
 ```
+
+> See [Security — Trusted Types](security.md#trusted-types) for the recommended CSP header and how the orchestrator interacts with a host-defined policy.
 
 > **Note:** `useShimImportMap` is required for dynamic init — native import maps can be committed to the DOM only once, while es-module-shims accepts additional maps at runtime.
 
@@ -274,6 +304,7 @@ const { loadRemoteModule } = await initFederation(manifest, {
 ## See also
 
 - [The orchestrator docs](https://github.com/native-federation/orchestrator/blob/main/docs/config.md) — Which shows a bit more in-depth how the orchestrator can be configured.
+- [Security & Subresource Integrity](security.md) — CSP setup for the built-in Trusted Types policy and the SRI trust chain (manifest → `remoteEntry.json` → modules).
 - [Version Resolver](version-resolver.md) — how the profile and strictness flags actually shape resolution output.
 - [Architecture — caches](architecture.md#caches) — what lives in the storage namespace.
 - [Getting Started](getting-started.md) — worked examples for the quickstart, registry and custom setups.

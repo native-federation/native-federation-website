@@ -175,7 +175,8 @@
       "version": "1.2.3",
       "requiredVersion": "~1.2.1",
       "strictVersion": false,
-      "singleton": true
+      "singleton": true,
+      "bundle": "browser-dep-a"
     },
     {
       "packageName": "dep-b",
@@ -185,9 +186,31 @@
       "strictVersion": true,
       "singleton": false
     }
-  ]
+  ],
+  "chunks": {
+    "browser-dep-a": ["chunk-ABCD1234.js"],
+    "mapping-or-exposed": []
+  },
+  "integrity": {
+    "component-a.js":     "sha384-…",
+    "dep-a.js":           "sha384-…",
+    "dep-b.js":           "sha384-…",
+    "chunk-ABCD1234.js":  "sha384-…"
+  }
 }</code></pre>
 
+        <p>
+          The optional <code>integrity</code> map (added by
+          <code>@softarc/native-federation</code> when built with
+          <code>integrity: true</code>) carries an SRI hash per emitted file,
+          keyed by <code>outFileName</code>. The orchestrator resolves these to
+          absolute URLs and emits them under the <code>integrity</code> block
+          of the generated import map — see
+          <a href="security.html#subresource-integrity"
+            >Security — Subresource Integrity</a
+          >
+          for the end-to-end trust chain.
+        </p>
         <h4>Shared external properties</h4>
         <div class="table-wrap">
           <table>
@@ -413,9 +436,14 @@
     "https://example.org/mfe2/": {
       "dep-c": "https://example.org/mfe1/dep-c.js"
     }
+  },
+  "integrity": {
+    // Only present for URLs whose remoteEntry.json published a hash
+    "https://ecommerce-team.com/cart-button.js": "sha384-…",
+    "https://example.org/mfe1/dep-a.js":         "sha384-…"
   }
 }</code></pre>
-        <p>Four patterns fall out of this structure:</p>
+        <p>Five patterns fall out of this structure:</p>
         <ul>
           <li>
             <strong>Global sharing</strong> via <code>imports</code> — one
@@ -440,6 +468,24 @@
             <code>@nf-internal/chunk-IXOA6WTM</code>). Dynamic imports emitted
             by the bundler inside a shared package then resolve to the right
             sibling file without polluting the global <code>imports</code>.
+          </li>
+          <li>
+            <strong>Tamper-evident loads</strong> via the optional
+            <a
+              href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap#integrity"
+              target="_blank"
+              rel="noopener"
+              ><code>integrity</code> block</a
+            >
+            — populated only for URLs whose
+            <code>remoteEntry.json</code> carried an SRI hash, fully enforced
+            under <code>useShimImportMap</code> and honored natively by
+            browsers that have shipped the import-map <code>integrity</code>
+            key (part of the import-maps spec, browser support is rolling out).
+            URLs without a hash are simply omitted, matching the SRI spec. See
+            <a href="security.html#subresource-integrity"
+              >Security — Subresource Integrity</a
+            >.
           </li>
         </ul>
 
@@ -577,6 +623,12 @@
           <li>
             <a href="configuration.html">Configuration</a> — every option that
             changes the behavior described above.
+          </li>
+          <li>
+            <a href="security.html">Security &amp; Subresource Integrity</a> —
+            the Trusted Types policy that wraps the DOM sinks shown above and
+            the SRI trust chain across the manifest, every
+            <code>remoteEntry.json</code>, and the import map.
           </li>
           <li>
             <a href="../v3-vs-v4.html">v3 vs v4</a> — how the orchestrator

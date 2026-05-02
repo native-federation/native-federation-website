@@ -125,7 +125,7 @@
     &lt;/script&gt;
 
     &lt;!-- Include the orchestrator --&gt;
-    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.2/quickstart.mjs"&gt;&lt;/script&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/quickstart.mjs"&gt;&lt;/script&gt;
   &lt;/head&gt;
   &lt;body&gt;
     &lt;my-header&gt;&lt;/my-header&gt;
@@ -152,6 +152,32 @@
             feed) rather than hard-coding it. For that, use the
             <a href="#custom-implementation">custom implementation</a> below and
             pass <code>initFederation</code> a URL instead of an object.
+          </p>
+        </div>
+
+        <p>
+          Manifest entries can also be supplied as objects to pin a
+          <code>remoteEntry.json</code> against an SRI hash — the orchestrator
+          hashes the response bytes and rejects on mismatch before parsing.
+          Both forms can coexist:
+        </p>
+
+        <pre><code>{
+  "team/mfe1": "http://localhost:3000/remoteEntry.json",
+  "team/mfe2": {
+    "url": "http://localhost:4000/remoteEntry.json",
+    "integrity": "sha384-…"
+  }
+}</code></pre>
+
+        <div class="callout">
+          <p>
+            See
+            <a href="security.html#subresource-integrity"
+              >Security — Subresource Integrity</a
+            >
+            for the full picture, including pinning the manifest URL itself and
+            propagating module hashes into the import map.
           </p>
         </div>
 
@@ -203,7 +229,7 @@
     &lt;title&gt;My Application&lt;/title&gt;
 
     &lt;!-- 1. Init the registry BEFORE any consumers --&gt;
-    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.2/init-registry.mjs"&gt;&lt;/script&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/init-registry.mjs"&gt;&lt;/script&gt;
 
     &lt;script type="esms-options"&gt;{ "shimMode": true }&lt;/script&gt;
 
@@ -224,7 +250,7 @@
     &lt;/script&gt;
 
     &lt;!-- 4. The orchestrator --&gt;
-    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.2/quickstart.mjs"&gt;&lt;/script&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/quickstart.mjs"&gt;&lt;/script&gt;
   &lt;/head&gt;
   &lt;body&gt;
     &lt;my-header&gt;&lt;/my-header&gt;
@@ -409,9 +435,24 @@ console.log(config);</code></pre>
         </p>
 
         <p>
-          <code>initRemoteEntry(remoteEntryUrl, remoteName?)</code> adds a
-          remote after the initial load and resolves with the same
+          <code>initRemoteEntry(remoteEntryUrl, remote?)</code> adds a remote
+          after the initial load and resolves with the same
           <code>NativeFederationResult</code> shape (so the chain can continue).
+          The second argument can be either a remote name string or a
+          <code>RemoteRef</code> object — the same shape used inside the
+          manifest:
+        </p>
+
+        <pre><code>// Plain name
+await initRemoteEntry('http://localhost:5000/remoteEntry.json', 'team/dashboard');
+
+// RemoteRef — also pins the remoteEntry.json against an SRI hash
+await initRemoteEntry('http://localhost:5000/remoteEntry.json', {
+  name: 'team/dashboard',
+  integrity: 'sha384-…',
+});</code></pre>
+
+        <p>
           See <a href="version-resolver.html#dynamic-init">Dynamic init</a> for
           the rules and constraints.
         </p>

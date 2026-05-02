@@ -13,11 +13,12 @@ The Orchestrator — `@softarc/native-federation-orchestrator` — is the next-g
 
 ## What makes it different
 
-Compared to the classic runtime, the orchestrator adds three things:
+Compared to the classic runtime, the orchestrator adds four things:
 
 - **Semver-aware version resolution.** When remotes disagree on a shared dependency version, the orchestrator picks the most compatible version per share-scope and falls back to scoped downloads only when it has to. See [Version Resolver](version-resolver.md).
 - **Cross-reload caching.** Resolved `remoteEntry.json` metadata and shared externals can be persisted in `sessionStorage` or `localStorage`, so server-rendered hosts that refresh on every navigation don't re-download what the browser already has.
 - **A zero-setup quickstart bundle.** For HTML-only hosts, a single `<script>` tag reads a manifest out of the DOM and wires everything up — no npm install, no build step.
+- **Built-in Trusted Types & SRI.** The two DOM sinks (the injected `<script type="importmap">` and the dynamic `import()`) flow through a vetted Trusted Types policy, and every artifact the orchestrator touches — the manifest, every `remoteEntry.json`, every JavaScript module — can be pinned against an SRI hash. See [Security](security.md).
 
 The orchestrator stays fully compatible with the Native Federation ecosystem — any remote built with `@softarc/native-federation` (v3 or v4) that emits a standard `remoteEntry.json` can be loaded by it.
 
@@ -33,6 +34,7 @@ The Orchestrator runs in the browser. A server-rendered host still works — the
 - [Architecture](architecture.md) — the manifest, `remoteEntry.json`, the internal caches, and how the final import map is built.
 - [Configuration](configuration.md) — the full `initFederation` options reference: host entry, import-map implementation, logging, modes and storage.
 - [Version Resolver](version-resolver.md) — how shared dependencies are resolved across scopes, the `shareScope` mechanism, the strict scope, and dynamic init.
+- [Security & Subresource Integrity](security.md) — CSP setup for the built-in Trusted Types policy and the SRI trust chain (manifest → `remoteEntry.json` → modules).
 
 ## Example repositories
 

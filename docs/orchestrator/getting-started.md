@@ -51,7 +51,7 @@ The simplest integration uses the pre-built `quickstart.mjs` runtime and a decla
     </script>
 
     <!-- Include the orchestrator -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.2/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/quickstart.mjs"></script>
   </head>
   <body>
     <my-header></my-header>
@@ -65,6 +65,20 @@ The simplest integration uses the pre-built `quickstart.mjs` runtime and a decla
 **The manifest** (`<script type="application/json" id="mfe-manifest">`) tells the orchestrator where every remote lives. The `id="mfe-manifest"` is required — `quickstart.mjs` specifically looks up that element. Each key is the logical remote name used by `loadRemoteModule`; each value is the URL of a `remoteEntry.json`.
 
 > **Note:** In production, you'll often fetch the manifest from a discovery service (feature-flag backend, micro-frontend registry, tenant-aware feed) rather than hard-coding it. For that, use the [custom implementation](#custom-implementation) below and pass `initFederation` a URL instead of an object.
+
+Manifest entries can also be supplied as objects to pin a `remoteEntry.json` against an SRI hash — the orchestrator hashes the response bytes and rejects on mismatch before parsing. Both forms can coexist:
+
+```json
+{
+  "team/mfe1": "http://localhost:3000/remoteEntry.json",
+  "team/mfe2": {
+    "url": "http://localhost:4000/remoteEntry.json",
+    "integrity": "sha384-…"
+  }
+}
+```
+
+> See [Security — Subresource Integrity](security.md#subresource-integrity) for the full picture, including pinning the manifest URL itself and propagating module hashes into the import map.
 
 **The event handler** listens for `mfe-loader-available`. Initialization is asynchronous — the orchestrator fetches every `remoteEntry.json`, resolves shared versions, writes the import map, and only then fires the event with `{ loadRemoteModule }` attached to `event.detail`. The `{ once: true }` flag avoids double-wiring.
 
@@ -85,7 +99,7 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
     <title>My Application</title>
 
     <!-- 1. Init the registry BEFORE any consumers -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.2/init-registry.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/init-registry.mjs"></script>
 
     <script type="esms-options">{ "shimMode": true }</script>
 
@@ -106,7 +120,7 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
     </script>
 
     <!-- 4. The orchestrator -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.2/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/quickstart.mjs"></script>
   </head>
   <body>
     <my-header></my-header>
@@ -241,7 +255,20 @@ console.log(config);
 
 `adapters` is the `DrivingContract` — a hexagonal-architecture concept (see [Hexagonal Architecture: there are always two sides to every story](https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c)) giving direct handles to `remoteInfoRepo`, `sharedExternalsRepo`, `scopedExternalsRepo`, `sharedChunksRepo`, the manifest and remote-entry providers, and the browser/SSE adapters. Use it to introspect the caches described in [Architecture — caches](architecture.md#caches).
 
-`initRemoteEntry(remoteEntryUrl, remoteName?)` adds a remote after the initial load and resolves with the same `NativeFederationResult` shape (so the chain can continue). See [Dynamic init](version-resolver.md#dynamic-init) for the rules and constraints.
+`initRemoteEntry(remoteEntryUrl, remote?)` adds a remote after the initial load and resolves with the same `NativeFederationResult` shape (so the chain can continue). The second argument can be either a remote name string or a `RemoteRef` object — the same shape used inside the manifest:
+
+```ts
+// Plain name
+await initRemoteEntry('http://localhost:5000/remoteEntry.json', 'team/dashboard');
+
+// RemoteRef — also pins the remoteEntry.json against an SRI hash
+await initRemoteEntry('http://localhost:5000/remoteEntry.json', {
+  name: 'team/dashboard',
+  integrity: 'sha384-…',
+});
+```
+
+See [Dynamic init](version-resolver.md#dynamic-init) for the rules and constraints.
 
 ## Configuration at a glance
 
