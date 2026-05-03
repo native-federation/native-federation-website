@@ -115,7 +115,7 @@ Each shared entry gets a `bundle` property pointing at its chunk bundle by name.
 
 ## Integrity map
 
-When the build runs with `integrity: true` on `FederationOptions`, the core hashes every emitted shared external, exposed module and chunk and writes the digests under a top-level `integrity` map keyed by `outFileName`:
+When `features.integrityHashes` is enabled in `federation.config.js`, the core hashes every emitted shared external, exposed module and chunk and writes the digests under a top-level `integrity` map keyed by `outFileName`:
 
 ```json
 {

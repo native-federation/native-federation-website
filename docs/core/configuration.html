@@ -205,8 +205,8 @@ export default withNativeFederation({
                 <td><code>features</code></td>
                 <td>
                   <code
-                    >{ mappingVersion?, ignoreUnusedDeps?, denseChunking?
-                    }</code
+                    >{ mappingVersion?, ignoreUnusedDeps?, denseChunking?,
+                    integrityHashes? }</code
                   >
                 </td>
                 <td>see below</td>
@@ -494,8 +494,8 @@ shared: {
         <p>
           All feature flags live under <code>features</code> on the config.
           <code>ignoreUnusedDeps</code> and <code>mappingVersion</code> are on
-          by default (opt-out); <code>denseChunking</code> is off by default
-          (opt-in).
+          by default (opt-out); <code>denseChunking</code> and
+          <code>integrityHashes</code> are off by default (opt-in).
         </p>
         <div class="table-wrap">
           <table>
@@ -539,6 +539,21 @@ shared: {
                   entry, so version mismatches across remotes are detected at
                   runtime. Set to <code>false</code> to fall back to the
                   unversioned <code>version: ''</code> shape.
+                </td>
+              </tr>
+              <tr>
+                <td><code>integrityHashes</code></td>
+                <td><code>false</code></td>
+                <td>
+                  Emit SRI hashes for every shared external, exposed module and
+                  chunk under a top-level <code>integrity</code> map in
+                  <code>remoteEntry.json</code>. The orchestrator copies these
+                  onto the import map so the browser (or
+                  <code>es-module-shims</code>) can verify each module before
+                  executing it. See
+                  <a href="../orchestrator/security.html#subresource-integrity"
+                    >Subresource Integrity</a
+                  >.
                 </td>
               </tr>
             </tbody>

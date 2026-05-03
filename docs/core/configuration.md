@@ -50,7 +50,7 @@ export default withNativeFederation({
 | `skip` | `string[]` | *see skip list* | Packages (or mapped paths) to exclude from sharing. Merged with the built-in skip list. |
 | `externals` | `string[]` | `[]` | Extra externals to expose to your bundler via `federationBuilder.externals` on top of the shared ones. |
 | `shareScope` | `string` | *undefined* | Optional share scope name, propagated to every shared external. |
-| `features` | `{ mappingVersion?, ignoreUnusedDeps?, denseChunking? }` | see below | Feature flags — [details below](#feature-flags). |
+| `features` | `{ mappingVersion?, ignoreUnusedDeps?, denseChunking?, integrityHashes? }` | see below | Feature flags — [details below](#feature-flags). |
 
 ## name
 
@@ -217,13 +217,14 @@ The `build` field on each shared entry controls how the core groups packages whe
 
 ## Feature Flags
 
-All feature flags live under `features` on the config. `ignoreUnusedDeps` and `mappingVersion` are on by default (opt-out); `denseChunking` is off by default (opt-in).
+All feature flags live under `features` on the config. `ignoreUnusedDeps` and `mappingVersion` are on by default (opt-out); `denseChunking` and `integrityHashes` are off by default (opt-in).
 
 | Flag | Default | Effect |
 | --- | --- | --- |
 | `ignoreUnusedDeps` | `true` | Drops shared externals that aren't actually imported by the entry points. Required for wildcard mapped paths. |
 | `denseChunking` | `false` | Groups chunks by bundle name in `remoteEntry.json` so each shared package references its chunk bundle by name rather than listing chunks individually. Produces a smaller, more cache-friendly `remoteEntry.json`. |
 | `mappingVersion` | `true` | Emits a real semver for every shared mapped path (monorepo-internal library) — picked up from the nearest `package.json` walking up from the entry file to the workspace root. Also sets `requiredVersion: '~<version>'` and `strictVersion: true` on the resulting shared entry, so version mismatches across remotes are detected at runtime. Set to `false` to fall back to the unversioned `version: ''` shape. |
+| `integrityHashes` | `false` | Emit SRI hashes for every shared external, exposed module and chunk under a top-level `integrity` map in `remoteEntry.json`. The orchestrator copies these onto the import map so the browser (or `es-module-shims`) can verify each module before executing it. See [Subresource Integrity](../orchestrator/security.md#subresource-integrity). |
 
 ### When to leave `ignoreUnusedDeps` on (and when to override it)
 

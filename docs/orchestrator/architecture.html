@@ -202,7 +202,7 @@
         <p>
           The optional <code>integrity</code> map (added by
           <code>@softarc/native-federation</code> when built with
-          <code>integrity: true</code>) carries an SRI hash per emitted file,
+          <code>features.integrityHashes: true</code>) carries an SRI hash per emitted file,
           keyed by <code>outFileName</code>. The orchestrator resolves these to
           absolute URLs and emits them under the <code>integrity</code> block
           of the generated import map — see

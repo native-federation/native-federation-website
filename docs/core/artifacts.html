@@ -81,7 +81,7 @@
   exposes: ExposesInfo[];
   shared: SharedInfo[];
   chunks?: Record&lt;string, string[]&gt;;
-  integrity?: Record&lt;string, string&gt;;   // SRI hash per outFileName when built with integrity: true
+  integrity?: Record&lt;string, string&gt;;   // SRI hash per outFileName when features.integrityHashes is enabled
   buildNotificationsEndpoint?: string;
 }
 
@@ -178,8 +178,8 @@ type SharedInfo = {
 
         <h2>Integrity map</h2>
         <p>
-          When the build runs with <code>integrity: true</code> on
-          <code>FederationOptions</code>, the core hashes every emitted shared
+          When <code>features.integrityHashes</code> is enabled in
+          <code>federation.config.js</code>, the core hashes every emitted shared
           external, exposed module and chunk and writes the digests under a
           top-level <code>integrity</code> map keyed by <code>outFileName</code>:
         </p>

@@ -291,8 +291,8 @@ initFederation('http://example.org/manifest.json', {
                 <td>
                   <code>integrity</code> map on
                   <code>remoteEntry.json</code> (emitted by
-                  <code>@softarc/native-federation</code> when the build uses
-                  <code>integrity: true</code>)
+                  <code>@softarc/native-federation</code> when the build enables
+                  <code>features.integrityHashes</code>)
                 </td>
                 <td>
                   Browser / <code>es-module-shims</code> honors the
@@ -312,7 +312,7 @@ initFederation('http://example.org/manifest.json', {
         <h3>Module &amp; chunk integrity (import map)</h3>
         <p>
           When <code>@softarc/native-federation</code> is built with
-          <code>integrity: true</code>, the generated
+          <code>features.integrityHashes: true</code>, the generated
           <code>remoteEntry.json</code> carries a top-level
           <code>integrity</code> map keyed by <code>outFileName</code>:
         </p>

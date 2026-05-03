@@ -112,13 +112,13 @@ The orchestrator can verify the bytes of every artifact it touches against an SR
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | `manifest.json`                                       | `manifestIntegrity` option on `initFederation`                                                                        | Manifest provider hashes the response bytes before parsing                           |
 | Each `remoteEntry.json`                               | `integrity` field on the manifest entry, or `hostRemoteEntry.integrity`                                               | Remote-entry provider hashes the response bytes before parsing                       |
-| Every shared external, exposed module, and chunk file | `integrity` map on `remoteEntry.json` (emitted by `@softarc/native-federation` when the build uses `integrity: true`) | Browser / `es-module-shims` honors the `integrity` block of the generated import map |
+| Every shared external, exposed module, and chunk file | `integrity` map on `remoteEntry.json` (emitted by `@softarc/native-federation` when the build enables `features.integrityHashes`) | Browser / `es-module-shims` honors the `integrity` block of the generated import map |
 
 These three layers form a trust chain: pinning the manifest pins which `remoteEntry.json` files are trusted, each of which pins the modules the page actually executes.
 
 ### Module & chunk integrity (import map)
 
-When `@softarc/native-federation` is built with `integrity: true`, the generated `remoteEntry.json` carries a top-level `integrity` map keyed by `outFileName`:
+When `@softarc/native-federation` is built with `features.integrityHashes: true`, the generated `remoteEntry.json` carries a top-level `integrity` map keyed by `outFileName`:
 
 ```json
 {

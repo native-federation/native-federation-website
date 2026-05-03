@@ -83,7 +83,7 @@ Every remote publishes one `remoteEntry.json`. It lists the modules the remote e
 }
 ```
 
-The optional `integrity` map (added by `@softarc/native-federation` when built with `integrity: true`) carries an SRI hash per emitted file, keyed by `outFileName`. The orchestrator resolves these to absolute URLs and emits them under the `integrity` block of the generated import map — see [Security — Subresource Integrity](security.md#subresource-integrity) for the end-to-end trust chain.
+The optional `integrity` map (added by `@softarc/native-federation` when built with `features.integrityHashes: true`) carries an SRI hash per emitted file, keyed by `outFileName`. The orchestrator resolves these to absolute URLs and emits them under the `integrity` block of the generated import map — see [Security — Subresource Integrity](security.md#subresource-integrity) for the end-to-end trust chain.
 
 #### Shared external properties
 
