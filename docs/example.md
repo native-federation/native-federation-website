@@ -1,8 +1,11 @@
 ---
 applies_to: [v3]
+deprecated: true
 ---
 
-# Example
+# Coming from Module Federation?
+
+> **Deprecated.** This page documents the original webpack Module Federation plugin example, ported to Native Federation v3. It is kept as a historical reference for users migrating from Module Federation. For up-to-date guidance, start with [Getting Started — Overview](getting-started.md), and for upgrade steps from v3 to v4 see [Migration to v4](migration.md).
 
 > A working example of Native Federation loading a Micro Frontend into a shell application using Angular.
 

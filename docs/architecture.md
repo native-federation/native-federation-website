@@ -1,3 +1,7 @@
+---
+applies_to: [v3, v4]
+---
+
 # Architecture Overview
 
 > A bird's-eye view of Native Federation — how the Core, Adapters, Runtime and Orchestrator fit together to enable framework-agnostic Micro Frontends.
@@ -64,4 +68,4 @@ At a very high level, building a Native Federation micro frontend goes through f
 
 - [The Mental Model](mental-model.md) — why the pieces are shaped this way.
 - [Terminology](terminology.md) — canonical glossary for the terms used above.
-- [Example Repo](example.md) — pointer to the working reference implementation.
+- [Coming from Module Federation?](example.md) — the working reference implementation, ported from the webpack Module Federation example.

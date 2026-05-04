@@ -52,7 +52,7 @@
         </a>
         <nav class="header-nav" aria-label="Main navigation">
           <a href="${pathPrefix}index.html" class="${activePage === 'home' ? 'active' : ''}">Home</a>
-          <a href="${pathPrefix}docs/example.html" class="${activePage === 'docs' ? 'active' : ''}">Docs</a>
+          <a href="${pathPrefix}docs/getting-started.html" class="${activePage === 'docs' ? 'active' : ''}">Docs</a>
           <a href="${pathPrefix}team.html" class="${activePage === 'team' ? 'active' : ''}">Team</a>
           <a href="${pathPrefix}resources.html" class="${activePage === 'resources' ? 'active' : ''}">Resources</a>
         </nav>
@@ -72,7 +72,7 @@
     mobileNav.setAttribute('aria-label', 'Mobile navigation');
     mobileNav.innerHTML = `
       <a href="${pathPrefix}index.html" class="${activePage === 'home' ? 'active' : ''}">Home</a>
-      <a href="${pathPrefix}docs/example.html" class="${activePage === 'docs' ? 'active' : ''}">Docs</a>
+      <a href="${pathPrefix}docs/getting-started.html" class="${activePage === 'docs' ? 'active' : ''}">Docs</a>
       <a href="${pathPrefix}team.html" class="${activePage === 'team' ? 'active' : ''}">Team</a>
       <a href="${pathPrefix}resources.html" class="${activePage === 'resources' ? 'active' : ''}">Resources</a>
       <a href="https://github.com/native-federation" target="_blank" rel="noopener">GitHub</a>
@@ -106,7 +106,7 @@
         </div>
         <div class="footer-links">
           <a href="${pathPrefix}index.html">Home</a>
-          <a href="${pathPrefix}docs/example.html">Docs</a>
+          <a href="${pathPrefix}docs/getting-started.html">Docs</a>
           <a href="${pathPrefix}team.html">Team</a>
           <a href="${pathPrefix}resources.html">Resources</a>
           <a href="https://github.com/native-federation" target="_blank" rel="noopener">GitHub</a>
@@ -127,11 +127,12 @@
 
     const docs = [
       { section: 'Getting Started', items: [
+        { href: 'getting-started.html', label: 'Overview', id: 'getting-started' },
         { href: 'architecture.html', label: 'Architecture Overview', id: 'architecture' },
         { href: 'mental-model.html', label: 'The Mental Model', id: 'mental-model' },
         { href: 'terminology.html', label: 'Terminology', id: 'terminology' },
         { href: 'tutorial.html', label: 'Tutorial', id: 'tutorial' },
-        { href: 'example.html', label: 'Example Repo', id: 'example' },
+        { href: 'example.html', label: 'Coming from Module Federation?', id: 'example' },
         { href: 'v3-vs-v4.html', label: 'v3 vs v4', id: 'v3-vs-v4' },
         { href: 'migration.html', label: 'Migration to v4', id: 'migration' },
       ]},

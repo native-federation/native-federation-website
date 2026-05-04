@@ -1,3 +1,7 @@
+---
+applies_to: [v3, v4]
+---
+
 # The Mental Model
 
 > Understand the core mental model behind Native Federation — hosts, remotes, shared dependencies, and version mismatch handling for Micro Frontend architectures.

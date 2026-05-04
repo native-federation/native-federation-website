@@ -8,6 +8,8 @@ applies_to: [v4]
 
 Install the adapter, run `ng add` on every project that should participate in the federation, and you have a working host + remote pair within minutes.
 
+> **See it running first** — the [Tractor Store demo](https://native-federation.github.io/angular-examples/) is a complete Native Federation Angular host with multiple remotes, deployed and live. Browse the source at [native-federation/angular-examples](https://github.com/native-federation/angular-examples) to clone, fork and run it locally.
+
 ## 1. Install
 
 ```bash

@@ -13,10 +13,11 @@ The ecosystem is split into four layers:
 
 ## Getting Started
 
+- [Overview](https://native-federation.com/docs/getting-started.md): switchboard linking to every section's getting-started page
 - [Architecture Overview](https://native-federation.com/docs/architecture.md): how hosts, remotes, the builder, and the runtime fit together
 - [The Mental Model](https://native-federation.com/docs/mental-model.md): core concepts for reasoning about Native Federation
 - [Terminology](https://native-federation.com/docs/terminology.md): glossary of host, remote, shared, exposed, import map, etc.
-- [Example Repo](https://native-federation.com/docs/example.md): pointer to the reference implementation
+- [Coming from Module Federation?](https://native-federation.com/docs/example.md): the original webpack Module Federation plugin example, migrated to Native Federation
 - [v3 vs v4](https://native-federation.com/docs/v3-vs-v4.md): what changed between majors
 - [Migration to v4](https://native-federation.com/docs/migration.md): upgrade steps from v3
 

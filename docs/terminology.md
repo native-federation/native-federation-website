@@ -1,3 +1,7 @@
+---
+applies_to: [v3, v4]
+---
+
 # Terminology
 
 > Glossary of Native Federation terms — manifest, remoteEntry.json, remote, host, external, exposed module, shared dependency, build adapter and more.

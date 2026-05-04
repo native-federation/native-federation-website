@@ -1137,6 +1137,11 @@ li code {
   white-space: nowrap;
 }
 
+a.playground-banner,
+.playground-banner a {
+  text-decoration: none;
+}
+
 @media (max-width: 600px) {
   .playground-banner {
     flex-direction: column;
