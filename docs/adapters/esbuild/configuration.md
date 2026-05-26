@@ -4,9 +4,9 @@ applies_to: [v4]
 
 # Adapter Configuration
 
-> Reference for EsBuildAdapterConfig — extra esbuild plugins, file replacements, compensateExports and loader mappings.
+> Reference for EsBuildAdapterConfig — extra esbuild plugins, framework presets, file replacements and loader mappings.
 
-`EsBuildAdapterConfig` is the esbuild-specific extension point. You pass it as `adapterConfig` on [`runEsBuildBuilder`](builder.md) (or directly into `createEsBuildAdapter`). Four fields — all optional except `plugins` — control extra esbuild plugins, entry-point rewriting, export compensation, and custom file loaders.
+`EsBuildAdapterConfig` is the esbuild-specific extension point. You pass it as `adapterConfig` on [`runEsBuildBuilder`](builder.md) (or directly into `createEsBuildAdapter`). Four fields — all optional except `plugins` — control extra esbuild plugins, framework presets, entry-point rewriting, and custom file loaders.
 
 ## Shape
 
@@ -16,14 +16,14 @@ import type * as esbuild from 'esbuild';
 export interface EsBuildAdapterConfig {
   plugins: esbuild.Plugin[];
   fileReplacements?: Record<string, string | { file: string }>;
-  compensateExports?: RegExp[];
   loader?: { [ext: string]: esbuild.Loader };
+  frameworks?: NfFrameworkPlugin[];
 }
 ```
 
 ## `plugins`
 
-Extra esbuild plugins applied to the **source-code** esbuild context — the one that bundles your exposed modules and their local source files. Use it for the usual esbuild extensions: Sass, CSS modules, SVGR, a GraphQL loader, etc.
+Extra esbuild plugins. They are applied to **both** esbuild contexts — the source-code bundle (your exposed modules and their local source files) and the node-modules bundle (shared dependencies). Use it for the usual esbuild extensions: Sass, CSS modules, SVGR, a GraphQL loader, etc.
 
 ```ts
 import { sassPlugin } from 'esbuild-sass-plugin';
@@ -33,7 +33,7 @@ adapterConfig: {
 }
 ```
 
-> **Note:** Plugins are _not_ forwarded to the node-modules bundle. That bundle always runs `@chialab/esbuild-plugin-commonjs` and defines `process.env.NODE_ENV` — it is intentionally opaque. If you need to patch a node-module's build, use `fileReplacements` instead of a plugin.
+Plugins contributed by a [framework preset](#frameworks) (via its `esbuildPlugins`) are prepended to this list, so framework plugins run before your own.
 
 ## `fileReplacements`
 
@@ -57,19 +57,60 @@ Typical uses:
 - Point a library at a browser-only build when its `main` field resolves to a Node-only file.
 - Feed esbuild a shim when a dependency's entry point does something esbuild cannot bundle (dynamic require on a directory, etc.).
 
-## `compensateExports`
+## `frameworks`
 
-List of regexes matched against module paths. Matching dependencies go through the core's **export compensation** pass, which parses the CJS/ESM output with `acorn` and synthesises a small re-export shim so named imports resolve to the same identity as the default import. The default is:
+A list of **framework presets** (`NfFrameworkPlugin[]`). Each preset bundles the esbuild settings a framework needs — file replacements, extra `resolveExtensions`, loaders, esbuild plugins, and whether the CommonJS interop plugin is required for the node-modules bundle.
+
+If you omit `frameworks` entirely, the adapter applies the built-in **React preset** (`reactFrameworkPlugin()`) by default, so existing React setups keep working unchanged. Pass an empty array to opt out of all presets:
 
 ```ts
-compensateExports: [/react/]
+import { reactFrameworkPlugin } from '@softarc/native-federation-esbuild/frameworks/react';
+
+adapterConfig: {
+  plugins: [],
+  frameworks: [reactFrameworkPlugin()], // optional — this is the default
+}
 ```
 
-You usually do not need to touch this. Extend the list only when you share another CJS library that exposes named exports through an `exports.*` pattern — typically something older in the React ecosystem. See [React & CommonJS Interop](react-interop.md) for a deeper look at why React in particular needs it.
+```ts
+adapterConfig: {
+  plugins: [],
+  frameworks: [], // disable the default React preset
+}
+```
+
+A preset is a plain object implementing `NfFrameworkPlugin`:
+
+| Field | Type | Purpose |
+| --- | --- | --- |
+| `name` | `string` | Identifier for the framework — used in logs/debugging. |
+| `fileReplacements` | `{ dev?, prod? }` | Maps of `<source path> → <replacement file>` applied to node-module entry points. The right map is picked automatically from the build's `dev` flag. |
+| `resolveExtensions` | `string[]` | Extra esbuild `resolveExtensions` (e.g. `['.vue']`). Merged with the adapter's defaults. |
+| `loader` | `Record<string, esbuild.Loader>` | esbuild loader overrides. Merged with `config.loader`; your own entries win. |
+| `esbuildPlugins` | `esbuild.Plugin[]` | Framework-specific esbuild plugins. Prepended to `config.plugins`. |
+| `needsCommonJsPlugin` | `boolean` | Set `true` when the framework's runtime ships CommonJS (React). Triggers `@chialab/esbuild-plugin-commonjs` for the node-modules bundle. |
+
+A minimal custom preset:
+
+```ts
+import type { NfFrameworkPlugin } from '@softarc/native-federation-esbuild';
+import vuePlugin from 'esbuild-plugin-vue3';
+
+export function vueFrameworkPlugin(): NfFrameworkPlugin {
+  return {
+    name: 'vue',
+    esbuildPlugins: [vuePlugin()],
+    resolveExtensions: ['.vue'],
+    needsCommonJsPlugin: false,
+  };
+}
+```
+
+When you supply multiple presets their contributions are merged. Your own top-level `EsBuildAdapterConfig` keys (`plugins`, `fileReplacements`, `loader`) take precedence over what a preset supplies. See [React & CommonJS Interop](react-interop.md) for how the React preset works in practice.
 
 ## `loader`
 
-Passed straight through to `esbuild.context()`'s `loader` option for the source-code bundle. Map file extensions to esbuild's built-in loaders (`'file'`, `'dataurl'`, `'text'`, `'binary'`, `'json'`, `'copy'`, …):
+Passed straight through to `esbuild.context()`'s `loader` option for both bundles. Map file extensions to esbuild's built-in loaders (`'file'`, `'dataurl'`, `'text'`, `'binary'`, `'json'`, `'copy'`, …):
 
 ```ts
 adapterConfig: {
@@ -94,8 +135,8 @@ A few esbuild options are fixed by the adapter and cannot be overridden through 
 | `splitting` | `false` | Splitting is not yet supported; every entry is one file. |
 | `write` | `false` | The adapter writes files itself, so it can hash names and feed them to the federation cache. |
 | `entryNames` | `'[name]-[hash]'` / `'[name]'` | Hashed when the core asks for hashed output, plain otherwise. |
-| `resolveExtensions` | `.ts .tsx .mjs .js .cjs` (source) / `.mjs .js .cjs` (node-modules) | TypeScript is only resolved in the source-code bundle. |
+| `resolveExtensions` | `.ts .tsx .mjs .js .cjs` (source) / `.mjs .js .cjs` (node-modules) | TypeScript is only resolved in the source-code bundle. Framework presets can add more (e.g. `.vue`). |
 | `external` | from the core | All shared dependencies are marked external so they load via the import map. |
 | `sourcemap` / `minify` | from `dev` | `dev: true` enables sourcemaps and disables minification. |
 
-Everything else flows from `EsBuildAdapterConfig` — extra plugins, replaced entry paths, custom loaders, and the export-compensation list.
+Everything else flows from `EsBuildAdapterConfig` — extra plugins, framework presets, replaced entry paths, and custom loaders.

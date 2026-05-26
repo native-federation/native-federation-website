@@ -75,6 +75,22 @@
           </p>
         </div>
 
+        <a
+          class="playground-banner"
+          href="https://github.com/native-federation/playground"
+          target="_blank"
+          rel="noopener"
+        >
+          <div>
+            <span class="playground-banner__title">Try the playground</span>
+            <p class="playground-banner__desc">
+              Runnable Native Federation host and remote examples on GitHub —
+              clone and experiment locally.
+            </p>
+          </div>
+          <span class="playground-banner__cta">Open on GitHub →</span>
+        </a>
+
         <h2>What's in the Box</h2>
         <div class="table-wrap">
           <table>
@@ -121,7 +137,7 @@
                 <td><code>EsBuildAdapterConfig</code></td>
                 <td>
                   esbuild-specific extension points: <code>plugins</code>,
-                  <code>fileReplacements</code>, <code>compensateExports</code>,
+                  <code>frameworks</code>, <code>fileReplacements</code>,
                   <code>loader</code>. See
                   <a href="configuration.html">Configuration</a>.
                 </td>
@@ -144,8 +160,10 @@
             <strong>Two bundling modes</strong> — source-code entries (your
             exposed modules) and node-modules entries (shared dependencies) are
             bundled with different esbuild configurations. Shared dependencies
-            always go through <code>@chialab/esbuild-plugin-commonjs</code> and
-            get <code>process.env.NODE_ENV</code> defined, so CommonJS libraries
+            get <code>process.env.NODE_ENV</code> defined, and — when a
+            <a href="configuration.html#frameworks">framework preset</a>
+            requests it (the default React preset does) — run through
+            <code>@chialab/esbuild-plugin-commonjs</code> so CommonJS libraries
             Just Work.
           </li>
           <li>
@@ -163,11 +181,13 @@
             cleanly rather than racing.
           </li>
           <li>
-            <strong>CJS/ESM interop knobs</strong> —
+            <strong>Framework presets</strong> — the <code>frameworks</code>
+            option bundles per-framework esbuild settings (file replacements,
+            loaders, extra <code>resolveExtensions</code>, the CommonJS plugin).
+            A React preset ships built-in and is applied by default;
             <code>fileReplacements</code> lets you swap problematic CJS entry
             points for their pre-bundled variants (e.g. React's
-            <code>cjs/</code> files), and <code>compensateExports</code> routes
-            selected packages through the core's export-compensation pass.
+            <code>cjs/</code> files).
           </li>
         </ul>
 
@@ -196,15 +216,16 @@
           <li>
             <a href="configuration.html">Adapter Configuration</a> —
             <code>EsBuildAdapterConfig</code>: extra esbuild
-            <code>plugins</code>, <code>fileReplacements</code>,
-            <code>compensateExports</code> and custom
+            <code>plugins</code>, <code>frameworks</code> presets,
+            <code>fileReplacements</code> and custom
             <code>loader</code> mappings.
           </li>
           <li>
-            <a href="react-interop.html">React &amp; CommonJS Interop</a> — why
-            React needs extra care, the CJS plugin, the canonical
-            <code>fileReplacements</code> map, <code>shareAll</code> overrides,
-            and the Shadow-DOM custom-element pattern.
+            <a href="react-interop.html">React &amp; CommonJS Interop</a> — the
+            built-in React preset, the CJS plugin, the
+            <code>fileReplacements</code> map it applies,
+            <code>shareAll</code> overrides, and the Shadow-DOM custom-element
+            pattern.
           </li>
         </ul>
 
@@ -220,14 +241,16 @@
             native ESM.
           </li>
           <li>
-            <strong>esbuild ≥ 0.25</strong> as a peer — the adapter imports
-            <code>esbuild</code> directly rather than bundling a copy.
+            <strong>esbuild</strong> — you install it yourself; the adapter
+            imports <code>esbuild</code> directly rather than bundling a copy.
           </li>
           <li>
-            <strong><code>@softarc/native-federation</code> ~4.0.0</strong> —
-            the core package is a peer dependency; the adapter calls
+            <strong><code>@softarc/native-federation</code> ~4.1.0</strong> —
+            pulled in as a dependency; the adapter calls
             <code>buildForFederation</code> /
             <code>rebuildForFederation</code> from it.
+            <code>@chialab/esbuild-plugin-commonjs</code> ships bundled too, so
+            neither needs a separate install.
           </li>
         </ul>
 

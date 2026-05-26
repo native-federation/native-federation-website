@@ -10,7 +10,7 @@ The Angular adapter — published as `@angular-architects/native-federation-v4` 
 
 > **Note:** This section covers the v4 Angular adapter (Angular 20+, currently in beta as `@angular-architects/native-federation-v4`). For a full overview of what changed since v3 — packages, ESM, Angular version support — see [v3 vs v4](../v3-vs-v4.md).
 
-> **Try the Angular playground** — runnable hosts, remotes and SSR examples on GitHub: [native-federation/angular-examples](https://github.com/native-federation/angular-examples).
+> **Try the playground** — runnable hosts, remotes and SSR examples on GitHub: [native-federation/playground](https://github.com/native-federation/playground).
 
 ## What's in the Box
 
@@ -54,7 +54,7 @@ The adapter follows Angular's major versions: `21.x` targets Angular 21.x, `20.1
 
 ## Example repositories
 
-- [Explore all of our Angular examples](https://github.com/native-federation/angular-examples)
+- [Explore all of our examples](https://github.com/native-federation/playground)
 
 ## Prerequisites
 

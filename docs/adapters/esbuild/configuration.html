@@ -6,7 +6,7 @@
     <title>Adapter Configuration — esbuild Adapter</title>
     <meta
       name="description"
-      content="Reference for EsBuildAdapterConfig — extra esbuild plugins, file replacements, compensateExports and loader mappings."
+      content="Reference for EsBuildAdapterConfig — extra esbuild plugins, framework presets, file replacements and loader mappings."
     />
     <link
       rel="canonical"
@@ -25,7 +25,7 @@
     />
     <meta
       property="og:description"
-      content="EsBuildAdapterConfig — plugins, fileReplacements, compensateExports, loader."
+      content="EsBuildAdapterConfig — plugins, frameworks, fileReplacements, loader."
     />
     <meta
       property="og:url"
@@ -61,8 +61,8 @@
           point. You pass it as <code>adapterConfig</code> on
           <a href="builder.html"><code>runEsBuildBuilder</code></a> (or directly
           into <code>createEsBuildAdapter</code>). Four fields — all optional
-          except <code>plugins</code> — control extra esbuild plugins,
-          entry-point rewriting, export compensation, and custom file loaders.
+          except <code>plugins</code> — control extra esbuild plugins, framework
+          presets, entry-point rewriting, and custom file loaders.
         </p>
 
         <h2>Shape</h2>
@@ -71,32 +71,28 @@
 export interface EsBuildAdapterConfig {
   plugins: esbuild.Plugin[];
   fileReplacements?: Record&lt;string, string | { file: string }&gt;;
-  compensateExports?: RegExp[];
   loader?: { [ext: string]: esbuild.Loader };
+  frameworks?: NfFrameworkPlugin[];
 }</code></pre>
 
         <h2><code>plugins</code></h2>
         <p>
-          Extra esbuild plugins applied to the
-          <strong>source-code</strong> esbuild context — the one that bundles
-          your exposed modules and their local source files. Use it for the
-          usual esbuild extensions: Sass, CSS modules, SVGR, a GraphQL loader,
-          etc.
+          Extra esbuild plugins. They are applied to <strong>both</strong>
+          esbuild contexts — the source-code bundle (your exposed modules and
+          their local source files) and the node-modules bundle (shared
+          dependencies). Use it for the usual esbuild extensions: Sass, CSS
+          modules, SVGR, a GraphQL loader, etc.
         </p>
         <pre><code>import { sassPlugin } from 'esbuild-sass-plugin';
 
 adapterConfig: {
   plugins: [sassPlugin()],
 }</code></pre>
-        <div class="callout">
-          <p>
-            Plugins are <em>not</em> forwarded to the node-modules bundle. That
-            bundle always runs <code>@chialab/esbuild-plugin-commonjs</code> and
-            defines <code>process.env.NODE_ENV</code> — it is intentionally
-            opaque. If you need to patch a node-module's build, use
-            <code>fileReplacements</code> instead of a plugin.
-          </p>
-        </div>
+        <p>
+          Plugins contributed by a <a href="#frameworks">framework preset</a>
+          (via its <code>esbuildPlugins</code>) are prepended to this list, so
+          framework plugins run before your own.
+        </p>
 
         <h2><code>fileReplacements</code></h2>
         <p>
@@ -134,28 +130,120 @@ adapterConfig: {
           </li>
         </ul>
 
-        <h2><code>compensateExports</code></h2>
+        <h2 id="frameworks"><code>frameworks</code></h2>
         <p>
-          List of regexes matched against module paths. Matching dependencies go
-          through the core's <strong>export compensation</strong> pass, which
-          parses the CJS/ESM output with <code>acorn</code> and synthesises a
-          small re-export shim so named imports resolve to the same identity as
-          the default import. The default is:
+          A list of <strong>framework presets</strong>
+          (<code>NfFrameworkPlugin[]</code>). Each preset bundles the esbuild
+          settings a framework needs — file replacements, extra
+          <code>resolveExtensions</code>, loaders, esbuild plugins, and whether
+          the CommonJS interop plugin is required for the node-modules bundle.
         </p>
-        <pre><code>compensateExports: [/react/]</code></pre>
         <p>
-          You usually do not need to touch this. Extend the list only when you
-          share another CJS library that exposes named exports through an
-          <code>exports.*</code> pattern — typically something older in the
-          React ecosystem. See
-          <a href="react-interop.html">React &amp; CommonJS Interop</a> for a
-          deeper look at why React in particular needs it.
+          If you omit <code>frameworks</code> entirely, the adapter applies the
+          built-in <strong>React preset</strong> (<code>reactFrameworkPlugin()</code>)
+          by default, so existing React setups keep working unchanged. Pass an
+          empty array to opt out of all presets:
+        </p>
+        <pre><code>import { reactFrameworkPlugin } from '@softarc/native-federation-esbuild/frameworks/react';
+
+adapterConfig: {
+  plugins: [],
+  frameworks: [reactFrameworkPlugin()], // optional — this is the default
+}</code></pre>
+        <pre><code>adapterConfig: {
+  plugins: [],
+  frameworks: [], // disable the default React preset
+}</code></pre>
+        <p>
+          A preset is a plain object implementing
+          <code>NfFrameworkPlugin</code>:
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>name</code></td>
+                <td><code>string</code></td>
+                <td>Identifier for the framework — used in logs/debugging.</td>
+              </tr>
+              <tr>
+                <td><code>fileReplacements</code></td>
+                <td><code>{ dev?, prod? }</code></td>
+                <td>
+                  Maps of <code>&lt;source path&gt; → &lt;replacement file&gt;</code>
+                  applied to node-module entry points. The right map is picked
+                  automatically from the build's <code>dev</code> flag.
+                </td>
+              </tr>
+              <tr>
+                <td><code>resolveExtensions</code></td>
+                <td><code>string[]</code></td>
+                <td>
+                  Extra esbuild <code>resolveExtensions</code> (e.g.
+                  <code>['.vue']</code>). Merged with the adapter's defaults.
+                </td>
+              </tr>
+              <tr>
+                <td><code>loader</code></td>
+                <td><code>Record&lt;string, esbuild.Loader&gt;</code></td>
+                <td>
+                  esbuild loader overrides. Merged with <code>config.loader</code>;
+                  your own entries win.
+                </td>
+              </tr>
+              <tr>
+                <td><code>esbuildPlugins</code></td>
+                <td><code>esbuild.Plugin[]</code></td>
+                <td>
+                  Framework-specific esbuild plugins. Prepended to
+                  <code>config.plugins</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>needsCommonJsPlugin</code></td>
+                <td><code>boolean</code></td>
+                <td>
+                  Set <code>true</code> when the framework's runtime ships
+                  CommonJS (React). Triggers
+                  <code>@chialab/esbuild-plugin-commonjs</code> for the
+                  node-modules bundle.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A minimal custom preset:</p>
+        <pre><code>import type { NfFrameworkPlugin } from '@softarc/native-federation-esbuild';
+import vuePlugin from 'esbuild-plugin-vue3';
+
+export function vueFrameworkPlugin(): NfFrameworkPlugin {
+  return {
+    name: 'vue',
+    esbuildPlugins: [vuePlugin()],
+    resolveExtensions: ['.vue'],
+    needsCommonJsPlugin: false,
+  };
+}</code></pre>
+        <p>
+          When you supply multiple presets their contributions are merged. Your
+          own top-level <code>EsBuildAdapterConfig</code> keys
+          (<code>plugins</code>, <code>fileReplacements</code>,
+          <code>loader</code>) take precedence over what a preset supplies. See
+          <a href="react-interop.html">React &amp; CommonJS Interop</a> for how
+          the React preset works in practice.
         </p>
 
         <h2><code>loader</code></h2>
         <p>
           Passed straight through to <code>esbuild.context()</code>'s
-          <code>loader</code> option for the source-code bundle. Map file
+          <code>loader</code> option for both bundles. Map file
           extensions to esbuild's built-in loaders (<code>'file'</code>,
           <code>'dataurl'</code>, <code>'text'</code>, <code>'binary'</code>,
           <code>'json'</code>, <code>'copy'</code>, …):
@@ -239,7 +327,10 @@ adapterConfig: {
                   <code>.ts .tsx .mjs .js .cjs</code> (source) /
                   <code>.mjs .js .cjs</code> (node-modules)
                 </td>
-                <td>TypeScript is only resolved in the source-code bundle.</td>
+                <td>
+                  TypeScript is only resolved in the source-code bundle.
+                  Framework presets can add more (e.g. <code>.vue</code>).
+                </td>
               </tr>
               <tr>
                 <td><code>external</code></td>
@@ -262,8 +353,7 @@ adapterConfig: {
         </div>
         <p>
           Everything else flows from <code>EsBuildAdapterConfig</code> — extra
-          plugins, replaced entry paths, custom loaders, and the
-          export-compensation list.
+          plugins, framework presets, replaced entry paths, and custom loaders.
         </p>
       </main>
     </div>

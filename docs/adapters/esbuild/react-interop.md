@@ -4,15 +4,33 @@ applies_to: [v4]
 
 # React & CommonJS Interop
 
-> CommonJS interop for the esbuild adapter — React fileReplacements, compensateExports, shareAll overrides and the Shadow-DOM custom-element pattern.
+> CommonJS interop for the esbuild adapter — the React preset, fileReplacements, shareAll overrides and the Shadow-DOM custom-element pattern.
 
-Most of the React-specific plumbing in the esbuild adapter exists because React still ships as CommonJS. This page collects every knob you might need — the built-in CommonJS plugin, `fileReplacements`, `compensateExports`, the `shareAll` overrides, the `skip` list, and the Shadow-DOM custom-element pattern.
+Most of the React-specific plumbing in the esbuild adapter exists because React still ships as CommonJS. In v4 this is wrapped up in a built-in **React preset** that the adapter applies by default, so a React remote works out of the box. This page explains what that preset does and the knobs around it — the CommonJS plugin, `fileReplacements`, the `shareAll` overrides, the `skip` list, and the Shadow-DOM custom-element pattern.
 
-## The CommonJS Plugin (Automatic)
+## The React Preset (Default)
 
-Every **node-modules** bundle is built with [`@chialab/esbuild-plugin-commonjs`](https://www.npmjs.com/package/@chialab/esbuild-plugin-commonjs), and the adapter defines `process.env.NODE_ENV` (`"development"` or `"production"` based on `dev`). For most CJS libraries this is enough — the plugin converts `module.exports` / `exports.*` patterns to ESM named exports and you import them as normal.
+The adapter's [`frameworks`](configuration.md#frameworks) option defaults to `[reactFrameworkPlugin()]` whenever you don't pass `frameworks` yourself. That preset does two things:
 
-There is no opt-out and no configuration: the node-modules bundle is deliberately opaque so that _shared_ dependencies always come out of the build shaped the same way, regardless of what the host app does.
+1. Registers the canonical React `fileReplacements` (the `cjs/` map below), picking the development or production variant from the build's `dev` flag.
+2. Sets `needsCommonJsPlugin: true`, which turns on `@chialab/esbuild-plugin-commonjs` for the node-modules bundle.
+
+So for a React remote you usually configure nothing — just leave `adapterConfig.plugins: []` (or omit `adapterConfig` entirely) and the preset handles React. The package ships `@chialab/esbuild-plugin-commonjs` as a dependency, so there is nothing extra to install.
+
+If you are **not** building a React app, opt out by passing an empty array:
+
+```ts
+adapterConfig: {
+  plugins: [],
+  frameworks: [],
+}
+```
+
+## The CommonJS Plugin
+
+When a preset sets `needsCommonJsPlugin` (the React preset does), the **node-modules** bundle is built with [`@chialab/esbuild-plugin-commonjs`](https://www.npmjs.com/package/@chialab/esbuild-plugin-commonjs). The adapter also defines `process.env.NODE_ENV` (`"development"` or `"production"` based on `dev`) on that bundle unconditionally. For most CJS libraries the plugin is enough — it converts `module.exports` / `exports.*` patterns to ESM named exports and you import them as normal.
+
+With `frameworks: []` (no preset requesting it), the CommonJS plugin is not applied — the node-modules bundle is built as plain ESM.
 
 ## Why React Needs Extra Work
 
@@ -22,29 +40,15 @@ React's entry points (`react/index.js`, `react/jsx-runtime.js`, `react-dom/index
 2. React's named exports (`useState`, `useEffect`, …) are attached to `module.exports` inside the `cjs/` file. Going through the wrapper layer can lose them after conversion, depending on how each consumer imports them.
 3. React's submodules (`react-dom/client`, `react/jsx-runtime`, …) must share identity with the main module at runtime, or you get _Invalid Hook Call_ errors across the federation boundary.
 
-The adapter has three mechanisms for this — a default, a fallback, and a core-level knob.
+The React preset solves all of this by pointing React's entry points straight at its pre-bundled `cjs/` files, so esbuild never sees the dynamic `require()`.
 
-## Default: `compensateExports`
+## What the Preset Replaces
 
-Out of the box, `EsBuildAdapterConfig.compensateExports` defaults to `[/react/]`. Modules matching this list go through the core's **export-compensation pass**: the adapter parses the bundled output with `acorn`, detects named `exports.*` assignments and default exports, and writes a small re-export shim so named ESM imports resolve correctly regardless of how the CJS side wrote them.
-
-For most React apps this default is all you need. Leave it alone unless you are sharing another CJS library with the same export shape and want it compensated too:
+The React preset applies this `fileReplacements` map automatically — the development variant when `dev` is on, the production variant otherwise. You do not have to write any of it; it is shown here so you know what the build resolves React to:
 
 ```ts
-adapterConfig: {
-  plugins: [],
-  compensateExports: [/react/, /some-legacy-cjs-lib/],
-}
-```
-
-## Fallback: `fileReplacements`
-
-When the wrapper dance still gives you hook errors, or when you want a fully pre-bundled React build for production, point the entry points directly at React's `cjs/` files. The adapter already ships this replacement map internally — reuse it verbatim or adapt per environment:
-
-```ts
-const isDev = process.argv.includes('--dev');
-
-const reactDev = {
+// dev
+{
   'node_modules/react/index.js':
     'node_modules/react/cjs/react.development.js',
   'node_modules/react/jsx-runtime.js':
@@ -53,9 +57,10 @@ const reactDev = {
     'node_modules/react/cjs/react-jsx-dev-runtime.development.js',
   'node_modules/react-dom/index.js':
     'node_modules/react-dom/cjs/react-dom.development.js',
-};
+}
 
-const reactProd = {
+// prod
+{
   'node_modules/react/index.js':
     'node_modules/react/cjs/react.production.min.js',
   'node_modules/react/jsx-runtime.js':
@@ -64,21 +69,28 @@ const reactProd = {
     'node_modules/react/cjs/react-jsx-dev-runtime.production.min.js',
   'node_modules/react-dom/index.js':
     'node_modules/react-dom/cjs/react-dom.production.min.js',
-};
+}
+```
 
+Feeding the pre-bundled React straight into esbuild skips the dynamic `require()` entirely and keeps the named exports intact across the federation boundary.
+
+## Overriding the Replacements
+
+You only need to touch `fileReplacements` when the defaults don't fit — for example, pinning React to a specific build or replacing a different CJS library. Your top-level `adapterConfig.fileReplacements` is merged on top of the preset's map and wins on conflicts:
+
+```ts
 await runEsBuildBuilder('federation.config.js', {
   outputPath: 'dist',
   entryPoints: ['src/bootstrap.tsx'],
-  dev: isDev,
-  watch: isDev,
   adapterConfig: {
     plugins: [],
-    fileReplacements: isDev ? reactDev : reactProd,
+    fileReplacements: {
+      'node_modules/react/index.js':
+        'node_modules/react/cjs/react.production.min.js',
+    },
   },
 });
 ```
-
-This feeds the pre-bundled React straight into esbuild and skips the dynamic `require()` entirely. Combine it with the default `compensateExports` and the named-export story is airtight.
 
 ## `shareAll` Overrides
 
@@ -167,8 +179,8 @@ The entry point in your `federation.config.js`'s `exposes` map points at this fi
 
 ## Checklist
 
-- Keep the default `compensateExports: [/react/]`.
+- Leave the default React preset in place — don't pass `frameworks: []` for a React app.
 - Share `react` and `react-dom` as _singletons_ with `includeSecondaries: { keepAll: true }`.
 - Skip `react-dom/server*` and `react-dom/test-utils`.
 - Expose a custom element with Shadow DOM so the remote is drop-in on any host.
-- If you still hit hook errors or missing named exports, add the React `fileReplacements` map above.
+- Only override `fileReplacements` if you need React pinned to a build the preset doesn't pick.

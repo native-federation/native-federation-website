@@ -67,12 +67,35 @@
           fifty lines.
         </p>
 
+        <a
+          class="playground-banner"
+          href="https://github.com/native-federation/playground"
+          target="_blank"
+          rel="noopener"
+        >
+          <div>
+            <span class="playground-banner__title">Browse the playground</span>
+            <p class="playground-banner__desc">
+              More runnable Native Federation examples live at
+              <code>native-federation/playground</code>.
+            </p>
+          </div>
+          <span class="playground-banner__cta">Open on GitHub →</span>
+        </a>
+
         <h2>1. Install</h2>
         <pre><code>npm i -D esbuild \
   @softarc/native-federation \
-  @softarc/native-federation-esbuild \
-  @chialab/esbuild-plugin-commonjs
+  @softarc/native-federation-esbuild
 npm i @softarc/native-federation-orchestrator</code></pre>
+        <div class="callout">
+          <p>
+            You no longer install
+            <code>@chialab/esbuild-plugin-commonjs</code> — it ships as a
+            dependency of the adapter and the React CommonJS plugin is wired up
+            automatically by the default React preset.
+          </p>
+        </div>
         <p>
           Also make sure your <code>package.json</code> has
           <code>"type": "module"</code> — the adapter and its generated
@@ -251,7 +274,7 @@ if (isDev) {
     &lt;/script&gt;
 
     &lt;!-- 3. Include the orchestrator runtime --&gt;
-    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.2/quickstart.mjs"&gt;&lt;/script&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.2.1/quickstart.mjs"&gt;&lt;/script&gt;
   &lt;/head&gt;
   &lt;body&gt;
     &lt;!-- 4. Use your loaded components --&gt;

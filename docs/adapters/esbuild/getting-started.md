@@ -8,15 +8,18 @@ applies_to: [v4]
 
 This page walks the [React reference example](https://github.com/Aukevanoost/native-federation-examples-react/) end-to-end — a `federation.config.js`, a `build.mjs` that drives the adapter, and a host page that mounts the remote as a custom element. The whole setup is roughly fifty lines.
 
+> **Browse the playground** — more runnable Native Federation examples live at [native-federation/playground](https://github.com/native-federation/playground).
+
 ## 1. Install
 
 ```bash
 npm i -D esbuild \
   @softarc/native-federation \
-  @softarc/native-federation-esbuild \
-  @chialab/esbuild-plugin-commonjs
+  @softarc/native-federation-esbuild
 npm i @softarc/native-federation-orchestrator
 ```
+
+> **Note:** You no longer install `@chialab/esbuild-plugin-commonjs` — it ships as a dependency of the adapter and the React CommonJS plugin is wired up automatically by the default React preset.
 
 Also make sure your `package.json` has `"type": "module"` — the adapter and its generated `federation.config.js` are native ESM.
 
@@ -147,7 +150,7 @@ The host page declares the remotes, pulls in the orchestrator runtime, and mount
     </script>
 
     <!-- 3. Include the orchestrator runtime -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.0.2/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.2.1/quickstart.mjs"></script>
   </head>
   <body>
     <!-- 4. Use your loaded components -->

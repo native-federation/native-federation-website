@@ -18,6 +18,14 @@ Repo: https://github.com/native-federation/orchestrator
 | ---------- | ------- | --------- |
 | 2026-05-26 | `4.2.1` | `3da79c8` |
 
+## `@softarc/native-federation-esbuild`
+
+Repo: https://github.com/native-federation/esbuild-adapter
+
+| Date       | Version | Commit    |
+| ---------- | ------- | --------- |
+| 2026-05-26 | `4.0.0` | `f3d5810` |
+
 ## `@angular-architects/native-federation-v4`
 
 Repo: https://github.com/native-federation/angular-adapter
