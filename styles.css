@@ -976,6 +976,17 @@ li code {
   gap: 8px;
 }
 
+.resource-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin-top: 12px;
+}
+
+.resource-links .resource-link {
+  margin-top: 0;
+}
+
 /* --- Doc Tables --- */
 .table-wrap {
   overflow-x: auto;
