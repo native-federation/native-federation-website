@@ -41,13 +41,14 @@ Configuration DSL used inside `federation.config.js`.
 
 TypeScript contracts — types only. Useful when authoring an adapter or integrating at the type level.
 
-- `FederationConfig`, `NormalizedFederationConfig`
-- `ExternalConfig`, `NormalizedExternalConfig`, `SharedExternalsConfig`, `ShareExternalsOptions`, `ShareAllExternalsOptions`, `IncludeSecondariesOptions`
+- `FederationConfig`
+- `ExternalConfig`, `SharedExternalsConfig`, `ShareExternalsOptions`, `ShareAllExternalsOptions`, `IncludeSecondariesOptions`
 - `FederationOptions`, `NormalizedFederationOptions`
 - `NFBuildAdapter`, `NFBuildAdapterOptions`, `NFBuildAdapterContext`, `NFBuildAdapterResult`, `EntryPoint`
 - `FederationInfo`, `SharedInfo`, `ExposesInfo`, `ChunkInfo`, `ArtifactInfo`, `IntegrityMap`
+- `FederationManifest` — the host manifest shape: `Record<string, string | { url; integrity?; main? }>`
 - `FederationCache`
-- `SkipList`, `PreparedSkipList`
+- `SkipList`, `SkipListEntry`, `SkipFn`, `PreparedSkipList`
 - `BuildNotificationOptions`, `BuildNotificationType`
 
 ## `@softarc/native-federation/internal`

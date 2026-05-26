@@ -242,12 +242,9 @@
           integrating at the type level.
         </p>
         <ul>
+          <li><code>FederationConfig</code></li>
           <li>
-            <code>FederationConfig</code>,
-            <code>NormalizedFederationConfig</code>
-          </li>
-          <li>
-            <code>ExternalConfig</code>, <code>NormalizedExternalConfig</code>,
+            <code>ExternalConfig</code>,
             <code>SharedExternalsConfig</code>,
             <code>ShareExternalsOptions</code>,
             <code>ShareAllExternalsOptions</code>,
@@ -267,8 +264,15 @@
             <code>ExposesInfo</code>, <code>ChunkInfo</code>,
             <code>ArtifactInfo</code>, <code>IntegrityMap</code>
           </li>
+          <li>
+            <code>FederationManifest</code> — the host manifest shape:
+            <code>Record&lt;string, string | { url; integrity?; main? }&gt;</code>
+          </li>
           <li><code>FederationCache</code></li>
-          <li><code>SkipList</code>, <code>PreparedSkipList</code></li>
+          <li>
+            <code>SkipList</code>, <code>SkipListEntry</code>,
+            <code>SkipFn</code>, <code>PreparedSkipList</code>
+          </li>
           <li>
             <code>BuildNotificationOptions</code>,
             <code>BuildNotificationType</code>

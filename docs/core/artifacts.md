@@ -38,6 +38,7 @@ interface FederationInfo {
 interface ExposesInfo {
   key: string; // e.g. './component'
   outFileName: string; // path relative to remoteEntry.json
+  element?: string; // custom-element tag name, when set on the exposes entry
   dev?: { entryPoint: string };
 }
 

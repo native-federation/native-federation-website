@@ -42,7 +42,7 @@ export default withNativeFederation({
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `name` | `string` | `''` | The remote's name. Used as the key in the host manifest and in the generated `remoteEntry.json`. |
-| `exposes` | `Record<string, string>` | `{}` | Map of public keys (e.g. `'./component'`) to file paths. Every entry becomes a module a host can load via `loadRemoteModule`. |
+| `exposes` | `Record<string, string \| { file, element? }>` | `{}` | Map of public keys (e.g. `'./component'`) to file paths. Every entry becomes a module a host can load via `loadRemoteModule`. A value can be a path string or an object with an explicit `file` and an optional `element` tag name. |
 | `shared` | `SharedExternalsConfig` | *all deps* | Packages to share between host and remotes. If omitted, the core shares every dependency found in `package.json` with sensible defaults. See [Sharing Dependencies](sharing.md). |
 | `sharedMappings` | `string[]` | all `tsconfig` paths | Paths mapped in your `tsconfig` that should be treated as shared (monorepo-internal libraries). |
 | `platform` | `'browser' \| 'node'` | `'browser'` | Default platform for shared externals that don't set their own. |
@@ -82,6 +82,25 @@ Each entry ends up in `remoteEntry.json` as:
 ```
 
 A host then imports it as `mfe1/./Component` via the import map. Hosts that don't expose modules simply omit the field.
+
+### Object form
+
+Instead of a bare path string, an entry can be an object. This lets you attach extra metadata to an exposed module while keeping the path under `file`:
+
+```js
+exposes: {
+  // string form — shorthand for { file: '...' }
+  './routes': './projects/mfe1/src/routes.ts',
+
+  // object form
+  './Widget': {
+    file: './projects/mfe1/src/widget.ts',
+    element: 'mfe1-widget',
+  },
+}
+```
+
+`withNativeFederation` normalizes both forms to `{ file, element? }`. The optional `element` is a custom-element tag name, carried through to the exposed module's entry in `remoteEntry.json` (`{ "key": "./Widget", "outFileName": "…", "element": "mfe1-widget" }`) so a consumer can register the module as a web component. It's metadata only — the core build doesn't act on it.
 
 ## shared & the share helpers
 

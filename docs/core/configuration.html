@@ -126,12 +126,16 @@ export default withNativeFederation({
               </tr>
               <tr>
                 <td><code>exposes</code></td>
-                <td><code>Record&lt;string, string&gt;</code></td>
+                <td>
+                  <code>Record&lt;string, string | { file, element? }&gt;</code>
+                </td>
                 <td><code>{}</code></td>
                 <td>
                   Map of public keys (e.g. <code>'./component'</code>) to file
                   paths. Every entry becomes a module a host can load via
-                  <code>loadRemoteModule</code>.
+                  <code>loadRemoteModule</code>. A value can be a path string or
+                  an object with an explicit <code>file</code> and an optional
+                  <code>element</code> tag name.
                 </td>
               </tr>
               <tr>
@@ -260,6 +264,31 @@ export default withNativeFederation({
         <p>
           A host then imports it as <code>mfe1/./Component</code> via the import
           map. Hosts that don't expose modules simply omit the field.
+        </p>
+        <h3>Object form</h3>
+        <p>
+          Instead of a bare path string, an entry can be an object. This lets
+          you attach extra metadata to an exposed module while keeping the path
+          under <code>file</code>:
+        </p>
+        <pre><code>exposes: {
+  // string form — shorthand for { file: '...' }
+  './routes': './projects/mfe1/src/routes.ts',
+
+  // object form
+  './Widget': {
+    file: './projects/mfe1/src/widget.ts',
+    element: 'mfe1-widget',
+  },
+}</code></pre>
+        <p>
+          <code>withNativeFederation</code> normalizes both forms to
+          <code>{ file, element? }</code>. The optional <code>element</code> is
+          a custom-element tag name, carried through to the exposed module's
+          entry in <code>remoteEntry.json</code> (<code
+            >{ "key": "./Widget", "outFileName": "…", "element": "mfe1-widget" }</code
+          >) so a consumer can register the module as a web component. It's
+          metadata only — the core build doesn't act on it.
         </p>
 
         <h2 id="shared">shared &amp; the share helpers</h2>
