@@ -55,8 +55,9 @@
         </div>
         <p class="doc-lead">
           v4 of the Angular adapter is a packaging and runtime upgrade — full
-          ESM, an opt-in
-          <a href="../runtime/index.html">orchestrator</a> runtime, and a few
+          ESM, the
+          <a href="../runtime/index.html">orchestrator</a> runtime by default,
+          and a few
           <code>angular.json</code> tidy-ups. The
           <code>update-v4</code> schematic does the work for you, but the steps
           below are useful when migrating by hand or auditing the diff.
@@ -69,10 +70,8 @@
             — see
             <a href="schematics.html#update-v4">Schematics → update-v4</a>. Pass
             <code>--project &lt;name&gt;</code> to scope it to a single project,
-            otherwise every project in the workspace is migrated. Accept the
-            <code>--orchestrator</code> prompt to also rewrite
-            <code>main.ts</code> onto the new runtime. The same migration runs
-            automatically on <code>ng update</code>.
+            otherwise every project in the workspace is migrated. The same
+            migration runs automatically on <code>ng update</code>.
           </p>
         </div>
 
@@ -83,7 +82,7 @@
 └── 📁 projects/&lt;your-project&gt;/
     ├── 📄 federation.config.mjs        ← renamed from .js, CommonJS → ESM, package rename
     └── 📁 src/
-        └── 📄 main.ts                  ← runtime import update (and optionally orchestrator wiring)</code></pre>
+        └── 📄 main.ts                  ← import moved to the -v4 package (orchestrator wiring is an optional manual step)</code></pre>
 
         <h2>0. Clear Caches</h2>
         <p>
@@ -100,11 +99,16 @@
     "@softarc/native-federation-runtime": "~4.0.0"
   },
   "devDependencies": {
-    "@angular-architects/native-federation-v4": "^21.1.13",
+    "@angular-architects/native-federation-v4": "~21.2.1",
     "@softarc/native-federation": "~4.0.0",
     "@softarc/native-federation-orchestrator": "^4.0.0"
   }
 }</code></pre>
+        <p>
+          <code>@softarc/native-federation-runtime</code> is only needed if you
+          deliberately stay on the classic runtime — v4 runs on the orchestrator
+          by default, so for most projects you can drop it.
+        </p>
         <p>
           The v4 generation is published under
           <code>@angular-architects/native-federation-v4</code> while it
@@ -204,34 +208,38 @@ export default withNativeFederation({
 
         <h2>4. <code>main.ts</code> — Required Change</h2>
         <p>
-          Update the runtime import. v3 re-exported the runtime under
-          <code>@angular-architects/native-federation</code>; v4 imports it
-          directly from the runtime package:
+          Update the import path. v3 re-exported the runtime under
+          <code>@angular-architects/native-federation</code>; on v4 the import
+          simply moves to the <code>-v4</code> package — this is exactly what
+          the <code>update-v4</code> schematic rewrites:
         </p>
         <pre><code>// before
 import { initFederation } from '@angular-architects/native-federation';
 
 // after
-import { initFederation } from '@softarc/native-federation-runtime';
+import { initFederation } from '@angular-architects/native-federation-v4';
 
 initFederation()
   .catch(err =&gt; console.error(err))
   .then(_ =&gt; import('./bootstrap'))
   .catch(err =&gt; console.error(err));</code></pre>
         <p>
-          That's the minimum to be on v4. The legacy runtime keeps working, but
-          you miss out on the orchestrator's range-based version selection,
-          share scopes and in-browser caching.
+          That's the minimum to be on v4. The adapter's
+          <code>initFederation</code> bridges to the orchestrator under the
+          hood, so you already get range-based version selection, share scopes
+          and in-browser caching without touching your call.
         </p>
 
-        <h2>5. Optional — Switch to the Orchestrator</h2>
+        <h2 id="orchestrator">5. Optional — Switch to the Orchestrator</h2>
         <p>
-          The <code>update-v4</code> schematic offers this step interactively
-          via the <code>--orchestrator</code> flag (or the prompt). It keeps
-          your existing <code>initFederation</code> first argument (the manifest
-          path, remote map, or
-          <code>{ '&lt;project&gt;': './remoteEntry.json' }</code>) and appends
-          the orchestrator's options block as a second argument:
+          This is a <strong>manual</strong> step — <code>update-v4</code> does
+          not perform it. If you want to call
+          <code>@softarc/native-federation-orchestrator</code> directly (for
+          full control over its options and the destructured
+          <code>loadRemoteModule</code>), keep your existing
+          <code>initFederation</code> first argument (the manifest path, remote
+          map, or <code>{ '&lt;project&gt;': './remoteEntry.json' }</code>) and
+          append the orchestrator's options block as a second argument:
         </p>
         <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
 import {
@@ -266,7 +274,7 @@ initFederation(manifest, orchestratorOptions)
         <p>
           See
           <a href="runtime.html#orchestrator"
-            >Runtime → Opting into the Orchestrator</a
+            >Runtime → The orchestrator runtime</a
           >
           for the full DI pattern (bootstrap, app config, injection token).
         </p>

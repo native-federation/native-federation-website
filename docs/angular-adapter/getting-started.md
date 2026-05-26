@@ -16,7 +16,7 @@ Install the adapter, run `ng add` on every project that should participate in th
 npm i @angular-architects/native-federation-v4 -D
 ```
 
-The package brings `@softarc/native-federation` (`~4.0.0`) and `@softarc/native-federation-runtime` (`~4.0.0`) as transitive dependencies. The `ng add` step below adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` on top — nothing else to install up front.
+The package brings `@softarc/native-federation` (`^4.0.0`) and `@softarc/native-federation-orchestrator` (`^4.0.0`) as dependencies. The `ng add` step below adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` (as a devDependency) on top — nothing else to install up front.
 
 ## 2. Scaffold a Remote (Micro Frontend)
 
@@ -56,7 +56,7 @@ Pick the type that fits the role of the project:
 
 ## 4. Wire a Lazy Route in the Host
 
-Loading a remote module is plain Angular lazy-loading with `loadRemoteModule` in place of a dynamic `import()`. On v4 the schematic wires the orchestrator by default, which returns `loadRemoteModule` from `initFederation` — pass it through Angular's DI so routes can use it:
+Loading a remote module is plain Angular lazy-loading with `loadRemoteModule` in place of a dynamic `import()`. On v4 the schematic wires the orchestrator directly — the generated `main.ts` initialises federation, then dynamically imports your Angular bootstrap:
 
 ```ts
 // projects/shell/src/main.ts (generated)
@@ -74,17 +74,19 @@ initFederation('/assets/federation.manifest.json', {
   hostRemoteEntry: './remoteEntry.json',
   logLevel: 'debug',
 })
-  .then(({ loadRemoteModule }) =>
-    import('./bootstrap').then(m => m.bootstrap(loadRemoteModule)))
+  .catch(err => console.error(err))
+  .then(_ => import('./bootstrap'))
   .catch(err => console.error(err));
 ```
+
+With that generated bootstrap, routes use the `loadRemoteModule` re-exported from the adapter package:
 
 ```ts
 // projects/shell/src/app/app.routes.ts
 import { Routes } from '@angular/router';
-import type { LoadRemoteModule } from '@softarc/native-federation-orchestrator';
+import { loadRemoteModule } from '@angular-architects/native-federation-v4';
 
-export const routes = (loadRemoteModule: LoadRemoteModule): Routes => [
+export const routes: Routes = [
   {
     path: 'flights',
     loadComponent: () =>
@@ -93,7 +95,7 @@ export const routes = (loadRemoteModule: LoadRemoteModule): Routes => [
 ];
 ```
 
-See [Runtime](runtime.md) for the full `loadRemoteModule` reference, the bootstrap/app-config wiring, and how to stay on the classic runtime (`@softarc/native-federation-runtime`) if you prefer a global `loadRemoteModule` import.
+> **Note:** That top-level `loadRemoteModule` is convenient but deprecated. For the recommended pattern — taking `loadRemoteModule` off the resolved `initFederation` promise and threading it through Angular's DI — see [Runtime](runtime.md).
 
 ## 5. Run It
 

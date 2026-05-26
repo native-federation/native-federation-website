@@ -252,16 +252,16 @@
         </ul>
 
         <h2 id="update-v4">update-v4</h2>
-        <pre><code>ng g @angular-architects/native-federation-v4:update-v4 [--project &lt;name&gt;] [--orchestrator]</code></pre>
+        <pre><code>ng g @angular-architects/native-federation-v4:update-v4 [--project &lt;name&gt;]</code></pre>
         <p>
-          Migrates a v3 project (CommonJS, legacy runtime) to v4 (full ESM,
-          optional orchestrator). <code>--project</code> is optional — omit it
+          Migrates a v3 project (CommonJS, legacy runtime) to v4 (full ESM).
+          <code>--project</code> is optional — omit it
           to migrate every project in the workspace. The schematic is also wired
           into <code>ng update</code>'s migration collection, so
           <code>ng update</code> picks it up automatically when you bump to a v4
           release.
         </p>
-        <p>It performs:</p>
+        <p>It performs three changes:</p>
         <ol>
           <li>
             Renames every
@@ -286,29 +286,22 @@
           <li>
             Updates <code>main.ts</code> imports from
             <code>@angular-architects/native-federation</code> to
-            <code>@softarc/native-federation-runtime</code>.
+            <code>@angular-architects/native-federation-v4</code>. Because the
+            v4 adapter's <code>initFederation</code> bridges to the
+            orchestrator, your migrated project runs on the orchestrator runtime
+            without further changes.
           </li>
         </ol>
         <p>
-          If you pass <code>--orchestrator</code> (or accept the prompt) it
-          additionally:
+          The schematic does <strong>not</strong> rewrite your bootstrap onto
+          the orchestrator's own API or change the shape of the
+          <code>initFederation</code> call. If you'd rather call
+          <code>@softarc/native-federation-orchestrator</code> directly — for
+          the destructured <code>loadRemoteModule</code> and full control over
+          its options — do it by hand; see
+          <a href="migration-v4.html#orchestrator">Migration to v4 → Switch to
+          the Orchestrator</a>.
         </p>
-        <ol start="4">
-          <li>
-            Adds
-            <code>@softarc/native-federation-orchestrator</code>
-            (<code>^4.0.0</code>) to <code>dependencies</code>.
-          </li>
-          <li>
-            Surgically rewrites <code>initFederation(...)</code> to import from
-            the orchestrator and pass the orchestrator's options block
-            (<code>useShimImportMap</code>, <code>consoleLogger</code>,
-            <code>globalThisStorageEntry</code>,
-            <code>hostRemoteEntry: './remoteEntry.json'</code>,
-            <code>logLevel: 'debug'</code>). The existing first argument
-            (manifest path, remote map, or <code>{}</code>) is preserved.
-          </li>
-        </ol>
         <p>
           Not touched by this schematic: the root <code>package.json</code>'s
           <code>"type": "module"</code> and the v4 runtime/core packages — those

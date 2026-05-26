@@ -54,14 +54,16 @@
           >
         </div>
         <p class="doc-lead">
-          The Angular adapter doesn't ship its own runtime — it re-exports
-          <code>initFederation</code> and <code>loadRemoteModule</code> from
-          <code>@softarc/native-federation-runtime</code> (on v3 under
-          <code>@angular-architects/native-federation</code>, on v4 under
-          <code>@angular-architects/native-federation-v4</code>). This page
-          covers how the two integrate with an Angular bootstrap and what
-          changes when you opt into the new
-          <a href="../runtime/index.html">orchestrator</a> runtime.
+          On v3 the adapter re-exported <code>initFederation</code> and
+          <code>loadRemoteModule</code> from the classic
+          <code>@softarc/native-federation-runtime</code>. On v4 the adapter
+          ships its own <code>initFederation</code> (and a deprecated top-level
+          <code>loadRemoteModule</code>) from
+          <code>@angular-architects/native-federation-v4</code> that bridge to
+          the <a href="../runtime/index.html">orchestrator</a> runtime by
+          default. The generated <code>main.ts</code> goes one step further and
+          calls the orchestrator directly. This page covers how these integrate
+          with an Angular bootstrap.
         </p>
 
         <nav class="page-toc" aria-label="On this page">
@@ -71,7 +73,7 @@
             <li><a href="#init">initFederation</a></li>
             <li><a href="#load">loadRemoteModule</a></li>
             <li><a href="#manifest">The federation manifest</a></li>
-            <li><a href="#orchestrator">Opting into the orchestrator</a></li>
+            <li><a href="#orchestrator">The orchestrator runtime</a></li>
           </ul>
         </nav>
 
@@ -103,7 +105,17 @@ bootstrapApplication(AppComponent, appConfig)
         </p>
 
         <h2 id="init">initFederation</h2>
-        <pre><code>initFederation(remotesOrManifest?, options?): Promise&lt;void&gt;</code></pre>
+        <p>
+          On v4 the adapter's <code>initFederation</code> wraps the orchestrator
+          with sensible defaults (shim import map, console logger,
+          <code>globalThis</code> storage, <code>hostRemoteEntry:
+          './remoteEntry.json'</code>, <code>logLevel: 'debug'</code>) and
+          resolves to a <code>NativeFederationResult</code>:
+        </p>
+        <pre><code>initFederation(
+  remotesOrManifestUrl?: Record&lt;string, string&gt; | string,
+  options?: { cacheTag?: string; logging?: LogType },
+): Promise&lt;NativeFederationResult&gt;</code></pre>
         <ul>
           <li>
             <strong>Host (dynamic).</strong> Pass the manifest URL:
@@ -124,8 +136,12 @@ bootstrapApplication(AppComponent, appConfig)
           </li>
         </ul>
         <p>
-          The schematic emits the right call for the project type you chose —
-          see <a href="schematics.html#init">Schematics → init</a>.
+          The resolved <code>NativeFederationResult</code> carries the
+          <code>loadRemoteModule</code> you should use (see below). The
+          <code>init</code> schematic emits the right call for the project type
+          you chose — and on v4 it imports <code>initFederation</code> straight
+          from <code>@softarc/native-federation-orchestrator</code>. See
+          <a href="schematics.html#init">Schematics → init</a>.
         </p>
 
         <h2 id="load">loadRemoteModule</h2>
@@ -137,7 +153,7 @@ bootstrapApplication(AppComponent, appConfig)
         </p>
         <pre><code>// projects/shell/src/app/app.routes.ts
 import { Routes } from '@angular/router';
-import { loadRemoteModule } from '@angular-architects/native-federation';
+import { loadRemoteModule } from '@angular-architects/native-federation-v4';
 
 export const APP_ROUTES: Routes = [
   {
@@ -159,6 +175,18 @@ export const APP_ROUTES: Routes = [
           <code>exposes</code>. The promise resolves to the module's exports —
           whatever you'd get from a regular dynamic <code>import()</code>.
         </p>
+        <div class="callout">
+          <p>
+            <strong>Deprecated on v4.</strong> This top-level
+            <code>loadRemoteModule</code> import is kept for backwards
+            compatibility but is deprecated — it resolves against a
+            module-scoped instance from the most recent
+            <code>initFederation</code> call, which is brittle in tests and
+            multi-host setups. Prefer the <code>loadRemoteModule</code> returned
+            by the <code>initFederation</code> promise and thread it through
+            Angular's DI (see <a href="#orchestrator">below</a>).
+          </p>
+        </div>
 
         <h2 id="manifest">The Federation Manifest</h2>
         <p>
@@ -188,23 +216,19 @@ export const APP_ROUTES: Routes = [
           </p>
         </div>
 
-        <h2 id="orchestrator">Opting into the Orchestrator</h2>
+        <h2 id="orchestrator">The Orchestrator Runtime</h2>
         <p>
-          The legacy runtime (<code>@softarc/native-federation-runtime</code>,
-          re-exported from the adapter as
-          <code>@angular-architects/native-federation</code> on v3 and
-          <code>@angular-architects/native-federation-v4</code> on v4) is the v3
-          default and remains fully supported on v4. v4 introduces a more
-          capable runtime — the <strong>orchestrator</strong> — with range-based
-          version selection, share scopes, in-browser caching, configurable
-          storage, and pluggable loggers.
+          The <strong>orchestrator</strong> is the default runtime on v4 — it
+          adds range-based version selection, share scopes, in-browser caching,
+          configurable storage, and pluggable loggers over the legacy
+          <code>@softarc/native-federation-runtime</code> (the v3 default). The
+          adapter's own <code>initFederation</code> already bridges to it, and
+          the <code>init</code> schematic generates a bootstrap that calls the
+          orchestrator directly.
         </p>
         <p>
-          On v4 the <code>init</code> schematic generates orchestrator-flavoured
-          bootstraps by default, and
-          <code>update-v4 --orchestrator</code> rewrites an existing
-          <code>main.ts</code> onto the orchestrator. Manually, the migration
-          looks like this:
+          A freshly scaffolded (or hand-written) orchestrator bootstrap looks
+          like this:
         </p>
         <pre><code>// projects/shell/src/main.ts
 import { initFederation } from '@softarc/native-federation-orchestrator';

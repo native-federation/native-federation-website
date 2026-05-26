@@ -72,21 +72,18 @@ It only touches `angular.json`:
 ## update-v4
 
 ```bash
-ng g @angular-architects/native-federation-v4:update-v4 [--project <name>] [--orchestrator]
+ng g @angular-architects/native-federation-v4:update-v4 [--project <name>]
 ```
 
-Migrates a v3 project (CommonJS, legacy runtime) to v4 (full ESM, optional orchestrator). `--project` is optional — omit it to migrate every project in the workspace. The schematic is also wired into `ng update`'s migration collection, so `ng update` picks it up automatically when you bump to a v4 release.
+Migrates a v3 project (CommonJS, legacy runtime) to v4 (full ESM). `--project` is optional — omit it to migrate every project in the workspace. The schematic is also wired into `ng update`'s migration collection, so `ng update` picks it up automatically when you bump to a v4 release.
 
-It performs:
+It performs three changes:
 
 1. Renames every `@angular-architects/native-federation:build` reference in `angular.json` to `@angular-architects/native-federation-v4:build`; ensures every federation target has `entryPoints` (defaulting to `<sourceRoot>/main.ts`) and `projectName` set.
 2. For every project's `federation.config.js`: rewrites from CommonJS to ESM (`require()` → `import`, `module.exports = ...` → `export default ...`), swaps `@angular-architects/native-federation` imports for `@angular-architects/native-federation-v4`, and **renames the file to `federation.config.mjs`**.
-3. Updates `main.ts` imports from `@angular-architects/native-federation` to `@softarc/native-federation-runtime`.
+3. Updates `main.ts` imports from `@angular-architects/native-federation` to `@angular-architects/native-federation-v4`. Because the v4 adapter's `initFederation` bridges to the orchestrator, your migrated project runs on the orchestrator runtime without further changes.
 
-If you pass `--orchestrator` (or accept the prompt) it additionally:
-
-4. Adds `@softarc/native-federation-orchestrator` (`^4.0.0`) to `dependencies`.
-5. Surgically rewrites `initFederation(...)` to import from the orchestrator and pass the orchestrator's options block (`useShimImportMap`, `consoleLogger`, `globalThisStorageEntry`, `hostRemoteEntry: './remoteEntry.json'`, `logLevel: 'debug'`). The existing first argument (manifest path, remote map, or `{}`) is preserved.
+The schematic does **not** rewrite your bootstrap onto the orchestrator's own API or change the shape of the `initFederation` call. If you'd rather call `@softarc/native-federation-orchestrator` directly — for the destructured `loadRemoteModule` and full control over its options — do it by hand; see [Migration to v4 → Switch to the Orchestrator](migration-v4.md#5-optional--switch-to-the-orchestrator).
 
 Not touched by this schematic: the root `package.json`'s `"type": "module"` and the v4 runtime/core packages — those are workspace-level concerns handled by `ng update` itself. See [Migration to v4](migration-v4.md) for the full walkthrough.
 

@@ -147,13 +147,13 @@
                 </td>
               </tr>
               <tr>
-                <td><strong>Runtime re-exports</strong></td>
+                <td><strong>Runtime helpers</strong></td>
                 <td><code>@angular-architects/native-federation-v4</code></td>
                 <td>
-                  Re-exports <code>initFederation</code>,
-                  <code>loadRemoteModule</code> (and related types) from
-                  <code>@softarc/native-federation-runtime</code> for ergonomic
-                  import when using the classic runtime. The generated
+                  Provides <code>initFederation</code> and a (deprecated)
+                  top-level <code>loadRemoteModule</code> that bridge to the
+                  <a href="runtime.html">orchestrator</a> runtime, plus
+                  re-exported domain types. The generated
                   <code>main.ts</code> wires the orchestrator by default — see
                   <a href="runtime.html">Runtime</a>.
                 </td>

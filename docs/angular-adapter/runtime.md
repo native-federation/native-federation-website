@@ -6,7 +6,7 @@ applies_to: [v3, v4]
 
 > The runtime side of the Angular adapter — initFederation, loadRemoteModule, lazy routes, and the optional orchestrator runtime.
 
-The Angular adapter doesn't ship its own runtime — it re-exports `initFederation` and `loadRemoteModule` from `@softarc/native-federation-runtime` (on v3 under `@angular-architects/native-federation`, on v4 under `@angular-architects/native-federation-v4`). This page covers how the two integrate with an Angular bootstrap and what changes when you opt into the new [orchestrator](../runtime/index.md) runtime.
+On v3 the adapter re-exported `initFederation` and `loadRemoteModule` from the classic `@softarc/native-federation-runtime`. On v4 the adapter ships its own `initFederation` (and a deprecated top-level `loadRemoteModule`) from `@angular-architects/native-federation-v4` that bridge to the [orchestrator](../runtime/index.md) runtime by default. The generated `main.ts` goes one step further and calls the orchestrator directly. This page covers how these integrate with an Angular bootstrap.
 
 **On this page**
 
@@ -14,7 +14,7 @@ The Angular adapter doesn't ship its own runtime — it re-exports `initFederati
 - [initFederation](#initfederation)
 - [loadRemoteModule](#loadremotemodule)
 - [The federation manifest](#the-federation-manifest)
-- [Opting into the orchestrator](#opting-into-the-orchestrator)
+- [The orchestrator runtime](#the-orchestrator-runtime)
 
 ## The Bootstrap Split
 
@@ -45,15 +45,20 @@ The dynamic `import('./bootstrap')` is mandatory: it forces the bundler to put y
 
 ## initFederation
 
+On v4 the adapter's `initFederation` wraps the orchestrator with sensible defaults (shim import map, console logger, `globalThis` storage, `hostRemoteEntry: './remoteEntry.json'`, `logLevel: 'debug'`) and resolves to a `NativeFederationResult`:
+
 ```ts
-initFederation(remotesOrManifest?, options?): Promise<void>
+initFederation(
+  remotesOrManifestUrl?: Record<string, string> | string,
+  options?: { cacheTag?: string; logging?: LogType },
+): Promise<NativeFederationResult>
 ```
 
 - **Host (dynamic).** Pass the manifest URL: `initFederation('/assets/federation.manifest.json')`.
 - **Host (static).** Pass the remote map inline: `initFederation({ mfe1: 'http://localhost:4201/remoteEntry.json' })`.
 - **Remote.** Pass a self-map: `initFederation({ mfe1: './remoteEntry.json' })`. This lets the remote's runtime register its own shared modules so the host can match versions.
 
-The schematic emits the right call for the project type you chose — see [Schematics → init](schematics.md#init--ng-add).
+The resolved `NativeFederationResult` carries the `loadRemoteModule` you should use (see below). The `init` schematic emits the right call for the project type you chose — and on v4 it imports `initFederation` straight from `@softarc/native-federation-orchestrator`. See [Schematics → init](schematics.md#init--ng-add).
 
 ## loadRemoteModule
 
@@ -66,7 +71,7 @@ Once `initFederation` resolves, you can lazy-load any exposed module from any re
 ```ts
 // projects/shell/src/app/app.routes.ts
 import { Routes } from '@angular/router';
-import { loadRemoteModule } from '@angular-architects/native-federation';
+import { loadRemoteModule } from '@angular-architects/native-federation-v4';
 
 export const APP_ROUTES: Routes = [
   {
@@ -84,6 +89,8 @@ export const APP_ROUTES: Routes = [
 
 `remoteName` matches the `name` in the remote's `federation.config.mjs` (or `.js` on v3 / legacy projects) and the key in the host's manifest. `exposedKey` matches the key under `exposes`. The promise resolves to the module's exports — whatever you'd get from a regular dynamic `import()`.
 
+> **Deprecated on v4.** This top-level `loadRemoteModule` import is kept for backwards compatibility but is deprecated — it resolves against a module-scoped instance from the most recent `initFederation` call, which is brittle in tests and multi-host setups. Prefer the `loadRemoteModule` returned by the `initFederation` promise and thread it through Angular's DI (see [below](#the-orchestrator-runtime)).
+
 ## The Federation Manifest
 
 For dynamic hosts, the manifest is just a JSON object mapping remote name → `remoteEntry.json` URL:
@@ -99,11 +106,11 @@ Swap it per environment by deploying a different `federation.manifest.json` alon
 
 > **Note:** Manifest URLs may be absolute (production CDN) or relative (local dev or same-origin deploys). For Angular SSR the same manifest is consumed server-side by `@softarc/native-federation-node` (or, on v4, by the orchestrator's [`/node` entry](../orchestrator/node.md)); see [SSR & Hydration](ssr.md).
 
-## Opting into the Orchestrator
+## The Orchestrator Runtime
 
-The legacy runtime (`@softarc/native-federation-runtime`, re-exported from the adapter as `@angular-architects/native-federation` on v3 and `@angular-architects/native-federation-v4` on v4) is the v3 default and remains fully supported on v4. v4 introduces a more capable runtime — the **orchestrator** — with range-based version selection, share scopes, in-browser caching, configurable storage, and pluggable loggers.
+The **orchestrator** is the default runtime on v4 — it adds range-based version selection, share scopes, in-browser caching, configurable storage, and pluggable loggers over the legacy `@softarc/native-federation-runtime` (the v3 default). The adapter's own `initFederation` already bridges to it, and the `init` schematic generates a bootstrap that calls the orchestrator directly.
 
-On v4 the `init` schematic generates orchestrator-flavoured bootstraps by default, and `update-v4 --orchestrator` rewrites an existing `main.ts` onto the orchestrator. Manually, the migration looks like this:
+A freshly scaffolded (or hand-written) orchestrator bootstrap looks like this:
 
 ```ts
 // projects/shell/src/main.ts
