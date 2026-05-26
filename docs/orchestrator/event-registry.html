@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orchestrator Event Registry — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="An in-page event bus exposed as window.__NF_REGISTRY__. Resolves the orchestrator's ready promise retroactively and gives micro frontends a typed channel for cross-MFE communication."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.com/docs/orchestrator/event-registry.html"
+    />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://native-federation.com/docs/orchestrator/event-registry.md"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:title"
+      content="Orchestrator Event Registry — Native Federation Docs"
+    />
+    <meta
+      property="og:description"
+      content="window.__NF_REGISTRY__ — the orchestrator's in-page event bus for race-free init and cross-MFE communication."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.com/docs/orchestrator/event-registry.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.com/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+      <main class="docs-content">
+        <h1>Event Registry</h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          An in-page event bus exposed as <code>window.__NF_REGISTRY__</code>.
+          Resolves the orchestrator's ready promise retroactively and gives
+          micro frontends a typed channel for cross-MFE communication.
+        </p>
+
+        <p>
+          The orchestrator ships a small event bus that lives on
+          <code>window.__NF_REGISTRY__</code>. It is what
+          <code>init-registry.mjs</code> boots up before the orchestrator
+          runtime arrives, and it covers two jobs:
+        </p>
+        <ol>
+          <li>
+            <strong>Resolving init promises retroactively.</strong> A subscriber
+            that arrives after the orchestrator has finished initializing still
+            receives <code>orch.init-ready</code> — no race condition window
+            like plain <code>window.addEventListener</code> events.
+          </li>
+          <li>
+            <strong>Robust cross-MFE communication.</strong> Micro frontends can
+            publish and subscribe to typed streams without holding direct
+            references to each other.
+          </li>
+        </ol>
+
+        <div class="callout callout-info">
+          <p>
+            <strong>Opt-in feature — it does not exist until you load it.</strong
+            ><br />
+            <code>window.__NF_REGISTRY__</code> is <strong>only</strong> created
+            when the registry has been initialized. For a quickstart host that
+            means adding the <code>init-registry.mjs</code> script (see
+            <a href="#installation">Installation</a> below) before any consumer
+            code runs. For a custom orchestrator host it means calling
+            <code>createRegistry({ ... })</code> from
+            <code>@softarc/native-federation-orchestrator/registry</code> and
+            assigning the result to <code>window.__NF_REGISTRY__</code>
+            yourself. If you skip both, the quickstart silently falls back to
+            the legacy <code>mfe-loader-available</code> custom event and
+            consumer code that calls
+            <code>window.__NF_REGISTRY__.onReady(...)</code> will throw
+            <em>Cannot read properties of undefined</em>.
+          </p>
+        </div>
+
+        <p>The registry distinguishes two concepts:</p>
+        <ul>
+          <li>
+            <strong>Resources</strong> — fire-and-latch values, delivered
+            through <code>register</code> / <code>onReady</code>. Once
+            registered, every future <code>onReady</code> consumer fires
+            immediately. Use these for one-shot readiness signals (the
+            orchestrator itself uses this for
+            <code>orch.init-ready</code>).
+          </li>
+          <li>
+            <strong>Event streams</strong> — append-only buffers, delivered
+            through <code>emit</code> / <code>update</code> / <code>on</code>.
+            Streams are bounded by <code>maxEvents</code> and (optionally)
+            <code>maxStreams</code>, and subscribers get configurable history
+            replay.
+          </li>
+        </ul>
+
+        <h2 id="installation">Installation</h2>
+        <p>
+          There are two supported ways to make
+          <code>window.__NF_REGISTRY__</code> available; pick the one that
+          matches how you ship the orchestrator.
+        </p>
+
+        <h3>Option A — quickstart hosts: load <code>init-registry.mjs</code></h3>
+        <p>
+          Include <code>init-registry.mjs</code> <strong>before</strong> the
+          rest of your scripts (including the orchestrator's
+          <code>quickstart.mjs</code> and any consumer code). Optionally tune
+          the bus via <code>data-*</code> attributes on the script tag:
+        </p>
+        <pre><code>&lt;script
+  src="https://unpkg.com/@softarc/native-federation-orchestrator@4.2.1/init-registry.mjs"
+  data-max-streams="50"
+  data-max-events="50"
+  data-remove-percentage="50"
+&gt;&lt;/script&gt;</code></pre>
+        <p>
+          After this script runs, <code>window.__NF_REGISTRY__</code> is a
+          frozen <code>NFEventRegistry</code> instance. The orchestrator's
+          quickstart bundle detects it at the end of init and publishes
+          <code>orch.init-ready</code> on it (see
+          <a href="#what-the-orchestrator-publishes"
+            >What the orchestrator publishes</a
+          >).
+        </p>
+
+        <h3>Option B — custom orchestrator hosts: create it yourself</h3>
+        <p>
+          If you bundle your own orchestrator script (calling
+          <code>initFederation</code> directly), <code>init-registry.mjs</code>
+          is the wrong shape — you don't load random
+          <code>unpkg</code> scripts in a bundled host. Instantiate the registry
+          from the <code>/registry</code> subpath and assign it to
+          <code>window</code> yourself, <em>before</em>
+          <code>initFederation</code> resolves:
+        </p>
+        <pre><code>import { createRegistry } from '@softarc/native-federation-orchestrator/registry';
+import { initFederation } from '@softarc/native-federation-orchestrator';
+
+// Same options as init-registry.mjs accepts via data-* attributes.
+// removePercentage is a fraction here (0.5), not a percent (50).
+window.__NF_REGISTRY__ = Object.freeze(
+  createRegistry({ maxEvents: 50, maxStreams: 50, removePercentage: 0.5 })()
+);
+
+initFederation(manifest, options).then(loaders =&gt; {
+  window.__NF_REGISTRY__.register('orch.init-ready', { ...loaders });
+});</code></pre>
+        <div class="callout callout-info">
+          <p>
+            <strong>If neither option runs, the registry doesn't exist.</strong>
+            <code>window.__NF_REGISTRY__</code> is <code>undefined</code> and
+            the orchestrator silently falls back to the legacy
+            <code>mfe-loader-available</code> <code>CustomEvent</code>. Consumer
+            code that calls <code>window.__NF_REGISTRY__.onReady(...)</code>
+            will throw — guard with
+            <code>window.__NF_REGISTRY__?.onReady(...)</code> if both wirings
+            must work side by side.
+          </p>
+        </div>
+
+        <h2>Configuration</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Attribute</th>
+                <th>Default (no attribute set)</th>
+                <th>Effect</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>data-max-streams</code></td>
+                <td>unbounded (no LRU eviction)</td>
+                <td>
+                  Maximum number of distinct stream types the registry will
+                  retain. When exceeded, the least-recently-emitted stream (and
+                  its history) is evicted.
+                </td>
+              </tr>
+              <tr>
+                <td><code>data-max-events</code></td>
+                <td><code>1</code> (latest-only)</td>
+                <td>
+                  Per-stream history depth. When exceeded, the oldest events are
+                  dropped — see <a href="#trimming">Trimming</a> below.
+                </td>
+              </tr>
+              <tr>
+                <td><code>data-remove-percentage</code></td>
+                <td><code>1</code> event removed per trim</td>
+                <td>
+                  When trimming kicks in, this percentage of
+                  <code>maxEvents</code> is evicted in one batch (so subsequent
+                  emits don't slice on every call). Expressed in %.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <p>
+            Without <code>data-max-events</code>, the registry only keeps the
+            most recent event per stream — fine for state-channels
+            (BehaviorSubject-style) but probably too aggressive for log-style
+            streams. Set <code>data-max-events</code> explicitly when you want
+            history.
+          </p>
+        </div>
+
+        <p>
+          If you instantiate the registry yourself via
+          <code>createRegistry({ ... })</code> rather than the script, the
+          equivalent options are <code>maxStreams</code>,
+          <code>maxEvents</code>, and <code>removePercentage</code>.
+          <strong
+            ><code>removePercentage</code> is a fraction here, not a
+            percent</strong
+          >
+          — pass <code>0.5</code>, not <code>50</code>. The script tag divides
+          the data-attribute value by 100 before forwarding it.
+        </p>
+
+        <h3 id="trimming">Trimming</h3>
+        <p>
+          The trim policy is "batch eviction." When a stream's history exceeds
+          <code>maxEvents</code>, the registry drops
+          <code>min(maxEvents - 1, ceil(maxEvents * removePercentage))</code> of
+          the oldest events at once, leaving the most recent
+          <code>maxEvents - removed</code> events. This avoids slicing on every
+          emit at the cost of a brief overshoot.
+        </p>
+        <p>
+          At least one event is always retained — even with
+          <code>removePercentage: 1.0</code> or <code>maxEvents: 1</code>, the
+          most recent event stays available for new subscribers.
+        </p>
+
+        <h2>API</h2>
+        <p>The full type is <code>NFEventRegistry</code>:</p>
+        <pre><code>type NFEventRegistry = {
+  // Resources (one-shot readiness)
+  register&lt;T&gt;(type: string, resource: T | (() =&gt; Promise&lt;T&gt; | T)): Promise&lt;void&gt;;
+  onReady&lt;T&gt;(type: string, callback: (value: T) =&gt; void): NFEventUnsubscribe;
+
+  // Event streams
+  emit&lt;T&gt;(type: string, data: T): void;
+  update&lt;T&gt;(type: string, reducer: (current: T | undefined) =&gt; T): void;
+  on&lt;T&gt;(
+    type: string,
+    callback: (event: { data: T; timestamp: number }) =&gt; void,
+    opts?: { replay?: number }
+  ): NFEventUnsubscribe;
+
+  // Maintenance
+  clear(type?: string): void;
+};</code></pre>
+
+        <h3>Resources</h3>
+
+        <h4><code>register(type, resource)</code></h4>
+        <p>
+          Stores <code>resource</code> under <code>type</code>. If
+          <code>resource</code> is a function, it is invoked (and awaited) and
+          the result is stored. Any consumers waiting via
+          <code>onReady(type, …)</code> are notified.
+        </p>
+        <pre><code>__NF_REGISTRY__.register('app-config', async () =&gt;
+  fetch('/config.json').then(r =&gt; r.json())
+);</code></pre>
+
+        <h4><code>onReady(type, callback)</code></h4>
+        <p>
+          If <code>type</code> is already registered, <code>callback</code>
+          fires <strong>synchronously</strong> with the value. Otherwise it is
+          queued and fires the moment <code>register(type, …)</code> runs.
+        </p>
+        <pre><code>__NF_REGISTRY__.onReady('orch.init-ready', ({ loadRemoteModule }) =&gt; {
+  loadRemoteModule('team/mfe1', './Button');
+});</code></pre>
+        <p>
+          Returns an unsubscribe function. When <code>type</code> was already
+          registered at subscribe time, the returned function is a no-op (the
+          callback has already fired).
+        </p>
+
+        <h3>Event streams</h3>
+
+        <h4><code>emit(type, data)</code></h4>
+        <p>
+          Publishes an event on <code>type</code>. The event is wrapped with a
+          <code>timestamp</code>, appended to the stream's history, and
+          delivered synchronously to every current subscriber.
+        </p>
+        <pre><code>__NF_REGISTRY__.emit('cart.changed', { itemCount: 3 });</code></pre>
+
+        <h4><code>update(type, reducer)</code></h4>
+        <p>
+          Publishes a new event whose value is derived from the previous one —
+          useful when the next state depends on the last (counters, accumulating
+          buffers, toggles).
+        </p>
+        <p>
+          The reducer receives a <strong>structured clone</strong> of the last
+          value (or <code>undefined</code> if the stream is empty), so it cannot
+          accidentally mutate stored history.
+        </p>
+        <pre><code>__NF_REGISTRY__.update('cart.itemCount', current =&gt; (current ?? 0) + 1);</code></pre>
+        <div class="callout">
+          <p>
+            Values passed through <code>update</code> must be
+            structured-clone-able when the stream is non-empty (no functions,
+            DOM nodes, or class instances).
+          </p>
+        </div>
+
+        <h4><code>on(type, callback, opts?)</code></h4>
+        <p>
+          Subscribes <code>callback</code> to <code>type</code> for every future
+          event. On subscribe, the most recent <code>opts.replay</code> events
+          from history are delivered via a microtask (so the unsubscribe handle
+          is returned synchronously, and the replay fires after the current task
+          completes).
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th><code>opts.replay</code></th>
+                <th>Behavior</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>1</code> (default)</td>
+                <td>
+                  Deliver only the most recent event — matches the
+                  "BehaviorSubject" pattern, where a fresh subscriber always
+                  sees the current state. Right default for state-channels.
+                </td>
+              </tr>
+              <tr>
+                <td><code>0</code></td>
+                <td>
+                  Suppress replay entirely. The subscriber only sees events
+                  emitted after it subscribes — right for one-shot signals where
+                  past history is irrelevant.
+                </td>
+              </tr>
+              <tr>
+                <td><code>N</code></td>
+                <td>
+                  Deliver up to the last <code>N</code> events in chronological
+                  order. Capped implicitly by <code>maxEvents</code>. Right for
+                  late-joining consumers that need recent context (e.g. a debug
+                  panel that wants the last 10 navigation events).
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Replay payloads are structured-cloned, so mutating them in the
+          callback never affects what later subscribers will see.
+        </p>
+        <pre><code>// Default: get the latest cart state immediately, then every future change.
+__NF_REGISTRY__.on('cart.changed', ({ data, timestamp }) =&gt; render(data));
+
+// Subscribe without backfill.
+__NF_REGISTRY__.on('user.clicked', ({ data }) =&gt; track(data), { replay: 0 });
+
+// Backfill the last 10 navigation events.
+__NF_REGISTRY__.on('nav.route', ({ data }) =&gt; log(data), { replay: 10 });</code></pre>
+        <p>
+          Returns an unsubscribe function that removes the listener.
+        </p>
+
+        <h3>Maintenance</h3>
+
+        <h4><code>clear(type?)</code></h4>
+        <p>
+          With a <code>type</code>, drops the stream's history, listeners,
+          registered resource, and pending <code>onReady</code> callbacks for
+          that key. Without a <code>type</code>, wipes the entire registry.
+          Useful in tests; rarely needed in production.
+        </p>
+
+        <h2>What the orchestrator publishes</h2>
+        <p>
+          When the orchestrator's quickstart bundle finishes initializing, it
+          calls <code>register('orch.init-ready', { … })</code> with the entire
+          <code>NativeFederationResult</code> payload —
+          <code>loadRemoteModule</code>, <code>load</code>, <code>as</code>,
+          <code>config</code>, <code>adapters</code>,
+          <code>initRemoteEntry</code>. Subscribers can destructure whichever
+          pieces they need:
+        </p>
+        <pre><code>__NF_REGISTRY__.onReady('orch.init-ready', ({ loadRemoteModule, initRemoteEntry }) =&gt; {
+  loadRemoteModule('team/mfe1', './Button');
+});</code></pre>
+        <p>
+          For a fully custom orchestrator script (you call
+          <code>initFederation</code> yourself), wire the registry the same way
+          the quickstart does:
+        </p>
+        <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
+
+initFederation(manifest, options).then(loaders =&gt; {
+  window.__NF_REGISTRY__?.register('orch.init-ready', { ...loaders });
+});</code></pre>
+
+        <h2>Patterns</h2>
+
+        <h3>State channel (BehaviorSubject-style)</h3>
+        <pre><code>// Producer
+__NF_REGISTRY__.update('cart.itemCount', n =&gt; (n ?? 0) + 1);
+
+// Consumer — gets the current count on subscribe + every change after
+__NF_REGISTRY__.on('cart.itemCount', ({ data }) =&gt; {
+  document.querySelector('#cart-badge').textContent = data;
+});</code></pre>
+
+        <h3>Event log (multiple subscribers, no backfill)</h3>
+        <pre><code>// Producer
+__NF_REGISTRY__.emit('analytics.click', { id: 'cta-1' });
+
+// Consumer — only sees events after subscribe
+__NF_REGISTRY__.on('analytics.click', ({ data }) =&gt; track(data), { replay: 0 });</code></pre>
+
+        <h3>Late-joining diagnostic (bounded backfill)</h3>
+        <pre><code>__NF_REGISTRY__.on(
+  'orch.module-loaded',
+  ({ data, timestamp }) =&gt; debugPanel.append({ ...data, at: timestamp }),
+  { replay: 50 }
+);</code></pre>
+
+        <h2>See also</h2>
+        <ul>
+          <li>
+            <a
+              href="https://github.com/native-federation/orchestrator/blob/main/docs/event-registry.md"
+              target="_blank"
+              rel="noopener"
+              >The orchestrator event-registry docs</a
+            >
+            — the upstream version of this page.
+          </li>
+          <li>
+            <a href="getting-started.html#race-conditions"
+              >Getting Started — Avoiding race conditions</a
+            >
+            — how the registry plugs into the HTML quickstart.
+          </li>
+          <li>
+            <a href="configuration.html">Configuration</a> — every option on
+            <code>initFederation</code>.
+          </li>
+        </ul>
+      </main>
+    </div>
+
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../../components.js"></script>
+    <script
+      async
+      src="https://scripts.simpleanalyticscdn.com/latest.js"
+    ></script>
+  </body>
+</html>

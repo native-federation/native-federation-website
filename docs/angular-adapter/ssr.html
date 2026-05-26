@@ -95,6 +95,24 @@
         </ol>
 
         <h2 id="node-bootstrap">The Node Bootstrap</h2>
+
+        <div class="callout callout-info">
+          <p>
+            <strong>Modern alternative.</strong> The Angular schematic still
+            wires <code>@softarc/native-federation-node</code>, the
+            classic-runtime companion. On v4 projects you can replace it with
+            the orchestrator's own Node entry,
+            <code>@softarc/native-federation-orchestrator/node</code>, which
+            runs the full orchestrator pipeline (version resolution, SRI
+            verification, dynamic init) server-side. See
+            <a href="../orchestrator/node.html"
+              >Orchestrator — Node.js / SSR</a
+            >
+            for the drop-in migration. The rest of this page documents what the
+            schematic generates today.
+          </p>
+        </div>
+
         <p>
           The schematic generates a <code>main.server.ts</code> that calls
           <code>initNodeFederation</code> from

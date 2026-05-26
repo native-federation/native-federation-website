@@ -31,7 +31,7 @@ The [core builder](../core/index.md) is intentionally framework- and bundler-agn
 - **Drives the dev server** — patches `serveWithVite` with federation middleware so `ng serve` serves the federated artifacts alongside the Angular bundle, with hot-reload via Server-Sent Events.
 - **Sane Angular defaults** — ships an Angular-aware `NG_SKIP_LIST`, infers the `browser`/`node` platform from your dependencies, and special-cases `@angular/common/locales` so locale data stays correct under `ignoreUnusedDeps`.
 - **Angular I18N** — runs `localize-translate` over the federation artifacts so a single build produces one bundle per locale.
-- **SSR + Hydration** — handles the Angular SSR entry point (`main.server.ts`) and writes a tiny `fstart.mjs` bootstrap so `@softarc/native-federation-node` can take over on the server.
+- **SSR + Hydration** — handles the Angular SSR entry point (`main.server.ts`) and writes a tiny `fstart.mjs` bootstrap so `@softarc/native-federation-node` can take over on the server. On v4 you can swap that for the orchestrator's own [`/node` entry](../orchestrator/node.md) for the same pipeline you get in the browser.
 
 ## In this Section
 

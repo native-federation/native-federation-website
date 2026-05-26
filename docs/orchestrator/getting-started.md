@@ -51,7 +51,7 @@ The simplest integration uses the pre-built `quickstart.mjs` runtime and a decla
     </script>
 
     <!-- Include the orchestrator -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.2.1/quickstart.mjs"></script>
   </head>
   <body>
     <my-header></my-header>
@@ -88,6 +88,8 @@ Manifest entries can also be supplied as objects to pin a `remoteEntry.json` aga
 
 Remotes typically register [custom elements](https://developer.mozilla.org/en-US/docs/Web/API/Web_components) when their module executes. The elements in your HTML stay empty until the corresponding module loads — which happens inside `loadRemoteModule`.
 
+<a id="race-conditions"></a>
+
 ## 2. Avoiding race conditions — the event registry
 
 Native DOM events are fire-and-forget: a listener attached after the event fires never hears it. For hosts that add listeners late (framework bootstrap, async imports, user navigation) the orchestrator ships a small **event registry** that replays the ready event and resolves promises retroactively.
@@ -99,7 +101,7 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
     <title>My Application</title>
 
     <!-- 1. Init the registry BEFORE any consumers -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/init-registry.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.2.1/init-registry.mjs"></script>
 
     <script type="esms-options">{ "shimMode": true }</script>
 
@@ -120,7 +122,7 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
     </script>
 
     <!-- 4. The orchestrator -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.2.1/quickstart.mjs"></script>
   </head>
   <body>
     <my-header></my-header>
@@ -129,7 +131,9 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
 </html>
 ```
 
-> **Note:** The registry is also a clean channel for remote-to-remote communication after initialization — any module can `emit` and any other can `onReady`.
+> **Note:** The registry is also a clean channel for remote-to-remote communication after initialization — any module can `emit` and any other can `onReady`. See the [Event Registry](event-registry.md) reference for the full API.
+
+> **Important:** `window.__NF_REGISTRY__` only exists after `init-registry.mjs` runs (or after you call `createRegistry` yourself in a custom orchestrator setup). If the script tag is missing, the orchestrator quietly falls back to the legacy `mfe-loader-available` `CustomEvent` and any consumer that calls `__NF_REGISTRY__.onReady(...)` will throw. See [Event Registry — Installation](event-registry.md#installation).
 
 ## 3. Custom orchestrator — production builds
 
@@ -250,6 +254,28 @@ const btn2 = await typed.loadRemoteModule('team/button', './Button');
 // Read the resolved configuration
 console.log(config);
 ```
+
+### Binding the module type to a loader variable
+
+`loadRemoteModule` is the generic call signature `<T = unknown>(remoteName, exposedModule) => Promise<T>`, exported as the type `LoadRemoteModule`. When you pass a loader through DI (or to a framework bootstrap) and want every call site to be typed without re-specifying the generic, use `LoadRemoteModuleOf<T>` to lock the return type onto the variable itself:
+
+```ts
+import {
+  LoadRemoteModule,        // <T = unknown>(name, exposed) => Promise<T>
+  LoadRemoteModuleOf,      // (name, exposed) => Promise<T>  — T baked in
+} from '@softarc/native-federation-orchestrator';
+
+const { loadRemoteModule } = await initFederation(manifest);
+
+// Generic on the call — each site picks its own T
+const btn = await loadRemoteModule<ButtonModule>('team/button', './Button');
+
+// Or bind T to the variable, then call without the generic
+const loadButton: LoadRemoteModuleOf<ButtonModule> = loadRemoteModule;
+const btn2 = await loadButton('team/button', './Button'); // typed as ButtonModule
+```
+
+The two forms compile to the same runtime function; pick whichever reads better at the call site.
 
 `config` is the `ConfigContract` — the merged result of your options and the library defaults. It exposes the active logger, storage handle and import-map functions, so you can reach the orchestrator's internals from anywhere without re-creating them.
 

@@ -125,7 +125,7 @@
     &lt;/script&gt;
 
     &lt;!-- Include the orchestrator --&gt;
-    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/quickstart.mjs"&gt;&lt;/script&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.2.1/quickstart.mjs"&gt;&lt;/script&gt;
   &lt;/head&gt;
   &lt;body&gt;
     &lt;my-header&gt;&lt;/my-header&gt;
@@ -212,7 +212,7 @@
           <code>loadRemoteModule</code>.
         </p>
 
-        <h2 id="event-registry">
+        <h2 id="race-conditions">
           2. Avoiding race conditions — the event registry
         </h2>
         <p>
@@ -229,7 +229,7 @@
     &lt;title&gt;My Application&lt;/title&gt;
 
     &lt;!-- 1. Init the registry BEFORE any consumers --&gt;
-    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/init-registry.mjs"&gt;&lt;/script&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.2.1/init-registry.mjs"&gt;&lt;/script&gt;
 
     &lt;script type="esms-options"&gt;{ "shimMode": true }&lt;/script&gt;
 
@@ -250,7 +250,7 @@
     &lt;/script&gt;
 
     &lt;!-- 4. The orchestrator --&gt;
-    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.1.0/quickstart.mjs"&gt;&lt;/script&gt;
+    &lt;script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.2.1/quickstart.mjs"&gt;&lt;/script&gt;
   &lt;/head&gt;
   &lt;body&gt;
     &lt;my-header&gt;&lt;/my-header&gt;
@@ -262,7 +262,25 @@
           <p>
             The registry is also a clean channel for remote-to-remote
             communication after initialization — any module can
-            <code>emit</code> and any other can <code>onReady</code>.
+            <code>emit</code> and any other can <code>onReady</code>. See the
+            <a href="event-registry.html">Event Registry</a> reference for the
+            full API.
+          </p>
+        </div>
+
+        <div class="callout callout-info">
+          <p>
+            <strong>Important.</strong>
+            <code>window.__NF_REGISTRY__</code> only exists after
+            <code>init-registry.mjs</code> runs (or after you call
+            <code>createRegistry</code> yourself in a custom orchestrator
+            setup). If the script tag is missing, the orchestrator quietly
+            falls back to the legacy <code>mfe-loader-available</code>
+            <code>CustomEvent</code> and any consumer that calls
+            <code>__NF_REGISTRY__.onReady(...)</code> will throw. See
+            <a href="event-registry.html#installation"
+              >Event Registry — Installation</a
+            >.
           </p>
         </div>
 
@@ -409,6 +427,34 @@ const btn2 = await typed.loadRemoteModule('team/button', './Button');
 
 // Read the resolved configuration
 console.log(config);</code></pre>
+
+        <h3>Binding the module type to a loader variable</h3>
+        <p>
+          <code>loadRemoteModule</code> is the generic call signature
+          <code>&lt;T = unknown&gt;(remoteName, exposedModule) =&gt; Promise&lt;T&gt;</code>,
+          exported as the type <code>LoadRemoteModule</code>. When you pass a
+          loader through DI (or to a framework bootstrap) and want every call
+          site to be typed without re-specifying the generic, use
+          <code>LoadRemoteModuleOf&lt;T&gt;</code> to lock the return type onto
+          the variable itself:
+        </p>
+        <pre><code>import {
+  LoadRemoteModule,        // &lt;T = unknown&gt;(name, exposed) =&gt; Promise&lt;T&gt;
+  LoadRemoteModuleOf,      // (name, exposed) =&gt; Promise&lt;T&gt;  — T baked in
+} from '@softarc/native-federation-orchestrator';
+
+const { loadRemoteModule } = await initFederation(manifest);
+
+// Generic on the call — each site picks its own T
+const btn = await loadRemoteModule&lt;ButtonModule&gt;('team/button', './Button');
+
+// Or bind T to the variable, then call without the generic
+const loadButton: LoadRemoteModuleOf&lt;ButtonModule&gt; = loadRemoteModule;
+const btn2 = await loadButton('team/button', './Button'); // typed as ButtonModule</code></pre>
+        <p>
+          The two forms compile to the same runtime function; pick whichever
+          reads better at the call site.
+        </p>
 
         <p>
           <code>config</code> is the <code>ConfigContract</code> — the merged

@@ -73,7 +73,7 @@
 
         <h2>What makes it different</h2>
         <p>
-          Compared to the classic runtime, the orchestrator adds four things:
+          Compared to the classic runtime, the orchestrator adds five things:
         </p>
         <ul>
           <li>
@@ -103,6 +103,14 @@
             every <code>remoteEntry.json</code>, every JavaScript module — can
             be pinned against an SRI hash. See
             <a href="security.html">Security</a>.
+          </li>
+          <li>
+            <strong>Server-side orchestration.</strong> The same pipeline runs
+            in Node through
+            <code>@softarc/native-federation-orchestrator/node</code>, so SSR /
+            edge-render hosts use the same version resolver, SRI verification
+            and dynamic-init flow as the browser. See
+            <a href="node.html">Node.js / SSR</a>.
           </li>
         </ul>
 
@@ -157,6 +165,17 @@
             dependencies are resolved across scopes, the
             <code>shareScope</code> mechanism, the strict scope, and dynamic
             init.
+          </li>
+          <li>
+            <a href="event-registry.html">Event Registry</a> — the
+            <code>window.__NF_REGISTRY__</code> event bus: race-free init,
+            cross-MFE resources, and event streams.
+          </li>
+          <li>
+            <a href="node.html">Node.js / SSR</a> —
+            <code>initNodeFederation</code>, the
+            <code>module.register()</code> loader hook, and migration from
+            <code>@softarc/native-federation-node</code>.
           </li>
           <li>
             <a href="security.html">Security &amp; Subresource Integrity</a> —

@@ -97,7 +97,7 @@ For dynamic hosts, the manifest is just a JSON object mapping remote name → `r
 
 Swap it per environment by deploying a different `federation.manifest.json` alongside the shell — no rebuild required. The schematic places it under `public/` if the project has a public folder, otherwise under `src/assets/`.
 
-> **Note:** Manifest URLs may be absolute (production CDN) or relative (local dev or same-origin deploys). For Angular SSR the same manifest is consumed server-side by `@softarc/native-federation-node`; see [SSR & Hydration](ssr.md).
+> **Note:** Manifest URLs may be absolute (production CDN) or relative (local dev or same-origin deploys). For Angular SSR the same manifest is consumed server-side by `@softarc/native-federation-node` (or, on v4, by the orchestrator's [`/node` entry](../orchestrator/node.md)); see [SSR & Hydration](ssr.md).
 
 ## Opting into the Orchestrator
 

@@ -46,7 +46,7 @@ Initializes a project for Native Federation. `ng add` and `ng g …:init` both r
     - `dynamic-host` → the path to a generated `federation.manifest.json`
 
     On v4 the schematic emits the **orchestrator** bootstrap (`@softarc/native-federation-orchestrator`) by default — `initFederation(<arg>, { ...useShimImportMap({ shimMode: true }), logger: consoleLogger, storage: globalThisStorageEntry, hostRemoteEntry: './remoteEntry.json', logLevel: 'debug' })`. See [Runtime](runtime.md).
-6. **SSR.** If the project has SSR enabled (`build.options.ssr.entry` is set), the schematic also rewrites `main.server.ts` to `bootstrap-server.ts` + a federation-aware `main.server.ts` that calls `initNodeFederation`, and adds `cors` + `@softarc/native-federation-node` to dependencies.
+6. **SSR.** If the project has SSR enabled (`build.options.ssr.entry` is set), the schematic also rewrites `main.server.ts` to `bootstrap-server.ts` + a federation-aware `main.server.ts` that calls `initNodeFederation`, and adds `cors` + `@softarc/native-federation-node` to dependencies. On v4 you can swap the latter for the orchestrator's own [`/node` entry](../orchestrator/node.md) after the fact.
 7. **federation.manifest.json.** For dynamic hosts, generates a manifest file. It lives in `public/federation.manifest.json` if the project has a `public/` folder, else `src/assets/federation.manifest.json`.
 8. **Dependencies.** Adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` (as a devDependency). Triggers `npm install` at the end.
 

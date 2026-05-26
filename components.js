@@ -142,6 +142,8 @@
         { href: 'orchestrator/architecture.html', label: 'Architecture', id: 'orchestrator/architecture' },
         { href: 'orchestrator/configuration.html', label: 'Configuration', id: 'orchestrator/configuration' },
         { href: 'orchestrator/version-resolver.html', label: 'Version Resolver', id: 'orchestrator/version-resolver' },
+        { href: 'orchestrator/event-registry.html', label: 'Event Registry', id: 'orchestrator/event-registry' },
+        { href: 'orchestrator/node.html', label: 'Node.js / SSR', id: 'orchestrator/node' },
         { href: 'orchestrator/security.html', label: 'Security & SRI', id: 'orchestrator/security' },
       ]},
       { section: 'Core', items: [

@@ -28,6 +28,8 @@ The ecosystem is split into four layers:
 - [Architecture](https://native-federation.com/docs/orchestrator/architecture.md): internal design and extension points
 - [Configuration](https://native-federation.com/docs/orchestrator/configuration.md): every config option
 - [Version Resolver](https://native-federation.com/docs/orchestrator/version-resolver.md): how shared-dependency version conflicts are resolved
+- [Event Registry](https://native-federation.com/docs/orchestrator/event-registry.md): `window.__NF_REGISTRY__` — race-free init, cross-MFE resources and event streams
+- [Node.js / SSR](https://native-federation.com/docs/orchestrator/node.md): `initNodeFederation` and the `module.register()` loader hook
 
 ## Core (@softarc/native-federation)
 

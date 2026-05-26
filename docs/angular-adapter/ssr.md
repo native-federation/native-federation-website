@@ -31,6 +31,15 @@ Then run the federation init (or re-run it). When the schematic sees `build.opti
 
 ## The Node Bootstrap
 
+> **Note — modern alternative.** The Angular schematic still wires
+> `@softarc/native-federation-node`, the classic-runtime companion. On v4
+> projects you can replace it with the orchestrator's own Node entry,
+> `@softarc/native-federation-orchestrator/node`, which runs the full
+> orchestrator pipeline (version resolution, SRI verification, dynamic init)
+> server-side. See [Orchestrator — Node.js / SSR](../orchestrator/node.md) for
+> the drop-in migration. The rest of this page documents what the schematic
+> generates today.
+
 The schematic generates a `main.server.ts` that calls `initNodeFederation` from `@softarc/native-federation-node` before pulling in the Angular SSR app:
 
 ```ts
