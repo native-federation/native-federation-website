@@ -101,7 +101,15 @@ declare function initNodeFederation(
 ): Promise<NativeFederationResult>;
 ```
 
-`InitNodeFederationOptions` is a type alias for the same `NFOptions` shape used by the browser `initFederation` — see the [Configuration Guide](configuration.md) for the full set. The Node entry pre-wires sensible server-side defaults:
+`InitNodeFederationOptions` extends the browser `NFOptions` shape (see the [Configuration Guide](configuration.md) for the full set) with one server-only field:
+
+```ts
+export type InitNodeFederationOptions = NFOptions & {
+  hostInstances?: HostInstancesOption;
+};
+```
+
+`hostInstances` bridges the host's shared singletons into the loader so a remote's `import '@angular/core'` resolves to the host's already-loaded instance — see [Bridging host singletons](#host-instances). The Node entry also pre-wires sensible server-side defaults:
 
 | Concern               | Default on Node                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------- |
@@ -129,20 +137,57 @@ Anything in `options` overrides the default. The returned `NativeFederationResul
 └──────────────────────────┘                     └──────────────────────────┘
 ```
 
-The loader hosts a W3C-compatible import-map resolve algorithm. For every `import(...)` call from user code it:
+The loader hosts a W3C-compatible import-map resolve algorithm. For every `import(...)` call from user code, the `resolve` hook:
 
-1. Walks `scopes` matching the parent URL and falls back to top-level `imports`.
-2. Matches by exact specifier first, then by trailing-slash prefix.
+1. If the specifier is a **bridged host instance** (see [below](#host-instances)), short-circuits it to a synthetic `nf-host:<specifier>` URL — these win over the import map.
+2. Otherwise walks `scopes` matching the parent URL and falls back to top-level `imports`, matching by exact specifier first then by trailing-slash prefix.
 3. Passes the rewritten URL on to the default resolver.
 
-For http/https URLs the `load` hook short-circuits the default loader and fetches the source over the wire; for `file://` and `node:` URLs it falls through normally.
+The `load` hook then handles three cases:
 
-The import map can be updated at any time after the initial install — e.g. when you add a new remote via `initRemoteEntry(...)` — and the loader picks up the new map on the next resolution. Updates are serialized: each `setMap` call waits for the previous one to be acknowledged before posting.
+- `nf-host:<spec>` → synthesizes a tiny ES module re-exporting from the host's instance (see [below](#host-instances)).
+- `http(s)://…` → short-circuits the default loader and fetches the source over the wire.
+- `file://` / `node:` / everything else → falls through normally.
+
+Both the import map and the host-instance set are pushed to the loader thread over the `MessageChannel` (`set-import-map` → `import-map-applied`, `set-host-instances` → `host-instances-applied`). The import map can be updated at any time after the initial install — e.g. when you add a new remote via `initRemoteEntry(...)` — and the loader picks up the new map on the next resolution. Updates are serialized: each post waits for the previous one to be acknowledged before posting.
 
 > **Note:** The acknowledgement round-trip has a 10-second timeout
 > (`NODE_LOADER_CLIENT_ACK_TIMEOUT_MS`). If the loader thread fails to ack —
 > e.g. because it crashed or was forcibly unregistered — `initNodeFederation`
 > rejects with an explicit `node-loader.client` error.
+
+## <a id="host-instances"></a> Bridging host singletons (`hostInstances`)
+
+In the browser, the import map alone guarantees one instance of each shared singleton. On the server that isn't enough: a remote's *secondary* entry point — e.g. `@angular/core/rxjs-interop` — can resolve to a private build-internal chunk instead of the shared `@angular/core`, giving you a **second** core instance and the dreaded `NG0203` ("inject() must be called from an injection context"). `hostInstances` closes that gap by routing the remote's imports to the host's *already-loaded* instances.
+
+Set it in `options.hostInstances`:
+
+| Form | Meaning |
+|---|---|
+| `'all'` | Every singleton in the host remote entry. Reads `hostRemoteEntry`, takes each shared dep marked `singleton`, and `await import(...)`s it in the orchestrator's realm. Used by the Angular adapter's prod preload. |
+| `{ include?, exclude?, load? }` | Same auto-derivation, optionally filtered, with a custom `load`. Dev passes `{ load: (s) => import(s) }` so capture happens through the *host* realm (e.g. Vite's SSR graph), not the orchestrator's. |
+| explicit map | A `Record<specifier, namespace>` you supply directly. |
+
+What `initNodeFederation` does when `hostInstances` is set (before the main init flow):
+
+1. `resolveHostInstances(...)` produces a map of `specifier → module namespace` — for `'all'`/auto it imports each singleton; for an explicit map it's used as-is.
+2. Those namespaces are published on `globalThis.__NF_HOST_INSTANCES__`.
+3. The export *key names* per specifier are pushed to the loader hook via `setHostInstances` (over the same `MessageChannel`, acknowledged with `host-instances-applied`).
+
+From then on the loader bridges any matching import:
+
+```
+remote SSR code:  import { inject } from '@angular/core'
+        │
+        ▼  resolve(): '@angular/core' is a host instance → nf-host:%40angular%2Fcore  (shortCircuit)
+        ▼  load():    synthesize  export const inject = globalThis.__NF_HOST_INSTANCES__['@angular/core'].inject
+        ▼
+   resolves to the host's already-loaded @angular/core  ✔ single instance
+```
+
+The synthesized module re-exports every captured key (named exports plus `default`), so a remote's `import '@angular/core'` returns the *same* object the host loaded — one core, no duplication. Failed imports during auto-capture are logged and skipped rather than aborting init.
+
+> **Angular SSR.** You rarely call this directly — the adapter's `node-preload` passes `hostInstances: 'all'` for you. See [Angular Adapter → SSR & Hydration](../angular-adapter/ssr.md). Outside Angular, treat `hostInstances` as an escape hatch for frameworks with the same secondary-entry-point hazard.
 
 ## What is *not* on the Node entry
 
@@ -223,6 +268,7 @@ expect(greet('world')).toBe('hello, world!');
 
 ## See also
 
+- [Angular Adapter — SSR & Hydration](../angular-adapter/ssr.md) — the `node-preload` launch model that wires this entry into an Angular SSR app.
 - [The orchestrator node docs](https://github.com/native-federation/orchestrator/blob/main/docs/node.md) — the upstream version of this page.
 - [Configuration](configuration.md) — the full `initFederation` options surface; the Node entry accepts the same shape.
 - [Security — Subresource Integrity](security.md#subresource-integrity) — pinning manifest, `remoteEntry.json` and modules; works the same way on Node as in the browser.

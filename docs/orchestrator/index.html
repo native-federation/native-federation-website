@@ -121,16 +121,29 @@
           standard <code>remoteEntry.json</code> can be loaded by it.
         </p>
 
-        <h2>SSR today</h2>
+        <h2>SSR</h2>
         <p>
-          The Orchestrator runs in the browser. A server-rendered host still
-          works — the Orchestrator loads the remotes client-side after the page
-          arrives — but if you need remote modules to execute during SSR itself,
-          stick with the default
-          <a href="../runtime/index.html">Runtime</a> for now. See
-          <a href="../ssr-hydration.html">SSR &amp; Hydration</a> for the full
-          picture.
+          On <strong>v4</strong> the Orchestrator runs server-side too, so remote
+          modules <strong>execute during SSR itself</strong> — not just
+          client-side after the page arrives. The
+          <a href="node.html"><code>/node</code> entry</a> installs a
+          <code>module.register()</code> loader hook and bridges the host's
+          shared singletons (<code>hostInstances</code>) so a remote's
+          <code>@angular/core</code> resolves to the host's single instance. For
+          Angular, the adapter's <code>node-preload</code> wires this for you —
+          see
+          <a href="../angular-adapter/ssr.html">Angular Adapter → SSR &amp;
+          Hydration</a>. For the general picture see
+          <a href="../ssr-hydration.html">SSR &amp; Hydration</a>.
         </p>
+        <div class="callout callout-info">
+          <p>
+            On v3 the Orchestrator was browser-only; a server-rendered host
+            worked but loaded its remotes client-side after the page arrived.
+            True SSR execution is a v4 capability via the <code>/node</code>
+            entry.
+          </p>
+        </div>
 
         <div class="callout">
           <p>

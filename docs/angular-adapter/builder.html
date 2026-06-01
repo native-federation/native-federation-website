@@ -268,8 +268,9 @@
                 <td>
                   Enables development mode for the federation build: source
                   maps, unminified output, watch-mode SSE notifications, and
-                  skips the SSR fstart bootstrap. Set automatically by the
-                  <code>development</code> configuration.
+                  (for SSR) the dev host-instance bridge that registers the
+                  federation loader inside Vite's SSR graph. Set automatically by
+                  the <code>development</code> configuration.
                 </td>
               </tr>
               <tr>
@@ -358,9 +359,13 @@
                   Marks this build as SSR-capable. When true, externals are
                   passed through Angular's
                   <code>externalDependencies</code> instead of an esbuild plugin
-                  (the SSR build path doesn't run that plugin), and an
-                  <code>fstart.mjs</code> Node bootstrap is written next to the
-                  server build. See <a href="ssr.html">SSR &amp; Hydration</a>.
+                  (the SSR build path doesn't run that plugin). The CLI's
+                  <code>server.mjs</code> is emitted as-is; the federation loader
+                  is registered at launch via the
+                  <code>node --import @angular-architects/native-federation-v4/node-preload …</code>
+                  preload (prod) or the dev host-instance bridge
+                  (<code>ng serve</code>). See
+                  <a href="ssr.html">SSR &amp; Hydration</a>.
                 </td>
               </tr>
               <tr>

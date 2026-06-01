@@ -218,13 +218,15 @@
             single build produces one bundle per locale.
           </li>
           <li>
-            <strong>SSR + Hydration</strong> — handles the Angular SSR entry
-            point (<code>main.server.ts</code>) and writes a tiny
-            <code>fstart.mjs</code> bootstrap so
-            <code>@softarc/native-federation-node</code> can take over on the
-            server. On v4 you can swap that for the orchestrator's own
-            <a href="../orchestrator/node.html"><code>/node</code> entry</a>
-            for the same pipeline you get in the browser.
+            <strong>SSR + Hydration</strong> — registers the federation loader
+            before Angular evaluates via a
+            <code>node --import …/node-preload</code> launch preload (prod) or a
+            dev host-instance bridge (<code>ng serve</code>), bridging the host's
+            shared singletons so remotes render server-side against one
+            <code>@angular/core</code>. The same orchestrator
+            <a href="../orchestrator/node.html"><code>/node</code> entry</a> you'd
+            use elsewhere drives it. See
+            <a href="ssr.html">SSR &amp; Hydration</a>.
           </li>
         </ul>
 

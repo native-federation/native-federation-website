@@ -23,9 +23,11 @@ Compared to the classic runtime, the orchestrator adds five things:
 
 The orchestrator stays fully compatible with the Native Federation ecosystem — any remote built with `@softarc/native-federation` (v3 or v4) that emits a standard `remoteEntry.json` can be loaded by it.
 
-## SSR today
+## SSR
 
-The Orchestrator runs in the browser. A server-rendered host still works — the Orchestrator loads the remotes client-side after the page arrives — but if you need remote modules to execute during SSR itself, stick with the default [Runtime](../runtime/index.md) for now. See [SSR & Hydration](../ssr-hydration.md) for the full picture.
+On **v4** the Orchestrator runs server-side too, so remote modules **execute during SSR itself** — not just client-side after the page arrives. The [`/node` entry](node.md) installs a `module.register()` loader hook and bridges the host's shared singletons (`hostInstances`) so a remote's `@angular/core` resolves to the host's single instance. For Angular, the adapter's `node-preload` wires this for you — see [Angular Adapter → SSR & Hydration](../angular-adapter/ssr.md). For the general picture see [SSR & Hydration](../ssr-hydration.md).
+
+> On v3 the Orchestrator was browser-only; a server-rendered host worked but loaded its remotes client-side after the page arrived. True SSR execution is a v4 capability via the `/node` entry.
 
 > **Note:** New to Native Federation? Start with the [Architecture Overview](../architecture.md) and [Mental Model](../mental-model.md). For a focused comparison between the Orchestrator and the Classic Runtime — when to use which, semver resolution, caching — see [v3 vs v4](../v3-vs-v4.md).
 

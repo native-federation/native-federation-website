@@ -186,14 +186,21 @@
             <strong>SSR.</strong> If the project has SSR enabled (<code
               >build.options.ssr.entry</code
             >
-            is set), the schematic also rewrites <code>main.server.ts</code> to
-            <code>bootstrap-server.ts</code> + a federation-aware
-            <code>main.server.ts</code> that calls
-            <code>initNodeFederation</code>, and adds <code>cors</code> +
-            <code>@softarc/native-federation-node</code> to dependencies. On v4
-            you can swap the latter for the orchestrator's own
-            <a href="../orchestrator/node.html"><code>/node</code> entry</a>
-            after the fact.
+            is set), the schematic sets <code>ssr: true</code> on the federation
+            <code>build</code> target, adds <code>app.use(cors())</code> to the
+            generated <code>server.ts</code>, switches
+            <code>RenderMode.Prerender</code> → <code>RenderMode.Server</code> in
+            <code>app.routes.server.ts</code>, and forces
+            <code>security.allowedHosts: ['localhost']</code> on the
+            <code>esbuild</code> target. It does <strong>not</strong> split
+            <code>main.server.ts</code>, emit an <code>fstart.mjs</code>, or add
+            <code>@softarc/native-federation-node</code> — on v4 the server-side
+            loader is registered at launch by the
+            <code>node --import @angular-architects/native-federation-v4/node-preload …</code>
+            preload, which wires the orchestrator's
+            <a href="../orchestrator/node.html"><code>/node</code> entry</a>. You
+            still set the prod start command to use the preload yourself. See
+            <a href="ssr.html">SSR &amp; Hydration</a>.
           </li>
           <li>
             <strong>federation.manifest.json.</strong> For dynamic hosts,
@@ -205,8 +212,10 @@
           <li>
             <strong>Dependencies.</strong> Adds <code>es-module-shims</code>,
             <code>@angular-devkit/build-angular</code> and
-            <code>@softarc/native-federation-orchestrator</code> (as a
-            devDependency). Triggers <code>npm install</code> at the end.
+            <code>@softarc/native-federation-orchestrator</code> — the
+            orchestrator as a devDependency for browser-only projects, or a
+            runtime dependency (plus <code>cors</code>) for SSR projects.
+            Triggers <code>npm install</code> at the end.
           </li>
         </ol>
 
@@ -220,7 +229,8 @@
           </li>
           <li>
             It does not change your application code; only the bootstrap files
-            (<code>main.ts</code>, optionally <code>main.server.ts</code>) are
+            (<code>main.ts</code>) and, for SSR, the generated
+            <code>server.ts</code> / <code>app.routes.server.ts</code> are
             touched.
           </li>
         </ul>
