@@ -6,7 +6,7 @@
     <title>Migration to v4 — Native Federation Docs</title>
     <meta
       name="description"
-      content="Migrate a Native Federation project from v3 to v4 — switch federation.config.js to ESM, enable ESM in package.json, and opt in to the stable Orchestrator runtime."
+      content="Migrate a Native Federation project from v3 to v4 — rename federation.config.js to ESM (.mjs), bump the packages, and opt in to the stable Orchestrator runtime."
     />
     <link
       rel="canonical"
@@ -70,10 +70,11 @@
         <div class="callout">
           <p>
             <strong>What changes at this layer:</strong>
-            <code>federation.config.js</code> switches from CommonJS to ESM, and
-            <code>package.json</code> opts the project into ESM with
-            <code>"type": "module"</code>. That's it — the file layout is
-            unchanged.
+            <code>federation.config.js</code> is renamed to
+            <code>federation.config.mjs</code> and switches from CommonJS to ESM,
+            and <code>package.json</code> bumps to the v4 packages. That's it —
+            the file layout is unchanged, and you do <strong>not</strong> need
+            <code>"type": "module"</code>.
           </p>
         </div>
 
@@ -83,7 +84,7 @@
             <li><a href="#clear-caches">1. Clear stale caches</a></li>
             <li>
               <a href="#package-json"
-                >2. (optional) Enable ESM in <code>package.json</code></a
+                >2. Bump the packages in <code>package.json</code></a
               >
             </li>
             <li>
@@ -112,16 +113,14 @@
     └── 📁 .cache/             ← native federation cache</code></pre>
         <p>If you use Angular, also remove <code>.angular/</code>.</p>
 
-        <h2 id="package-json">2. Enable ESM in <code>package.json</code></h2>
+        <h2 id="package-json">2. Bump the packages in <code>package.json</code></h2>
         <p>
           Native Federation 4 is fully ESM — both the config file and the
-          emitted artifacts. Set <code>"type": "module"</code> on every project
-          that owns a <code>federation.config.js</code>:
+          emitted artifacts. Update the dependencies to their v4 majors:
         </p>
         <pre><code>{
   "name": "mfe1",
   "version": "1.2.3",
-  "type": "module",           // (optional) for full ESM micro frontends.
   "dependencies": {
     "@softarc/native-federation-runtime": "~4.0.0"
   },
@@ -130,12 +129,15 @@
     "@softarc/native-federation-orchestrator": "^4.0.0"
   }
 }</code></pre>
-        <div class="callout callout-warning">
+        <div class="callout">
           <p>
-            If <code>"type": "module"</code> breaks a legacy CommonJS script you
-            still need, rename that script to <code>.cjs</code> — Node falls
-            back to CommonJS for that extension regardless of the package-wide
-            setting.
+            You do <strong>not</strong> need to add
+            <code>"type": "module"</code>. ESM comes from renaming the config to
+            <code>federation.config.mjs</code> (next step) — Node treats
+            <code>.mjs</code> as a module regardless of the package-wide setting,
+            so the rest of your project is left untouched. Setting
+            <code>"type": "module"</code> is optional and only matters if you
+            want the whole workspace to default to ESM.
           </p>
         </div>
 

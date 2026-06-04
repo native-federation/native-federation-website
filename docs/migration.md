@@ -4,11 +4,11 @@ applies_to: [v3, v4]
 
 # Migration to v4
 
-> Migrate a Native Federation project from v3 to v4 — switch federation.config.js to ESM, enable ESM in package.json, and opt in to the stable Orchestrator runtime.
+> Migrate a Native Federation project from v3 to v4 — rename federation.config.js to ESM (.mjs), bump the packages, and opt in to the stable Orchestrator runtime.
 
 The steps below cover the framework-agnostic parts of the v3 -> v4 upgrade — the two files every Native Federation project owns, regardless of whether it is built with Angular, React, Vite or a custom stack. For Angular-specific changes (builder, schematics, `main.ts`), see [Angular Adapter -> Migration to v4](angular-adapter/migration-v4.md).
 
-> **Note:** **What changes at this layer:** `federation.config.js` switches from CommonJS to ESM, and `package.json` opts the project into ESM with `"type": "module"`. That's it — the file layout is unchanged.
+> **Note:** **What changes at this layer:** `federation.config.js` is renamed to `federation.config.mjs` and switches from CommonJS to ESM, and `package.json` bumps to the v4 packages. That's it — the file layout is unchanged, and you do not need `"type": "module"`.
 
 ## 1. Clear stale caches
 
@@ -23,26 +23,25 @@ Before the first v4 build, wipe the caches your old build produced. Mixing v3 ar
 
 If you use Angular, also remove `.angular/`.
 
-## 2. Enable ESM in `package.json`
+## 2. Bump the packages in `package.json`
 
-Native Federation 4 is fully ESM — both the config file and the emitted artifacts. Set `"type": "module"` on every project that owns a `federation.config.js`:
+Native Federation 4 is fully ESM — both the config file and the emitted artifacts. Update the dependencies to their v4 majors:
 
 ```jsonc
 {
   "name": "mfe1",
   "version": "1.2.3",
-  "type": "module",           // (optional) for full ESM micro frontends.
   "dependencies": {
-    "@softarc/native-federation-runtime": "~4.0.0"
+    "@softarc/native-federation-runtime": "~4.0.0",
   },
   "devDependencies": {
     "@softarc/native-federation": "~4.0.0",
-    "@softarc/native-federation-orchestrator": "^4.0.0"
-  }
+    "@softarc/native-federation-orchestrator": "^4.0.0",
+  },
 }
 ```
 
-> **Warning:** If `"type": "module"` breaks a legacy CommonJS script you still need, rename that script to `.cjs` — Node falls back to CommonJS for that extension regardless of the package-wide setting.
+> **Note:** You do **not** need to add `"type": "module"`. ESM comes from renaming the config to `federation.config.mjs` (next step) — Node treats `.mjs` as a module regardless of the package-wide setting, so the rest of your project is left untouched. Setting `"type": "module"` is optional and only matters if you want the whole workspace to default to ESM.
 
 ## 3. Convert `federation.config.js` to ESM:
 
@@ -51,52 +50,64 @@ The config shape is the same as in v3. Only the module syntax changes: `require(
 ### Before (v3, CommonJS)
 
 ```js
-const { withNativeFederation, share, shareAll } = require('@softarc/native-federation/config');
+const {
+  withNativeFederation,
+  share,
+  shareAll,
+} = require("@softarc/native-federation/config");
 
 module.exports = withNativeFederation({
-  name: 'mfe1',
+  name: "mfe1",
 
   exposes: {
-    './Component': './src/bootstrap.ts',
+    "./Component": "./src/bootstrap.ts",
   },
 
   shared: {
-    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
-    ...share({ '@angular/core': { singleton: true, strictVersion: true, requiredVersion: 'auto' } }),
+    ...shareAll({
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: "auto",
+    }),
+    ...share({
+      "@angular/core": {
+        singleton: true,
+        strictVersion: true,
+        requiredVersion: "auto",
+      },
+    }),
   },
 
-  skip: [
-    'rxjs/ajax',
-    'rxjs/fetch',
-    'rxjs/testing',
-    'rxjs/webSocket',
-  ],
+  skip: ["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"],
 });
 ```
 
 ### After (v4, ESM)
 
 ```js
-import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+import {
+  withNativeFederation,
+  shareAll,
+} from "@softarc/native-federation/config";
 
 export default withNativeFederation({
-  name: 'team/mfe1',
+  name: "team/mfe1",
 
   exposes: {
-    './Component': './src/bootstrap.ts',
+    "./Component": "./src/bootstrap.ts",
   },
 
   shared: {
     // shareAll still works. In v4 you can also merge per-package overrides
     // straight into the shareAll call — no need for a trailing share(...).
     ...shareAll(
-      { singleton: true, strictVersion: true, requiredVersion: 'auto' },
+      { singleton: true, strictVersion: true, requiredVersion: "auto" },
       {
         overrides: {
-          '@angular/core': {
+          "@angular/core": {
             singleton: true,
             strictVersion: true,
-            requiredVersion: 'auto',
+            requiredVersion: "auto",
             includeSecondaries: { keepAll: true },
           },
         },
@@ -104,11 +115,11 @@ export default withNativeFederation({
     ),
   },
 
-  skip: ['rxjs/ajax', 'rxjs/fetch', 'rxjs/testing', 'rxjs/webSocket'],
+  skip: ["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"],
 
   features: {
     ignoreUnusedDeps: true, // on by default in v4
-    denseChunking: true,    // opt-in: groups chunks in remoteEntry.json for smaller payloads
+    denseChunking: true, // opt-in: groups chunks in remoteEntry.json for smaller payloads
   },
 });
 ```

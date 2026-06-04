@@ -65,9 +65,11 @@
 
         <div class="callout callout-info">
           <p>
-            <strong>Version note.</strong> This page tracks
+            <strong>Version note.</strong> This page tracks the v4 adapter —
+            <code>@angular-architects/native-federation</code>
+            <strong>22.x</strong> on Angular 22 (or
             <code>@angular-architects/native-federation-v4</code>
-            <strong>21.2.x</strong> (the <em>adapter</em>) and
+            <strong>21.2.x</strong> on Angular 20/21) — and
             <code>@softarc/native-federation-orchestrator</code>
             <strong>4.2.x</strong> (the <em>runtime</em>). A complete worked
             example is the
@@ -180,7 +182,7 @@
 
         <h2 id="prod">Production: the node-preload launch contract</h2>
         <p>Launch the server through the adapter's preload:</p>
-        <pre><code>node --import @angular-architects/native-federation-v4/node-preload \
+        <pre><code>node --import @angular-architects/native-federation/node-preload \
      dist/&lt;app&gt;/server/server.mjs</code></pre>
         <p>
           <code>--import</code> modules are fully evaluated (top-level
@@ -196,7 +198,7 @@
         </p>
         <p>
           What the preload
-          (<code>@angular-architects/native-federation-v4/node-preload</code>)
+          (<code>@angular-architects/native-federation/node-preload</code>)
           does:
         </p>
         <pre><code>import { initNodeFederation } from '@softarc/native-federation-orchestrator/node';

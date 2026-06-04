@@ -6,7 +6,7 @@
     <title>Angular Config — Angular Adapter</title>
     <meta
       name="description"
-      content="What @angular-architects/native-federation-v4/config adds on top of the core federation.config.mjs — Angular skip list, platform inference and locale handling."
+      content="What @angular-architects/native-federation/config adds on top of the core federation.config.mjs — Angular skip list, platform inference and locale handling."
     />
     <link
       rel="canonical"
@@ -57,7 +57,7 @@
           The Angular adapter re-exports the core's
           <code>withNativeFederation</code>, <code>share</code> and
           <code>shareAll</code> from a wrapper at
-          <code>@angular-architects/native-federation-v4/config</code>. The
+          <code>@angular-architects/native-federation/config</code>. The
           wrappers are thin: same options, same shape, same semantics. They only
           differ in the Angular-aware defaults they apply. For everything that
           isn't called out here, refer to the canonical
@@ -85,7 +85,7 @@
   shareAll,
   shareAngularLocales,
   NG_SKIP_LIST,
-} from '@angular-architects/native-federation-v4/config';</code></pre>
+} from '@angular-architects/native-federation/config';</code></pre>
         <p>
           All five symbols are Angular-specific exports. Anything else (helpers,
           types, advanced overrides) lives in the core — import it from
@@ -229,7 +229,7 @@
   withNativeFederation,
   shareAll,
   shareAngularLocales,
-} from '@angular-architects/native-federation-v4/config';
+} from '@angular-architects/native-federation/config';
 
 export default withNativeFederation({
   name: 'mfe1',
@@ -261,7 +261,7 @@ export default withNativeFederation({
           For reference, this is the <code>federation.config.mjs</code> that
           <code>ng add</code> emits for a remote on v4:
         </p>
-        <pre><code>import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
+        <pre><code>import { withNativeFederation, shareAll } from '@angular-architects/native-federation/config';
 
 export default withNativeFederation({
   name: 'mfe1',

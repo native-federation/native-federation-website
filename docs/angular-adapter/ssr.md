@@ -8,7 +8,7 @@ applies_to: [v4]
 
 The Angular adapter supports Angular SSR and Incremental Hydration — both for hosts and remotes. The server side is driven by a `node --import` **preload** that registers the federation loader before Angular evaluates; most of the wiring is done by the `init` schematic when it detects an SSR-enabled project. This page documents what it generates and the moving parts behind it.
 
-> **Version note.** This page tracks `@angular-architects/native-federation-v4` **21.2.x** (the *adapter*) and `@softarc/native-federation-orchestrator` **4.2.x** (the *runtime*). A complete worked example is the [Native Federation Angular SSR playground](https://github.com/native-federation/playground/tree/main/angular/ssr).
+> **Version note.** This page tracks the v4 adapter — `@angular-architects/native-federation` **22.x** on Angular 22 (or `@angular-architects/native-federation-v4` **21.2.x** on Angular 20/21) — and `@softarc/native-federation-orchestrator` **4.2.x** (the *runtime*). A complete worked example is the [Native Federation Angular SSR playground](https://github.com/native-federation/playground/tree/main/angular/ssr).
 
 **On this page**
 
@@ -57,13 +57,13 @@ ESM evaluates (and, for externals, loads) a module's entire static import graph 
 Launch the server through the adapter's preload:
 
 ```bash
-node --import @angular-architects/native-federation-v4/node-preload \
+node --import @angular-architects/native-federation/node-preload \
      dist/<app>/server/server.mjs
 ```
 
 `--import` modules are fully evaluated (top-level `await` awaited) **before** Node loads the entry point. The preload installs the loader hook, then Node loads `server.mjs` — whose static `@angular/*` imports are now intercepted. Because `server.mjs` stays the *main* module, its own `isMainModule(import.meta.url)` listen-guard fires unchanged. The build emits the CLI's `server.mjs` as-is; the preload is the only SSR-specific piece, applied purely at launch. **One preload serves the host and every remote.**
 
-What the preload (`@angular-architects/native-federation-v4/node-preload`) does:
+What the preload (`@angular-architects/native-federation/node-preload`) does:
 
 ```ts
 import { initNodeFederation } from '@softarc/native-federation-orchestrator/node';

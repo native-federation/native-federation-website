@@ -34,7 +34,7 @@ import {
   withNativeFederation,
   shareAll,
   shareAngularLocales,
-} from '@angular-architects/native-federation-v4/config';
+} from '@angular-architects/native-federation/config';
 
 export default withNativeFederation({
   name: 'mfe1',

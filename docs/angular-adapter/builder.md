@@ -4,9 +4,11 @@ applies_to: [v4]
 
 # Builder
 
-> The @angular-architects/native-federation-v4:build target — what it puts in angular.json, how it wraps Angular's ApplicationBuilder, and every option it accepts.
+> The @angular-architects/native-federation:build target — what it puts in angular.json, how it wraps Angular's ApplicationBuilder, and every option it accepts.
 
-The `@angular-architects/native-federation-v4:build` target is a thin wrapper around `@angular/build:application`. It runs the Native Federation build (shared bundles, exposed modules, `remoteEntry.json`), then delegates to Angular's Application Builder for the host/remote app itself. The same builder is used for both `build` and `serve`; the difference is configured by options.
+The `@angular-architects/native-federation:build` target is a thin wrapper around `@angular/build:application`. It runs the Native Federation build (shared bundles, exposed modules, `remoteEntry.json`), then delegates to Angular's Application Builder for the host/remote app itself. The same builder is used for both `build` and `serve`; the difference is configured by options.
+
+> **Note:** On **Angular 22+** the adapter ships under the base package `@angular-architects/native-federation` (22.x) — the names on this page assume it. On **Angular 20/21** the identical builder is published as `@angular-architects/native-federation-v4:build`; substitute the `-v4` package name throughout. See [Getting Started](getting-started.md#1-install) for the version matrix.
 
 **On this page**
 
@@ -23,8 +25,8 @@ The `init` schematic _doesn't_ replace your existing build — it shifts everyth
 ```json
 {
   "architect": {
-    "build":           { "builder": "@angular-architects/native-federation-v4:build", ... },
-    "serve":           { "builder": "@angular-architects/native-federation-v4:build", ... },
+    "build":           { "builder": "@angular-architects/native-federation:build", ... },
+    "serve":           { "builder": "@angular-architects/native-federation:build", ... },
     "esbuild":         { "builder": "@angular/build:application", ... },        // ← old build
     "serve-original":  { "builder": "@angular/build:dev-server", ... }          // ← old serve
   }
@@ -40,7 +42,7 @@ The schematic's defaults look like this:
 
 ```json
 "build": {
-  "builder": "@angular-architects/native-federation-v4:build",
+  "builder": "@angular-architects/native-federation:build",
   "options": {
     "projectName": "mfe1",
     "tsConfig": "projects/mfe1/tsconfig.federation.json",
@@ -54,7 +56,7 @@ The schematic's defaults look like this:
   "defaultConfiguration": "production"
 },
 "serve": {
-  "builder": "@angular-architects/native-federation-v4:build",
+  "builder": "@angular-architects/native-federation:build",
   "options": {
     "projectName": "mfe1",
     "tsConfig": "projects/mfe1/tsconfig.federation.json",
@@ -102,7 +104,7 @@ Every property below comes from `src/builders/build/schema.json`:
 | `cacheExternalArtifacts` (alias `cache`) | `boolean` | `true` | Reuse the bundled external artifacts from `node_modules/.cache/native-federation/<project>` across builds. See [core caching](../core/caching.md) for the checksum logic. |
 | `baseHref` | `string` | — | Overrides the underlying Angular target's `baseHref`. Also used by the dev server to strip the prefix from federation artifact requests. |
 | `outputPath` | `string` | `dist/<project>` | Output base directory. The federation artifacts land in `<outputPath>/browser/<sourceLocale?>`. |
-| `ssr` | `boolean` | `false` | Marks this build as SSR-capable. When true, externals are passed through Angular's `externalDependencies` instead of an esbuild plugin (the SSR build path doesn't run that plugin). The CLI's `server.mjs` is emitted as-is; the federation loader is registered at launch via the `node --import @angular-architects/native-federation-v4/node-preload …` preload (prod) or the dev host-instance bridge (`ng serve`). See [SSR & Hydration](ssr.md). |
+| `ssr` | `boolean` | `false` | Marks this build as SSR-capable. When true, externals are passed through Angular's `externalDependencies` instead of an esbuild plugin (the SSR build path doesn't run that plugin). The CLI's `server.mjs` is emitted as-is; the federation loader is registered at launch via the `node --import @angular-architects/native-federation/node-preload …` preload (prod) or the dev host-instance bridge (`ng serve`). See [SSR & Hydration](ssr.md). |
 | `esmsInitOptions` | `object` | `{ shimMode: true }` | Options injected into the `<script type="esms-options">` tag added to `index.html`. Forwarded to [es-module-shims](https://github.com/guybedford/es-module-shims). |
 | `skipHtmlTransform` | `boolean` | `false` | Skip the `index.html` rewrite (script tags → `type="module-shim"` + `esms-options`). Useful if you template `index.html` yourself. |
 | `buildNotifications` | `object` | `{ enable: true, endpoint: '/@angular-architects/native-federation:build-notifications' }` | Server-Sent Events stream that notifies a host when a remote finishes (re)building. See [below](#dev-server--hot-reload). |

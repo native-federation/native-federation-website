@@ -4,9 +4,9 @@ applies_to: [v4]
 
 # Angular Config
 
-> What @angular-architects/native-federation-v4/config adds on top of the core federation.config.mjs — Angular skip list, platform inference and locale handling.
+> What @angular-architects/native-federation/config adds on top of the core federation.config.mjs — Angular skip list, platform inference and locale handling.
 
-The Angular adapter re-exports the core's `withNativeFederation`, `share` and `shareAll` from a wrapper at `@angular-architects/native-federation-v4/config`. The wrappers are thin: same options, same shape, same semantics. They only differ in the Angular-aware defaults they apply. For everything that isn't called out here, refer to the canonical [core configuration reference](../core/configuration.md).
+The Angular adapter re-exports the core's `withNativeFederation`, `share` and `shareAll` from a wrapper at `@angular-architects/native-federation/config`. The wrappers are thin: same options, same shape, same semantics. They only differ in the Angular-aware defaults they apply. For everything that isn't called out here, refer to the canonical [core configuration reference](../core/configuration.md).
 
 **On this page**
 
@@ -26,7 +26,7 @@ import {
   shareAll,
   shareAngularLocales,
   NG_SKIP_LIST,
-} from '@angular-architects/native-federation-v4/config';
+} from '@angular-architects/native-federation/config';
 ```
 
 All five symbols are Angular-specific exports. Anything else (helpers, types, advanced overrides) lives in the core — import it from `@softarc/native-federation/config` or `@softarc/native-federation/domain`.
@@ -121,7 +121,7 @@ import {
   withNativeFederation,
   shareAll,
   shareAngularLocales,
-} from '@angular-architects/native-federation-v4/config';
+} from '@angular-architects/native-federation/config';
 
 export default withNativeFederation({
   name: 'mfe1',
@@ -141,7 +141,7 @@ See [Localization](localization.md) for the wider context.
 For reference, this is the `federation.config.mjs` that `ng add` emits for a remote on v4:
 
 ```ts
-import { withNativeFederation, shareAll } from '@angular-architects/native-federation-v4/config';
+import { withNativeFederation, shareAll } from '@angular-architects/native-federation/config';
 
 export default withNativeFederation({
   name: 'mfe1',

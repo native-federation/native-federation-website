@@ -90,8 +90,40 @@
           >.
         </p>
 
-        <h2>1. Install</h2>
-        <pre><code>npm i @angular-architects/native-federation-v4 -D</code></pre>
+        <h2 id="1-install">1. Install</h2>
+        <pre><code>npm i @angular-architects/native-federation -D</code></pre>
+        <div class="callout">
+          <p>
+            <strong>Which package?</strong> From <strong>Angular 22</strong> the
+            adapter is back under its original name,
+            <code>@angular-architects/native-federation</code> (22.x). If you are
+            still on <strong>Angular 20 or 21</strong>, install
+            <code>@angular-architects/native-federation-v4</code> instead — it is
+            the exact same adapter, only the package name differs, so substitute
+            <code>-v4</code> in every command and import on these pages. Pin the
+            adapter to the same major as your Angular CLI.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Your Angular</th>
+                  <th>Install</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>22+</td>
+                  <td><code>@angular-architects/native-federation</code></td>
+                </tr>
+                <tr>
+                  <td>20 – 21</td>
+                  <td><code>@angular-architects/native-federation-v4</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
         <p>
           The package brings
           <code>@softarc/native-federation</code> (<code>^4.0.0</code>) and
@@ -104,7 +136,7 @@
         </p>
 
         <h2>2. Scaffold a Remote (Micro Frontend)</h2>
-        <pre><code>ng g @angular-architects/native-federation-v4:init --project mfe1 --port 4201 --type remote</code></pre>
+        <pre><code>ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote</code></pre>
         <p>
           This runs the <code>init</code> schematic against <code>mfe1</code>.
           See <a href="schematics.html#init">Schematics → init</a> for the full
@@ -126,7 +158,7 @@
             <code>serve-original</code> and points <code>build</code>/<code
               >serve</code
             >
-            at <code>@angular-architects/native-federation-v4:build</code>.
+            at <code>@angular-architects/native-federation:build</code>.
           </li>
           <li>
             Splits <code>main.ts</code> in two: an orchestrator-based federation
@@ -136,7 +168,7 @@
         </ul>
 
         <h2>3. Scaffold a Host (Shell)</h2>
-        <pre><code>ng g @angular-architects/native-federation-v4:init --project shell --port 4200 --type dynamic-host</code></pre>
+        <pre><code>ng g @angular-architects/native-federation:init --project shell --port 4200 --type dynamic-host</code></pre>
         <p>
           The same schematic runs in <code>dynamic-host</code> mode for the
           shell. In addition to the changes above, it creates a
@@ -224,7 +256,7 @@ initFederation('/assets/federation.manifest.json', {
         </p>
         <pre><code>// projects/shell/src/app/app.routes.ts
 import { Routes } from '@angular/router';
-import { loadRemoteModule } from '@angular-architects/native-federation-v4';
+import { loadRemoteModule } from '@angular-architects/native-federation';
 
 export const routes: Routes = [
   {
@@ -268,8 +300,8 @@ ng serve shell -o  # in another</code></pre>
     ├── main.ts                   ← initFederation(...) bootstrap (orchestrator by default)
     └── bootstrap.ts              ← the *original* Angular bootstrap (bootstrapApplication etc.)</code></pre>
         <p>And in the workspace root:</p>
-        <pre><code>angular.json    ← build → @angular-architects/native-federation-v4:build
-                ← serve → @angular-architects/native-federation-v4:build
+        <pre><code>angular.json    ← build → @angular-architects/native-federation:build
+                ← serve → @angular-architects/native-federation:build
                 ← esbuild → @angular/build:application (the original build)
                 ← serve-original → @angular/build:dev-server (the original serve)
 package.json    ← + es-module-shims, + @softarc/native-federation-orchestrator (devDep)</code></pre>

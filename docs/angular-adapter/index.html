@@ -58,9 +58,10 @@
         </div>
         <p class="doc-lead">
           The Angular adapter — published as
-          <code>@angular-architects/native-federation-v4</code> during the v4
-          beta (it will revert to
-          <code>@angular-architects/native-federation</code> once stable) — is
+          <code>@angular-architects/native-federation</code> from
+          <strong>Angular 22</strong> onward (and as
+          <code>@angular-architects/native-federation-v4</code> on
+          <strong>Angular 20/21</strong>) — is
           the first-class integration between Angular's esbuild-based
           <code>@angular/build:application</code> and the
           <a href="../core/index.html">Native Federation core</a>. It ships a
@@ -71,10 +72,13 @@
 
         <div class="callout">
           <p>
-            This section covers the v4 Angular adapter (Angular 20+, currently
-            in beta as <code>@angular-architects/native-federation-v4</code>).
-            For a full overview of what changed since v3 — packages, ESM,
-            Angular version support — see
+            This section covers the v4 Angular adapter (Angular 20+). The
+            examples use the <strong>Angular 22</strong> package name
+            <code>@angular-architects/native-federation</code>; on Angular 20/21
+            the identical adapter is published as
+            <code>@angular-architects/native-federation-v4</code> (substitute
+            <code>-v4</code> throughout). For a full overview of what changed
+            since v3 — packages, ESM, Angular version support — see
             <a href="../v3-vs-v4.html">v3 vs v4</a>.
           </p>
         </div>
@@ -111,7 +115,7 @@
               <tr>
                 <td><strong>Builder</strong></td>
                 <td>
-                  <code>@angular-architects/native-federation-v4:build</code>
+                  <code>@angular-architects/native-federation:build</code>
                 </td>
                 <td>
                   Replaces the default Angular build/serve target. Wraps
@@ -123,7 +127,7 @@
               <tr>
                 <td><strong>Schematics</strong></td>
                 <td>
-                  <code>ng add @angular-architects/native-federation-v4</code>
+                  <code>ng add @angular-architects/native-federation</code>
                 </td>
                 <td>
                   Initializes a project as a host, dynamic-host or remote —
@@ -137,7 +141,7 @@
               <tr>
                 <td><strong>Config helpers</strong></td>
                 <td>
-                  <code>@angular-architects/native-federation-v4/config</code>
+                  <code>@angular-architects/native-federation/config</code>
                 </td>
                 <td>
                   <code>withNativeFederation</code>, <code>share</code>,
@@ -148,7 +152,7 @@
               </tr>
               <tr>
                 <td><strong>Runtime helpers</strong></td>
-                <td><code>@angular-architects/native-federation-v4</code></td>
+                <td><code>@angular-architects/native-federation</code></td>
                 <td>
                   Provides <code>initFederation</code> and a (deprecated)
                   top-level <code>loadRemoteModule</code> that bridge to the
@@ -162,7 +166,7 @@
                 <td><strong>Nx generator</strong></td>
                 <td>
                   <code
-                    >@angular-architects/native-federation-v4:native-federation</code
+                    >@angular-architects/native-federation:native-federation</code
                   >
                 </td>
                 <td>
@@ -172,7 +176,7 @@
               <tr>
                 <td><strong>Internal API</strong></td>
                 <td>
-                  <code>@angular-architects/native-federation-v4/internal</code>
+                  <code>@angular-architects/native-federation/internal</code>
                 </td>
                 <td>
                   Exposes <code>runBuilder</code> for users who need to inject
@@ -239,7 +243,7 @@
           </li>
           <li>
             <a href="builder.html">Builder</a> — the
-            <code>@angular-architects/native-federation-v4:build</code> target,
+            <code>@angular-architects/native-federation:build</code> target,
             what it puts in your <code>angular.json</code>, and every option it
             accepts.
           </li>
@@ -285,17 +289,20 @@
         <h2>Versioning</h2>
         <p>
           The adapter follows Angular's major versions:
-          <code>21.x</code> targets Angular 21.x, <code>20.1.x</code> targets
-          Angular 20.1, and so on. Pin the same major as your Angular CLI.
+          <code>22.x</code> targets Angular 22.x, <code>21.x</code> targets
+          Angular 21.x, <code>20.1.x</code> targets Angular 20.1, and so on. Pin
+          the same major as your Angular CLI.
         </p>
 
         <div class="callout">
           <p>
-            The v4 generation is published under
-            <code>@angular-architects/native-federation-v4</code> while it
-            stabilises. Once it lands as the new default, the package name will
-            revert to <code>@angular-architects/native-federation</code>. The
-            runtime semantics, config and builder API are identical.
+            The package name depends on your Angular version. From
+            <strong>Angular 22</strong> the v4 adapter is published under its
+            original name, <code>@angular-architects/native-federation</code>
+            (22.x). On <strong>Angular 20/21</strong> the same adapter ships as
+            <code>@angular-architects/native-federation-v4</code>. The runtime
+            semantics, config and builder API are identical — only the package
+            name differs.
           </p>
         </div>
 
@@ -325,9 +332,10 @@
             CLI workspaces and Nx.
           </li>
           <li>
-            <strong>ESM</strong> — v4 requires <code>"type": "module"</code> in
-            the root <code>package.json</code>. The migration schematic adds it
-            for you.
+            <strong>ESM</strong> — v4 is fully ESM. You do <strong>not</strong>
+            need <code>"type": "module"</code> in <code>package.json</code>; the
+            federation config is loaded as <code>federation.config.mjs</code>,
+            and the schematics generate it for you.
           </li>
         </ul>
       </main>

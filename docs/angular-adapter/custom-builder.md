@@ -6,18 +6,18 @@ applies_to: [v3, v4]
 
 > Inject custom esbuild plugins into the Native Federation Angular builder via runBuilder.
 
-Sometimes you need an esbuild plugin in the federation build itself — code transformation, bundling tweaks, third-party tooling. Since v4 the Angular adapter exposes its builder factory as `runBuilder` from `@angular-architects/native-federation-v4/internal`, so you can wrap it in your own Architect builder and pass extra plugins through.
+Sometimes you need an esbuild plugin in the federation build itself — code transformation, bundling tweaks, third-party tooling. Since v4 the Angular adapter exposes its builder factory as `runBuilder` from `@angular-architects/native-federation/internal`, so you can wrap it in your own Architect builder and pass extra plugins through.
 
 ## The Pattern
 
 1. Write a tiny builder file that calls `runBuilder` with an extended options object.
-2. Point the relevant `angular.json` targets at your wrapper instead of the default `@angular-architects/native-federation-v4:build`.
+2. Point the relevant `angular.json` targets at your wrapper instead of the default `@angular-architects/native-federation:build`.
 
 ### 1. The wrapper
 
 ```js
 // custom-builder.js
-import { runBuilder } from '@angular-architects/native-federation-v4/internal';
+import { runBuilder } from '@angular-architects/native-federation/internal';
 import { createBuilder } from '@angular-devkit/architect';
 import { myEsbuildPlugin } from './my-esbuild-plugin.js';
 
@@ -67,7 +67,7 @@ You're swapping the _builder_, not the options schema — every option from [Bui
 
 ## Notes
 
-- `runBuilder` is exposed from `@angular-architects/native-federation-v4/internal`. As the name suggests, it's not part of the public API guarantee — minor bumps may rename or refine the signature. Pin the adapter version when you ship a custom builder.
+- `runBuilder` is exposed from `@angular-architects/native-federation/internal`. As the name suggests, it's not part of the public API guarantee — minor bumps may rename or refine the signature. Pin the adapter version when you ship a custom builder.
 - Plugins added this way only run inside the build the adapter drives. They do _not_ see Angular CLI's pipeline outside the federation flow.
 - If you only need a config tweak rather than a plugin (e.g. forcing externals, changing output paths), prefer the existing [builder options](builder.md#builder-options) or a `federation.config.mjs` change.
 

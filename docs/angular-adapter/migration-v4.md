@@ -1,5 +1,5 @@
 ---
-applies_to: [v3]
+applies_to: [v3, v4]
 ---
 
 # Migration to v4
@@ -14,7 +14,7 @@ v4 of the Angular adapter is a packaging and runtime upgrade — full ESM, the [
 
 ```
 📁 /
-├── 📄 package.json                     ← (optional) "type": "module", new deps
+├── 📄 package.json                     ← new v4 dependencies
 ├── 📄 angular.json                     ← v4 builder name, entryPoints, projectName
 └── 📁 projects/<your-project>/
     ├── 📄 federation.config.mjs        ← renamed from .js, CommonJS → ESM, package rename
@@ -32,11 +32,10 @@ rm -rf .angular/ dist/ node_modules/.cache/
 
 ## 1. `package.json`
 
-Mark the workspace as ESM and switch to the v4 packages:
+Switch to the v4 packages:
 
 ```json
 {
-  "type": "module",
   "dependencies": {
     "@softarc/native-federation-runtime": "~4.0.0"
   },
@@ -50,11 +49,13 @@ Mark the workspace as ESM and switch to the v4 packages:
 
 `@softarc/native-federation-runtime` is only needed if you deliberately stay on the classic runtime — v4 runs on the orchestrator by default, so for most projects you can drop it.
 
-The v4 generation is published under `@angular-architects/native-federation-v4` while it stabilises. Once it's the default, the package name will collapse back to `@angular-architects/native-federation` — no further code changes needed at that point.
+> **Note:** You do **not** need to add `"type": "module"` to `package.json`. The federation config is renamed to `federation.config.mjs` (step 2), which Node loads as ESM regardless of the package-wide setting. Renaming the config — which the `update-v4` schematic does for you — is enough.
+
+`@angular-architects/native-federation-v4` is the package name v4 ships under on **Angular 20/21**. On **Angular 22** the adapter reverts to its original name, `@angular-architects/native-federation` — see [Updating to Angular 22](#updating-to-angular-22) for the one-command move once you're ready to take that step.
 
 ## 2. `federation.config.js` → `federation.config.mjs`
 
-Rename the file to `federation.config.mjs`, switch from CommonJS to ESM, and update the import path. Functionally everything else stays the same. The builder still falls back to `federation.config.js` if no `.mjs` file is present, but the `update-v4` schematic renames it for consistency with the workspace-wide `"type": "module"`.
+Rename the file to `federation.config.mjs`, switch from CommonJS to ESM, and update the import path. Functionally everything else stays the same. The `.mjs` extension is what makes the config ESM — Node treats it as a module regardless of your `package.json`, so there is no need to set `"type": "module"`. The builder still falls back to `federation.config.js` if no `.mjs` file is present, but the `update-v4` schematic renames it for you.
 
 **Before**
 
@@ -181,6 +182,28 @@ initFederation(manifest, orchestratorOptions)
 ```
 
 See [Runtime → The orchestrator runtime](runtime.md#the-orchestrator-runtime) for the full DI pattern (bootstrap, app config, injection token).
+
+## Updating to Angular 22
+
+Everything above lands you on v4 under the `@angular-architects/native-federation-v4` package — the name v4 ships under on **Angular 20 and 21**. From **Angular 22** the adapter is published under its original name again, `@angular-architects/native-federation` (22.x), so the move to Angular 22 also means dropping the `-v4` suffix.
+
+You don't have to do that by hand. Run the Angular CLI update:
+
+```bash
+ng update @angular-architects/native-federation
+```
+
+This pulls the Angular 22 release and runs the bundled **`update22`** migration, which rewrites your project to the v22 ESM standard automatically — it swaps every `@angular-architects/native-federation-v4` import and `angular.json` builder reference back to `@angular-architects/native-federation`, and renames `federation.config.js` to `federation.config.mjs` if you're still on the old name.
+
+If you already pulled the package with npm (e.g. `npm install @angular-architects/native-federation@22`), run the migration on its own instead:
+
+```bash
+ng update @angular-architects/native-federation --migrate-only update22
+```
+
+> **Note:** The `update22` schematic is all you need — and so is the `federation.config.js` → `.mjs` rename if you prefer to do it by hand. Either one is sufficient; you do **not** need to set `"type": "module"` in `package.json`. The `.mjs` extension already makes the config ESM.
+
+Coming straight from v3 on Angular 22? You can run `ng update @angular-architects/native-federation` directly — the migration takes you to the v22 ESM setup in one step, so you can skip the intermediate `-v4` package entirely.
 
 ## That's It
 

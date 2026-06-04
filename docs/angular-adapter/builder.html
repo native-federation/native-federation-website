@@ -6,7 +6,7 @@
     <title>Builder — Angular Adapter</title>
     <meta
       name="description"
-      content="The @angular-architects/native-federation-v4:build target — what it puts in angular.json, how it wraps Angular's ApplicationBuilder, and every option it accepts."
+      content="The @angular-architects/native-federation:build target — what it puts in angular.json, how it wraps Angular's ApplicationBuilder, and every option it accepts."
     />
     <link
       rel="canonical"
@@ -54,7 +54,7 @@
           >
         </div>
         <p class="doc-lead">
-          The <code>@angular-architects/native-federation-v4:build</code> target
+          The <code>@angular-architects/native-federation:build</code> target
           is a thin wrapper around <code>@angular/build:application</code>. It
           runs the Native Federation build (shared bundles, exposed modules,
           <code>remoteEntry.json</code>), then delegates to Angular's
@@ -62,6 +62,19 @@
           is used for both <code>build</code> and <code>serve</code>; the
           difference is configured by options.
         </p>
+
+        <div class="callout">
+          <p>
+            On <strong>Angular 22+</strong> the adapter ships under the base
+            package <code>@angular-architects/native-federation</code> (22.x) —
+            the names on this page assume it. On <strong>Angular 20/21</strong>
+            the identical builder is published as
+            <code>@angular-architects/native-federation-v4:build</code>;
+            substitute the <code>-v4</code> package name throughout. See
+            <a href="getting-started.html#1-install">Getting Started</a> for the
+            version matrix.
+          </p>
+        </div>
 
         <nav class="page-toc" aria-label="On this page">
           <strong>On this page</strong>
@@ -82,8 +95,8 @@
         </p>
         <pre><code>{
   "architect": {
-    "build":           { "builder": "@angular-architects/native-federation-v4:build", ... },
-    "serve":           { "builder": "@angular-architects/native-federation-v4:build", ... },
+    "build":           { "builder": "@angular-architects/native-federation:build", ... },
+    "serve":           { "builder": "@angular-architects/native-federation:build", ... },
     "esbuild":         { "builder": "@angular/build:application", ... },        // ← old build
     "serve-original":  { "builder": "@angular/build:dev-server", ... }          // ← old serve
   }
@@ -113,7 +126,7 @@
         </ul>
         <p>The schematic's defaults look like this:</p>
         <pre><code>"build": {
-  "builder": "@angular-architects/native-federation-v4:build",
+  "builder": "@angular-architects/native-federation:build",
   "options": {
     "projectName": "mfe1",
     "tsConfig": "projects/mfe1/tsconfig.federation.json",
@@ -127,7 +140,7 @@
   "defaultConfiguration": "production"
 },
 "serve": {
-  "builder": "@angular-architects/native-federation-v4:build",
+  "builder": "@angular-architects/native-federation:build",
   "options": {
     "projectName": "mfe1",
     "tsConfig": "projects/mfe1/tsconfig.federation.json",
@@ -362,7 +375,7 @@
                   (the SSR build path doesn't run that plugin). The CLI's
                   <code>server.mjs</code> is emitted as-is; the federation loader
                   is registered at launch via the
-                  <code>node --import @angular-architects/native-federation-v4/node-preload …</code>
+                  <code>node --import @angular-architects/native-federation/node-preload …</code>
                   preload (prod) or the dev host-instance bridge
                   (<code>ng serve</code>). See
                   <a href="ssr.html">SSR &amp; Hydration</a>.
