@@ -59,11 +59,11 @@
           <code>@softarc/native-federation-runtime</code>. On v4 the adapter
           ships its own <code>initFederation</code> (and a deprecated top-level
           <code>loadRemoteModule</code>) from
-          <code>@angular-architects/native-federation</code> that bridge to
-          the <a href="../runtime/index.html">orchestrator</a> runtime by
-          default. The generated <code>main.ts</code> goes one step further and
-          calls the orchestrator directly. This page covers how these integrate
-          with an Angular bootstrap.
+          <code>@angular-architects/native-federation</code> that bridge to the
+          <a href="../runtime/index.html">orchestrator</a> runtime by default.
+          The generated <code>main.ts</code> goes one step further and calls the
+          orchestrator directly. This page covers how these integrate with an
+          Angular bootstrap.
         </p>
 
         <nav class="page-toc" aria-label="On this page">
@@ -108,9 +108,10 @@ bootstrapApplication(AppComponent, appConfig)
         <p>
           On v4 the adapter's <code>initFederation</code> wraps the orchestrator
           with sensible defaults (shim import map, console logger,
-          <code>globalThis</code> storage, <code>hostRemoteEntry:
-          './remoteEntry.json'</code>, <code>logLevel: 'debug'</code>) and
-          resolves to a <code>NativeFederationResult</code>:
+          <code>globalThis</code> storage,
+          <code>hostRemoteEntry: './remoteEntry.json'</code>,
+          <code>logLevel: 'debug'</code>) and resolves to a
+          <code>NativeFederationResult</code>:
         </p>
         <pre><code>initFederation(
   remotesOrManifestUrl?: Record&lt;string, string&gt; | string,
@@ -210,9 +211,9 @@ export const APP_ROUTES: Routes = [
             dev or same-origin deploys). For Angular SSR the same manifest is
             consumed server-side by
             <code>@softarc/native-federation-node</code> (or, on v4, by the
-            orchestrator's <a href="../orchestrator/node.html"
-              ><code>/node</code> entry</a
-            >); see <a href="ssr.html">SSR &amp; Hydration</a>.
+            orchestrator's
+            <a href="../orchestrator/node.html"><code>/node</code> entry</a>);
+            see <a href="ssr.html">SSR &amp; Hydration</a>.
           </p>
         </div>
 

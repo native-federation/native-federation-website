@@ -82,6 +82,8 @@
             <li><a href="#angular-json">The angular.json layout</a></li>
             <li><a href="#lifecycle">What the builder does</a></li>
             <li><a href="#options">Builder options</a></li>
+            <li><a href="#native-import-maps">Native import maps</a></li>
+            <li><a href="#sri">Subresource Integrity</a></li>
             <li><a href="#dev-server">Dev server &amp; hot reload</a></li>
             <li><a href="#i18n">Locale-aware output paths</a></li>
           </ul>
@@ -173,7 +175,8 @@
             Call the core's <code>normalizeFederationOptions</code> with the
             project's <code>federation.config.mjs</code> (falling back to
             <code>federation.config.js</code> if no <code>.mjs</code> file
-            exists) and <code>tsconfig.federation.json</code>.
+            exists, or the explicit <code>federationConfigPath</code> option if
+            set) and <code>tsconfig.federation.json</code>.
           </li>
           <li>
             Validate that there are no invalid <code>.</code>-imports in the
@@ -259,6 +262,17 @@
                   creates <code>tsconfig.federation.json</code> for this purpose
                   so the federation build doesn't pick up your test types or
                   app-only paths.
+                </td>
+              </tr>
+              <tr>
+                <td><code>federationConfigPath</code></td>
+                <td><code>string</code></td>
+                <td><code>federation.config.mjs</code></td>
+                <td>
+                  Path to the project's federation config file. Point it
+                  elsewhere if your config doesn't sit next to the project or
+                  isn't named <code>federation.config.mjs</code>.
+                  <em>Added in 22.0.1.</em>
                 </td>
               </tr>
               <tr>
@@ -394,7 +408,9 @@
                     target="_blank"
                     rel="noopener"
                     >es-module-shims</a
-                  >.
+                  >. Set <code>{ shimMode: false }</code> to opt out of shim
+                  mode and use the browser's
+                  <a href="#native-import-maps">native import maps</a> instead.
                 </td>
               </tr>
               <tr>
@@ -425,6 +441,59 @@
             </tbody>
           </table>
         </div>
+
+        <h2 id="native-import-maps">Native Import Maps</h2>
+        <p>
+          <em>Since 22.0.3.</em> By default the adapter runs
+          <a
+            href="https://github.com/guybedford/es-module-shims"
+            target="_blank"
+            rel="noopener"
+            >es-module-shims</a
+          >
+          in <strong>shim mode</strong>
+          (<code>esmsInitOptions: { shimMode: true }</code>), which rewrites the
+          app's script tags to <code>type="module-shim"</code>. Modern browsers
+          now support import maps natively, so you can opt out of shim mode and
+          let the browser resolve the import map directly:
+        </p>
+        <pre><code>"options": {
+  "esmsInitOptions": { "shimMode": false }
+}</code></pre>
+        <p>
+          The build and runtime sides must agree. If you disable shim mode in
+          the builder, disable it on the runtime too — pass
+          <code>shimMode: false</code> to the orchestrator's
+          <code>useShimImportMap</code> (or <code>initFederation</code>) in your
+          <code>main.ts</code>:
+        </p>
+        <pre><code>initFederation('/assets/federation.manifest.json', {
+  ...useShimImportMap({ shimMode: false }),
+  // ...
+});</code></pre>
+        <p>
+          Native import maps require a recent browser (Chrome/Edge 133+, Safari
+          18.4+, Firefox 150+); shim mode remains the default for broader
+          compatibility. See <a href="runtime.html#init">Runtime</a>
+          for the runtime side.
+        </p>
+
+        <h2 id="sri">Subresource Integrity</h2>
+        <p>
+          <em>Since 22.0.1.</em> When Angular's own
+          <a
+            href="https://angular.dev/reference/configs/workspace-config"
+            target="_blank"
+            rel="noopener"
+            ><code>subresourceIntegrity</code></a
+          >
+          option is enabled, the CLI stamps <code>integrity</code> and
+          <code>crossorigin</code> attributes onto the <code>polyfills</code>
+          and <code>main</code> script tags. The federation builder now
+          preserves those attributes when it rewrites the tags for federation —
+          only the <code>type</code> attribute is changed. This keeps SRI hashes
+          intact for environments that require them (e.g. PCI DSS compliance).
+        </p>
 
         <h2 id="dev-server">Dev Server &amp; Hot Reload</h2>
         <p>

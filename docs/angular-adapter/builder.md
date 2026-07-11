@@ -15,6 +15,8 @@ The `@angular-architects/native-federation:build` target is a thin wrapper aroun
 - [The angular.json layout](#the-angularjson-layout)
 - [What the builder does](#what-the-builder-does)
 - [Builder options](#builder-options)
+- [Native import maps](#native-import-maps)
+- [Subresource Integrity](#subresource-integrity)
 - [Dev server & hot reload](#dev-server--hot-reload)
 - [Locale-aware output paths](#locale-aware-output-paths)
 
@@ -77,7 +79,7 @@ For every `ng build` or `ng serve` the federation builder runs roughly the follo
 
 1. Resolve the underlying target (the `esbuild` or `serve-original` target referenced by `options.target`) and load its options.
 2. Construct an `NFBuildAdapter` over esbuild and Angular's `SourceFileCache` (see [below](#how-the-adapter-wraps-esbuild)).
-3. Call the core's `normalizeFederationOptions` with the project's `federation.config.mjs` (falling back to `federation.config.js` if no `.mjs` file exists) and `tsconfig.federation.json`.
+3. Call the core's `normalizeFederationOptions` with the project's `federation.config.mjs` (falling back to `federation.config.js` if no `.mjs` file exists, or the explicit `federationConfigPath` option if set) and `tsconfig.federation.json`.
 4. Validate that there are no invalid `.`-imports in the shared mappings or externals (a current Vite limitation — see [vitejs/vite#21036](https://github.com/vitejs/vite/issues/21036)).
 5. Run the core's `buildForFederation` — this writes the shared bundles, exposed modules and `remoteEntry.json` into the configured output directory.
 6. If I18N is configured, post-process the federation artifacts with `localize-translate` (one bundle copy per target locale).
@@ -95,6 +97,7 @@ Every property below comes from `src/builders/build/schema.json`:
 | `target` | `string` | — | The Angular target this builder delegates to (e.g. `mfe1:esbuild:production`, or for serve `mfe1:serve-original:development`). Required when used as a `serve` builder; for `build` it's set per `configuration`. |
 | `projectName` | `string` | — | The Angular project name. Used for the federation cache key and for default output paths. |
 | `tsConfig` | `string` | underlying target's tsconfig | A specific tsconfig used _only_ for the federation build (exposed modules + shared mappings). The schematic creates `tsconfig.federation.json` for this purpose so the federation build doesn't pick up your test types or app-only paths. |
+| `federationConfigPath` | `string` | `federation.config.mjs` | Path to the project's federation config file. Point it elsewhere if your config doesn't sit next to the project or isn't named `federation.config.mjs`. _Added in 22.0.1._ |
 | `entryPoints` | `string[]` | `[<tsConfig dir>/src/main.ts]` | Entry points used to detect which dependencies are actually used. Combined with `features.ignoreUnusedDeps` in `federation.config.mjs` this drives shaking of unused shared externals. Seeded by the `init` / `update-v4` schematics; defaults to `[<sourceRoot>/main.ts]`. |
 | `dev` | `boolean` | `false` | Enables development mode for the federation build: source maps, unminified output, watch-mode SSE notifications, and (for SSR) the dev host-instance bridge that registers the federation loader inside Vite's SSR graph. Set automatically by the `development` configuration. |
 | `watch` | `boolean` | `false` | Re-runs the federation build on file changes. Set automatically when serving; useful for `ng build --watch`. |
@@ -105,9 +108,34 @@ Every property below comes from `src/builders/build/schema.json`:
 | `baseHref` | `string` | — | Overrides the underlying Angular target's `baseHref`. Also used by the dev server to strip the prefix from federation artifact requests. |
 | `outputPath` | `string` | `dist/<project>` | Output base directory. The federation artifacts land in `<outputPath>/browser/<sourceLocale?>`. |
 | `ssr` | `boolean` | `false` | Marks this build as SSR-capable. When true, externals are passed through Angular's `externalDependencies` instead of an esbuild plugin (the SSR build path doesn't run that plugin). The CLI's `server.mjs` is emitted as-is; the federation loader is registered at launch via the `node --import @angular-architects/native-federation/node-preload …` preload (prod) or the dev host-instance bridge (`ng serve`). See [SSR & Hydration](ssr.md). |
-| `esmsInitOptions` | `object` | `{ shimMode: true }` | Options injected into the `<script type="esms-options">` tag added to `index.html`. Forwarded to [es-module-shims](https://github.com/guybedford/es-module-shims). |
+| `esmsInitOptions` | `object` | `{ shimMode: true }` | Options injected into the `<script type="esms-options">` tag added to `index.html`. Forwarded to [es-module-shims](https://github.com/guybedford/es-module-shims). Set `{ shimMode: false }` to opt out of shim mode and use the browser's [native import maps](#native-import-maps) instead. |
 | `skipHtmlTransform` | `boolean` | `false` | Skip the `index.html` rewrite (script tags → `type="module-shim"` + `esms-options`). Useful if you template `index.html` yourself. |
 | `buildNotifications` | `object` | `{ enable: true, endpoint: '/@angular-architects/native-federation:build-notifications' }` | Server-Sent Events stream that notifies a host when a remote finishes (re)building. See [below](#dev-server--hot-reload). |
+
+## Native Import Maps
+
+_Since 22.0.3._ By default the adapter runs [es-module-shims](https://github.com/guybedford/es-module-shims) in **shim mode** (`esmsInitOptions: { shimMode: true }`), which rewrites the app's script tags to `type="module-shim"`. Modern browsers now support import maps natively, so you can opt out of shim mode and let the browser resolve the import map directly:
+
+```json
+"options": {
+  "esmsInitOptions": { "shimMode": false }
+}
+```
+
+The build and runtime sides must agree. If you disable shim mode in the builder, disable it on the runtime too — pass `shimMode: false` to the orchestrator's `useShimImportMap` (or `initFederation`) in your `main.ts`:
+
+```ts
+initFederation('/assets/federation.manifest.json', {
+  ...useShimImportMap({ shimMode: false }),
+  // ...
+});
+```
+
+Native import maps require a recent browser (Chrome/Edge 133+, Safari 18.4+, Firefox 150+); shim mode remains the default for broader compatibility. See [Runtime](runtime.md#initfederation) for the runtime side.
+
+## Subresource Integrity
+
+_Since 22.0.1._ When Angular's own [`subresourceIntegrity`](https://angular.dev/reference/configs/workspace-config) option is enabled, the CLI stamps `integrity` and `crossorigin` attributes onto the `polyfills` and `main` script tags. The federation builder now preserves those attributes when it rewrites the tags for federation — only the `type` attribute is changed. This keeps SRI hashes intact for environments that require them (e.g. PCI DSS compliance).
 
 ## Dev Server & Hot Reload
 

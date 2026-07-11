@@ -15,6 +15,7 @@ The Angular adapter re-exports the core's `withNativeFederation`, `share` and `s
 - [NG_SKIP_LIST](#ng_skip_list)
 - [Platform inference](#platform-inference)
 - [shareAngularLocales & locale handling](#shareangularlocales--locale-handling)
+- [Version-pinned share scopes](#version-pinned-share-scopes)
 - [What the schematic generates](#what-the-schematic-generates)
 
 ## Imports
@@ -25,11 +26,12 @@ import {
   share,
   shareAll,
   shareAngularLocales,
+  autoShareScope,
   NG_SKIP_LIST,
 } from '@angular-architects/native-federation/config';
 ```
 
-All five symbols are Angular-specific exports. Anything else (helpers, types, advanced overrides) lives in the core — import it from `@softarc/native-federation/config` or `@softarc/native-federation/domain`.
+All six symbols are Angular-specific exports. Anything else (helpers, types, advanced overrides) lives in the core — import it from `@softarc/native-federation/config` or `@softarc/native-federation/domain`.
 
 ## What `withNativeFederation` Adds
 
@@ -135,6 +137,55 @@ export default withNativeFederation({
 `shareAngularLocales(keys, opts?)` generates one shared entry per locale key, pre-wiring the `packageInfo.entryPoint` at `node_modules/@angular/common/locales/<key>.js`. Pass `opts.config` to override the default `{ singleton: true, strictVersion: true, requiredVersion: 'auto' }`; pass `opts.legacy: true` to use the old `.mjs` filenames if your `@angular/common` still ships them.
 
 See [Localization](localization.md) for the wider context.
+
+## Version-Pinned Share Scopes
+
+_Since adapter 22.0.4 / 21.2.x._ A `shareScope` isolates shared dependencies into a named bucket, so packages are only shared between remotes that use the same scope. The `autoShareScope` helper derives that name from a dependency's declared version, letting you pin sharing to a version line without hardcoding the number:
+
+```ts
+import { withNativeFederation, shareAll, autoShareScope } from '@angular-architects/native-federation/config';
+
+export default withNativeFederation({
+  // Only share with remotes built against the same Angular minor, e.g. "ng21.1"
+  shareScope: autoShareScope(),
+
+  shared: {
+    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
+  },
+});
+```
+
+`autoShareScope(opts?)` reads the version from `dependencies`, `devDependencies` or `peerDependencies` in your `package.json` and returns a scope string. It accepts:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `level` | `'major' \| 'minor' \| 'patch'` | `'minor'` | Granularity of the generated scope. |
+| `dependency` | `string` | `'@angular/core'` | The package whose version drives the scope. |
+| `prefix` | `string` | `'ng'` | Prepended to the generated name. |
+| `projectPath` | `string` | `cwd()` | Where to start looking for `package.json`. |
+
+The `level` controls the granularity of the generated scope (given `@angular/core` is `21.1.4`):
+
+| `level` | Result |
+| --- | --- |
+| `'major'` | `"ng21"` |
+| `'minor'` | `"ng21.1"` (default) |
+| `'patch'` | `"ng21.1.4"` |
+
+You can also point it at another package or set a per-dependency scope:
+
+```ts
+export default withNativeFederation({
+  shareScope: autoShareScope({ level: 'patch' }),
+
+  shared: {
+    // Override the scope for a single package
+    rxjs: { singleton: true, shareScope: autoShareScope({ dependency: 'rxjs' }) },
+  },
+});
+```
+
+`autoShareScope` throws if the dependency isn't declared, or if the declared version lacks enough segments for the requested `level`.
 
 ## What the Schematic Generates
 

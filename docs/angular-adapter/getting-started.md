@@ -23,7 +23,7 @@ npm i @angular-architects/native-federation -D
 > | 22+ | `@angular-architects/native-federation` |
 > | 20 – 21 | `@angular-architects/native-federation-v4` |
 
-The package brings `@softarc/native-federation` (`^4.0.0`) and `@softarc/native-federation-orchestrator` (`^4.0.0`) as dependencies. The `ng add` step below adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` (as a devDependency) on top — nothing else to install up front.
+The package brings `@softarc/native-federation` (`^4.3.0`) and `@softarc/native-federation-orchestrator` (`^4.5.0`) as dependencies. The `ng add` step below adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` (as a devDependency) on top — nothing else to install up front.
 
 ## 2. Scaffold a Remote (Micro Frontend)
 

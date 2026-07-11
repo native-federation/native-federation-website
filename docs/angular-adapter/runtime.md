@@ -22,23 +22,24 @@ Native Federation must wire the import map _before_ Angular evaluates any module
 
 ```ts
 // projects/<project>/src/main.ts
-import { initFederation } from '@angular-architects/native-federation';
+import { initFederation } from "@angular-architects/native-federation";
 
-initFederation('/assets/federation.manifest.json')
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
+initFederation("/assets/federation.manifest.json")
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
 ```
 
 ```ts
 // projects/<project>/src/bootstrap.ts
 // ← whatever your original main.ts contained, e.g.
-import { bootstrapApplication } from '@angular/platform-browser';
-import { AppComponent } from './app/app.component';
-import { appConfig } from './app/app.config';
+import { bootstrapApplication } from "@angular/platform-browser";
+import { AppComponent } from "./app/app.component";
+import { appConfig } from "./app/app.config";
 
-bootstrapApplication(AppComponent, appConfig)
-  .catch(err => console.error(err));
+bootstrapApplication(AppComponent, appConfig).catch((err) =>
+  console.error(err),
+);
 ```
 
 The dynamic `import('./bootstrap')` is mandatory: it forces the bundler to put your Angular code in a separate chunk that's only loaded once the import map is live.
@@ -70,19 +71,19 @@ Once `initFederation` resolves, you can lazy-load any exposed module from any re
 
 ```ts
 // projects/shell/src/app/app.routes.ts
-import { Routes } from '@angular/router';
-import { loadRemoteModule } from '@angular-architects/native-federation';
+import { Routes } from "@angular/router";
+import { loadRemoteModule } from "@angular-architects/native-federation";
 
 export const APP_ROUTES: Routes = [
   {
-    path: 'flights',
+    path: "flights",
     loadComponent: () =>
-      loadRemoteModule('mfe1', './Component').then(m => m.AppComponent),
+      loadRemoteModule("mfe1", "./Component").then((m) => m.AppComponent),
   },
   {
-    path: 'orders',
+    path: "orders",
     loadChildren: () =>
-      loadRemoteModule('mfe2', './Routes').then(m => m.ORDERS_ROUTES),
+      loadRemoteModule("mfe2", "./Routes").then((m) => m.ORDERS_ROUTES),
   },
 ];
 ```
@@ -114,68 +115,79 @@ A freshly scaffolded (or hand-written) orchestrator bootstrap looks like this:
 
 ```ts
 // projects/shell/src/main.ts
-import { initFederation } from '@softarc/native-federation-orchestrator';
+import { initFederation } from "@softarc/native-federation-orchestrator";
 import {
   useShimImportMap,
   consoleLogger,
   globalThisStorageEntry,
-} from '@softarc/native-federation-orchestrator/options';
+} from "@softarc/native-federation-orchestrator/options";
 
-initFederation('/assets/federation.manifest.json', {
+initFederation("/assets/federation.manifest.json", {
   ...useShimImportMap({ shimMode: true }),
   logger: consoleLogger,
   storage: globalThisStorageEntry,
-  hostRemoteEntry: './remoteEntry.json',
-  logLevel: 'debug',
+  hostRemoteEntry: "./remoteEntry.json",
+  logLevel: "debug",
 })
-  .catch(err => console.error(err))
-  .then(_ => import('./bootstrap'))
-  .catch(err => console.error(err));
+  .catch((err) => console.error(err))
+  .then((_) => import("./bootstrap"))
+  .catch((err) => console.error(err));
 ```
 
 The biggest behavioural change is that `loadRemoteModule` is no longer a global export — it's returned from the resolved `initFederation` promise. That nudges your bootstrap into a controlled flow:
 
 ```ts
 // projects/shell/src/main.ts
-import { initFederation, NativeFederationResult } from '@softarc/native-federation-orchestrator';
+import {
+  initFederation,
+  NativeFederationResult,
+} from "@softarc/native-federation-orchestrator";
 
-initFederation('/assets/federation.manifest.json')
+initFederation("/assets/federation.manifest.json")
   .then(({ loadRemoteModule }: NativeFederationResult) =>
-    import('./bootstrap').then((m: any) => m.bootstrap(loadRemoteModule)))
-  .catch(err => console.error(err));
+    import("./bootstrap").then((m: any) => m.bootstrap(loadRemoteModule)),
+  )
+  .catch((err) => console.error(err));
 ```
 
 ```ts
 // projects/shell/src/bootstrap.ts
-import { bootstrapApplication } from '@angular/platform-browser';
-import { AppComponent } from './app/app.component';
-import { appConfig } from './app/app.config';
-import { LoadRemoteModule } from '@softarc/native-federation-orchestrator';
+import { bootstrapApplication } from "@angular/platform-browser";
+import { AppComponent } from "./app/app.component";
+import { appConfig } from "./app/app.config";
+import { LoadRemoteModule } from "@softarc/native-federation-orchestrator";
 
 export const bootstrap = (loadRemoteModule: LoadRemoteModule) =>
-  bootstrapApplication(AppComponent, appConfig(loadRemoteModule))
-    .catch(err => console.error(err));
+  bootstrapApplication(AppComponent, appConfig(loadRemoteModule)).catch((err) =>
+    console.error(err),
+  );
 ```
 
 And then pass the loader through Angular's DI so routes can use it:
 
 ```ts
 // projects/shell/src/app/app.config.ts
-import { ApplicationConfig, InjectionToken, provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter, Routes } from '@angular/router';
-import { LoadRemoteModule } from '@softarc/native-federation-orchestrator';
+import {
+  ApplicationConfig,
+  InjectionToken,
+  provideZonelessChangeDetection,
+} from "@angular/core";
+import { provideRouter, Routes } from "@angular/router";
+import { LoadRemoteModule } from "@softarc/native-federation-orchestrator";
 
-export const MODULE_LOADER = new InjectionToken<LoadRemoteModule>('loader');
+export const MODULE_LOADER = new InjectionToken<LoadRemoteModule>("loader");
 
 const routes = (loadRemoteModule: LoadRemoteModule): Routes => [
   {
-    path: 'mfe3',
+    path: "mfe3",
     loadComponent: () =>
-      loadRemoteModule('mfe3', './Component').then((m: any) => m.AppComponent),
+      loadRemoteModule("mfe3", "./Component").then((m: any) => m.AppComponent),
   },
 ];
 
-export const appConfig = (loadRemoteModule: LoadRemoteModule): ApplicationConfig => ({
+export const appConfig = (
+  loadRemoteModule: LoadRemoteModule,
+): ApplicationConfig => ({
   providers: [
     { provide: MODULE_LOADER, useValue: loadRemoteModule },
     provideZonelessChangeDetection(),

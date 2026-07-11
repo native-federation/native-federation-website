@@ -28,11 +28,18 @@ Repo: https://github.com/native-federation/esbuild-adapter
 | ---------- | ------- | --------- |
 | 2026-05-26 | `4.0.0` | `f3d5810` |
 
-## `@angular-architects/native-federation-v4`
+## `@angular-architects/native-federation`
 
 Repo: https://github.com/native-federation/angular-adapter
 
-| Date       | Version  | Commit    |
-| ---------- | -------- | --------- |
-| 2026-06-01 | `21.2.3` | `fafd466` |
-| 2026-05-26 | `21.2.1` | `576f192` |
+> **Package naming.** The base package `@angular-architects/native-federation`
+> was v3 up to Angular 21; from Angular 22 (22.0.0) the base package is v4.
+> `@angular-architects/native-federation-v4` is a backport that brings v4 support
+> to Angular 20/21 only. The `22.x` rows below are the base package; the `21.x`
+> rows are the `-v4` backport.
+
+| Date       | Version  | Package | Commit    |
+| ---------- | -------- | ------- | --------- |
+| 2026-07-11 | `22.0.5` | base    | `8647b2c` |
+| 2026-06-01 | `21.2.3` | `-v4`   | `fafd466` |
+| 2026-05-26 | `21.2.1` | `-v4`   | `576f192` |

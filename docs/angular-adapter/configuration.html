@@ -74,6 +74,7 @@
             <li>
               <a href="#locales">shareAngularLocales &amp; locale handling</a>
             </li>
+            <li><a href="#scopes">Version-pinned share scopes</a></li>
             <li><a href="#scaffold">What the schematic generates</a></li>
           </ul>
         </nav>
@@ -84,10 +85,11 @@
   share,
   shareAll,
   shareAngularLocales,
+  autoShareScope,
   NG_SKIP_LIST,
 } from '@angular-architects/native-federation/config';</code></pre>
         <p>
-          All five symbols are Angular-specific exports. Anything else (helpers,
+          All six symbols are Angular-specific exports. Anything else (helpers,
           types, advanced overrides) lives in the core — import it from
           <code>@softarc/native-federation/config</code> or
           <code>@softarc/native-federation/domain</code>.
@@ -254,6 +256,115 @@ export default withNativeFederation({
         <p>
           See <a href="localization.html">Localization</a> for the wider
           context.
+        </p>
+
+        <h2 id="scopes">Version-Pinned Share Scopes</h2>
+        <p>
+          <em>Since adapter 22.0.4 / 21.2.x.</em> A <code>shareScope</code>
+          isolates shared dependencies into a named bucket, so packages are only
+          shared between remotes that use the same scope. The
+          <code>autoShareScope</code> helper derives that name from a
+          dependency's declared version, letting you pin sharing to a version
+          line without hardcoding the number:
+        </p>
+        <pre><code>import { withNativeFederation, shareAll, autoShareScope } from '@angular-architects/native-federation/config';
+
+export default withNativeFederation({
+  // Only share with remotes built against the same Angular minor, e.g. "ng21.1"
+  shareScope: autoShareScope(),
+
+  shared: {
+    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
+  },
+});</code></pre>
+        <p>
+          <code>autoShareScope(opts?)</code> reads the version from
+          <code>dependencies</code>, <code>devDependencies</code> or
+          <code>peerDependencies</code> in your <code>package.json</code> and
+          returns a scope string. It accepts:
+        </p>
+        <div class="table-wrap">
+          <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>level</code></td>
+              <td><code>'major' | 'minor' | 'patch'</code></td>
+              <td><code>'minor'</code></td>
+              <td>Granularity of the generated scope.</td>
+            </tr>
+            <tr>
+              <td><code>dependency</code></td>
+              <td><code>string</code></td>
+              <td><code>'@angular/core'</code></td>
+              <td>The package whose version drives the scope.</td>
+            </tr>
+            <tr>
+              <td><code>prefix</code></td>
+              <td><code>string</code></td>
+              <td><code>'ng'</code></td>
+              <td>Prepended to the generated name.</td>
+            </tr>
+            <tr>
+              <td><code>projectPath</code></td>
+              <td><code>string</code></td>
+              <td><code>cwd()</code></td>
+              <td>Where to start looking for <code>package.json</code>.</td>
+            </tr>
+          </tbody>
+          </table>
+        </div>
+        <p>
+          The <code>level</code> controls the granularity of the generated scope
+          (given <code>@angular/core</code> is <code>21.1.4</code>):
+        </p>
+        <div class="table-wrap">
+          <table>
+          <thead>
+            <tr>
+              <th><code>level</code></th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>'major'</code></td>
+              <td><code>"ng21"</code></td>
+            </tr>
+            <tr>
+              <td><code>'minor'</code></td>
+              <td><code>"ng21.1"</code> (default)</td>
+            </tr>
+            <tr>
+              <td><code>'patch'</code></td>
+              <td><code>"ng21.1.4"</code></td>
+            </tr>
+          </tbody>
+          </table>
+        </div>
+        <p>
+          You can also point it at another package or set a per-dependency
+          scope:
+        </p>
+        <pre><code>export default withNativeFederation({
+  shareScope: autoShareScope({ level: 'patch' }),
+
+  shared: {
+    // Override the scope for a single package
+    rxjs: { singleton: true, shareScope: autoShareScope({ dependency: 'rxjs' }) },
+  },
+});</code></pre>
+        <p>
+          <code>autoShareScope</code> throws if the dependency isn't declared,
+          or if the declared version lacks enough segments for the requested
+          <code>level</code>.
         </p>
 
         <h2 id="scaffold">What the Schematic Generates</h2>
