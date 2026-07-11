@@ -51,6 +51,7 @@ type SharedInfo = {
   outFileName: string;
   bundle?: string; // present when denseChunking is enabled
   shareScope?: string;
+  pool?: string; // orchestrator resource-pool hint (since v4.3)
   dev?: { entryPoint: string };
 };
 ```
@@ -113,6 +114,36 @@ When `features.denseChunking` is enabled, chunks move off the `shared` array and
 ```
 
 Each shared entry gets a `bundle` property pointing at its chunk bundle by name. The result is a smaller, more cache-friendly `remoteEntry.json` — and the runtime can skip entire chunk groups whose dependencies aren't part of the final import map.
+
+## Dense Externals
+
+When `features.denseExternals` is enabled (opt-in since v4.3), the `shared` array groups all entrypoints of a package — its primary import plus every secondary and shared mapping — under a single object. Instead of the flat `SharedInfo` shape (one entry per entrypoint, each with its own `outFileName`), each package becomes a `DenseSharedInfo`:
+
+```ts
+type DenseSharedInfo = Omit<SharedInfo, "outFileName"> & {
+  entries: Record<string, string>; // import name → output file
+};
+```
+
+```json
+{
+  "shared": [
+    {
+      "packageName": "@angular/common",
+      "requiredVersion": "^22.0.0",
+      "version": "20.0.6",
+      "singleton": true,
+      "strictVersion": true,
+      "entries": {
+        "@angular/common": "angular-common-VFK9A2LE.js",
+        "@angular/common/http": "angular-common-http-Q4XS7K1T.js"
+      }
+    }
+  ]
+}
+```
+
+Entrypoints whose sharing metadata (`singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`) diverges are split into separate groups. Bundler chunks stay flat and `importmap.json` is unaffected. The format is opt-in and fully backward compatible: the runtime detects each entry by shape (`entries` map vs. `outFileName`), so both classic and dense `remoteEntry.json` load. `denseExternals` and `denseChunking` are orthogonal and can be combined.
 
 ## Integrity map
 

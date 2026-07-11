@@ -50,7 +50,7 @@ export default withNativeFederation({
 | `skip` | `string[]` | *see skip list* | Packages (or mapped paths) to exclude from sharing. Merged with the built-in skip list. |
 | `externals` | `string[]` | `[]` | Extra externals to expose to your bundler via `federationBuilder.externals` on top of the shared ones. |
 | `shareScope` | `string` | *undefined* | Optional share scope name, propagated to every shared external. |
-| `features` | `{ mappingVersion?, ignoreUnusedDeps?, denseChunking?, integrityHashes? }` | see below | Feature flags — [details below](#feature-flags). |
+| `features` | `{ mappingVersion?, ignoreUnusedDeps?, denseChunking?, denseExternals?, integrityHashes? }` | see below | Feature flags — [details below](#feature-flags). |
 
 ## name
 
@@ -104,24 +104,25 @@ exposes: {
 
 ## shared & the share helpers
 
-The `shared` object lists every npm package that should be extracted into its own ESM bundle and reused between host and remotes. Declare each entry by hand, or use the `share` / `shareAll` helpers. If the property is omitted, `withNativeFederation` falls back to `shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto', platform: 'browser' })`.
+The `shared` object lists every npm package that should be extracted into its own ESM bundle and reused between host and remotes. Declare each entry by hand with `share`, or share everything in your `package.json` with the `fromPackageJson` builder (recommended, since v4.3) or the older `shareAll` helper. If the property is omitted, `withNativeFederation` falls back to the equivalent of `fromPackageJson({ singleton: true, strictVersion: true, requiredVersion: 'auto', platform: 'browser' })`.
 
 ```js
-import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+import { withNativeFederation, fromPackageJson } from '@softarc/native-federation/config';
 
 export default withNativeFederation({
   name: 'mfe1',
-  shared: {
-    ...shareAll({
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: 'auto',
-    }),
-  },
+  // Recommended: the fromPackageJson builder
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+  }).get(),
 });
 ```
 
-Every per-package option (`singleton`, `strictVersion`, `requiredVersion`, `includeSecondaries`, `build`, `chunks`, `platform`, `shareScope`) is documented on [Sharing Dependencies](sharing.md).
+`fromPackageJson` returns a fluent builder (`.skip()`, `.override()`, `.patch()`, `.get()`); `shareAll` is the older object-spread equivalent. Both are covered in full on [Sharing Dependencies](sharing.md).
+
+Every per-package option (`singleton`, `strictVersion`, `requiredVersion`, `includeSecondaries`, `build`, `chunks`, `platform`, `shareScope`, `pool`) is documented on [Sharing Dependencies](sharing.md).
 
 ### Empty vs. populated `shared`
 
@@ -236,12 +237,13 @@ The `build` field on each shared entry controls how the core groups packages whe
 
 ## Feature Flags
 
-All feature flags live under `features` on the config. `ignoreUnusedDeps` and `mappingVersion` are on by default (opt-out); `denseChunking` and `integrityHashes` are off by default (opt-in).
+All feature flags live under `features` on the config. `ignoreUnusedDeps` and `mappingVersion` are on by default (opt-out); `denseChunking`, `denseExternals` and `integrityHashes` are off by default (opt-in).
 
 | Flag | Default | Effect |
 | --- | --- | --- |
 | `ignoreUnusedDeps` | `true` | Drops shared externals that aren't actually imported by the entry points. Required for wildcard mapped paths. |
 | `denseChunking` | `false` | Groups chunks by bundle name in `remoteEntry.json` so each shared package references its chunk bundle by name rather than listing chunks individually. Produces a smaller, more cache-friendly `remoteEntry.json`. |
+| `denseExternals` | `false` | Since v4.3. Groups all entrypoints of a shared external (primary import, secondaries and shared mappings) under a single object with an `entries` map in `remoteEntry.json`, instead of one flat entry per entrypoint. Opt-in and backward compatible. See [Dense Externals](sharing.md#dense-externals). |
 | `mappingVersion` | `true` | Emits a real semver for every shared mapped path (monorepo-internal library) — picked up from the nearest `package.json` walking up from the entry file to the workspace root. Also sets `requiredVersion: '~<version>'` and `strictVersion: true` on the resulting shared entry, so version mismatches across remotes are detected at runtime. Set to `false` to fall back to the unversioned `version: ''` shape. |
 | `integrityHashes` | `false` | Emit SRI hashes for every shared external, exposed module and chunk under a top-level `integrity` map in `remoteEntry.json`. The orchestrator copies these onto the import map so the browser (or `es-module-shims`) can verify each module before executing it. See [Subresource Integrity](../orchestrator/security.md#subresource-integrity). |
 

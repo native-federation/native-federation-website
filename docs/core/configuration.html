@@ -210,7 +210,7 @@ export default withNativeFederation({
                 <td>
                   <code
                     >{ mappingVersion?, ignoreUnusedDeps?, denseChunking?,
-                    integrityHashes? }</code
+                    denseExternals?, integrityHashes? }</code
                   >
                 </td>
                 <td>see below</td>
@@ -295,32 +295,41 @@ export default withNativeFederation({
         <p>
           The <code>shared</code> object lists every npm package that should be
           extracted into its own ESM bundle and reused between host and remotes.
-          Declare each entry by hand, or use the <code>share</code> /
-          <code>shareAll</code> helpers. If the property is omitted,
-          <code>withNativeFederation</code> falls back to
+          Declare each entry by hand with <code>share</code>, or share
+          everything in your <code>package.json</code> with the
+          <code>fromPackageJson</code> builder (recommended, since v4.3) or the
+          older <code>shareAll</code> helper. If the property is omitted,
+          <code>withNativeFederation</code> falls back to the equivalent of
           <code
-            >shareAll({ singleton: true, strictVersion: true, requiredVersion:
-            'auto', platform: 'browser' })</code
+            >fromPackageJson({ singleton: true, strictVersion: true,
+            requiredVersion: 'auto', platform: 'browser' })</code
           >.
         </p>
-        <pre><code>import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+        <pre><code>import { withNativeFederation, fromPackageJson } from '@softarc/native-federation/config';
 
 export default withNativeFederation({
   name: 'mfe1',
-  shared: {
-    ...shareAll({
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: 'auto',
-    }),
-  },
+  // Recommended: the fromPackageJson builder
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+  }).get(),
 });</code></pre>
+        <p>
+          <code>fromPackageJson</code> returns a fluent builder
+          (<code>.skip()</code>, <code>.override()</code>, <code>.patch()</code>,
+          <code>.get()</code>); <code>shareAll</code> is the older object-spread
+          equivalent. Both are covered in full on
+          <a href="sharing.html">Sharing Dependencies</a>.
+        </p>
         <p>
           Every per-package option (<code>singleton</code>,
           <code>strictVersion</code>, <code>requiredVersion</code>,
           <code>includeSecondaries</code>, <code>build</code>,
-          <code>chunks</code>, <code>platform</code>, <code>shareScope</code>)
-          is documented on <a href="sharing.html">Sharing Dependencies</a>.
+          <code>chunks</code>, <code>platform</code>, <code>shareScope</code>,
+          <code>pool</code>) is documented on
+          <a href="sharing.html">Sharing Dependencies</a>.
         </p>
 
         <h3>Empty vs. populated <code>shared</code></h3>
@@ -523,8 +532,9 @@ shared: {
         <p>
           All feature flags live under <code>features</code> on the config.
           <code>ignoreUnusedDeps</code> and <code>mappingVersion</code> are on
-          by default (opt-out); <code>denseChunking</code> and
-          <code>integrityHashes</code> are off by default (opt-in).
+          by default (opt-out); <code>denseChunking</code>,
+          <code>denseExternals</code> and <code>integrityHashes</code> are off
+          by default (opt-in).
         </p>
         <div class="table-wrap">
           <table>
@@ -553,6 +563,18 @@ shared: {
                   references its chunk bundle by name rather than listing chunks
                   individually. Produces a smaller, more cache-friendly
                   <code>remoteEntry.json</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>denseExternals</code></td>
+                <td><code>false</code></td>
+                <td>
+                  Since v4.3. Groups all entrypoints of a shared external
+                  (primary import, secondaries and shared mappings) under a
+                  single object with an <code>entries</code> map in
+                  <code>remoteEntry.json</code>, instead of one flat entry per
+                  entrypoint. Opt-in and backward compatible. See
+                  <a href="sharing.html#dense-externals">Dense Externals</a>.
                 </td>
               </tr>
               <tr>

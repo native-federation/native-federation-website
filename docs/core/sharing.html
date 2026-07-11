@@ -59,16 +59,112 @@
         <p class="doc-lead">
           Shared dependencies are the mechanism that lets hosts and remotes load
           the same library once and reuse it at runtime. This page covers the
-          <code>share</code> and <code>shareAll</code> helpers and the options
-          that govern each shared entry.
+          <code>fromPackageJson</code>, <code>share</code> and
+          <code>shareAll</code> helpers and the options that govern each shared
+          entry.
         </p>
 
-        <h2><code>shareAll</code></h2>
+        <h2><code>fromPackageJson</code> (recommended)</h2>
         <p>
-          The <code>shareAll</code> helper shares <em>every</em> production
-          dependency declared in your <code>package.json</code>. Pass a single
-          options object — these options are applied to every discovered
-          dependency:
+          Since v4.3, <code>fromPackageJson</code> is the recommended way to
+          share your dependencies. It shares <strong>all</strong> dependencies
+          found in your <code>package.json</code> and returns a small fluent
+          builder so you can fine-tune the result. The base options you pass are
+          applied to every shared dependency; you then chain
+          <code>.skip(...)</code>, <code>.override(...)</code> and
+          <code>.patch(...)</code> as needed and finish with
+          <code>.get()</code>:
+        </p>
+        <pre><code>import { withNativeFederation, fromPackageJson } from '@softarc/native-federation/config';
+
+export default withNativeFederation({
+  name: 'host',
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+    includeSecondaries: false,
+  }).get(),
+});</code></pre>
+
+        <div class="callout">
+          <p>
+            If you omit the <code>shared</code> property entirely, Native
+            Federation applies exactly this <code>fromPackageJson</code>
+            configuration for you (with <code>singleton</code>,
+            <code>strictVersion</code> and <code>requiredVersion: 'auto'</code>).
+            So the snippet above is also a good description of the default
+            behavior.
+          </p>
+        </div>
+
+        <p>
+          The builder offers three chainable methods, each of which returns the
+          builder so you can combine them:
+        </p>
+        <ul>
+          <li>
+            <code>.skip(externals)</code> — exclude packages from sharing (added
+            on top of the
+            <a href="configuration.html#default-skip-list"
+              >default skip list</a
+            >).
+          </li>
+          <li>
+            <code>.override(externals)</code> — replace the configuration for
+            specific packages entirely. Use this when a package needs a
+            completely different set of options.
+          </li>
+          <li>
+            <code>.patch(externals, cfg)</code> — merge a partial configuration
+            onto specific shared externals, keeping the base options for
+            everything you don't touch.
+          </li>
+        </ul>
+        <pre><code>import { withNativeFederation, fromPackageJson } from '@softarc/native-federation/config';
+
+export default withNativeFederation({
+  name: 'host',
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: 'auto',
+  })
+    // Don't share these dependencies at all
+    .skip(['my-lib', 'some-dev-only-lib'])
+    // Give a package a completely different configuration
+    .override({
+      'package-a/themes/xyz': {
+        singleton: true,
+        strictVersion: true,
+        requiredVersion: 'auto',
+        includeSecondaries: { skip: '@package-a/themes/xyz/*' },
+        build: 'package',
+      },
+    })
+    // Tweak a few options on specific packages while keeping the base config
+    .patch(['package-b'], {
+      singleton: false,
+      includeSecondaries: { skip: 'package-b/icons/*' },
+      build: 'package',
+    })
+    .get(),
+});</code></pre>
+        <p>
+          By default the closest <code>package.json</code> (relative to your
+          <code>federation.config.js</code>) is used. You can point at a
+          different one by passing its path as the second argument:
+          <code>fromPackageJson(baseCfg, projectPath)</code>.
+        </p>
+
+        <h2>Alternative: the <code>shareAll</code> helper</h2>
+        <p>
+          <code>shareAll</code> is the older, object-spread style alternative to
+          <code>fromPackageJson</code>. It also shares <em>every</em> production
+          dependency declared in your <code>package.json</code>, but instead of
+          a fluent builder it returns a plain object that you spread into
+          <code>shared</code>. Pass a single options object — these options are
+          applied to every discovered dependency:
         </p>
         <pre><code>import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
 
@@ -220,6 +316,17 @@ shared: share({
                 <td><code>string</code></td>
                 <td>config default</td>
                 <td>Optional share-scope override for this package.</td>
+              </tr>
+              <tr>
+                <td><code>pool</code></td>
+                <td><code>string</code></td>
+                <td>–</td>
+                <td>
+                  Since v4.3. Optional resource-pool hint for this shared
+                  external. Passed through to <code>remoteEntry.json</code> and
+                  consumed by the orchestrator; the core build does not act on
+                  it.
+                </td>
               </tr>
             </tbody>
           </table>
@@ -509,6 +616,34 @@ import { of } from 'rxjs/internal/observable/of';</code></pre>
           individually, producing a smaller and more cache-friendly manifest:
         </p>
         <pre><code>features: { denseChunking: true }</code></pre>
+
+        <h3 id="dense-externals">Dense Externals</h3>
+        <p>
+          Since v4.3, the <code>denseExternals</code> feature flag reshapes the
+          <code>shared</code> array in <code>remoteEntry.json</code> so that all
+          entrypoints of a shared external — its primary import plus every
+          secondary and shared mapping — are grouped under a single object:
+        </p>
+        <pre><code>features: { denseExternals: true }</code></pre>
+        <p>
+          When enabled, instead of one flat entry per entrypoint, each package
+          becomes one object whose <code>entries</code> map keys the full import
+          name to its output file (e.g.
+          <code>{ "@angular/common": "…", "@angular/common/http": "…" }</code>).
+          Entrypoints whose sharing metadata (<code>singleton</code>,
+          <code>strictVersion</code>, <code>requiredVersion</code>,
+          <code>version</code>, <code>shareScope</code>) diverges are split into
+          separate groups. Bundler chunks stay flat, and
+          <code>importmap.json</code> is unaffected.
+        </p>
+        <p>
+          The flag is opt-in and fully backward compatible: the runtime
+          auto-detects each entry by shape, so both old and new
+          <code>remoteEntry.json</code> load. It is orthogonal to
+          <code>denseChunking</code> — the two can be combined. See
+          <a href="artifacts.html#dense-externals">Build Artifacts</a> for the
+          resulting <code>remoteEntry.json</code> shape.
+        </p>
       </main>
     </div>
 

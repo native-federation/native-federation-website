@@ -201,6 +201,16 @@
                 </td>
               </tr>
               <tr>
+                <td><code>fromPackageJson(baseCfg, projectPath?)</code></td>
+                <td>function</td>
+                <td>
+                  Recommended dep-sharing builder (since v4.3). Shares all
+                  <code>package.json</code> deps and returns a fluent builder
+                  (<code>.skip</code> / <code>.override</code> /
+                  <code>.patch</code> / <code>.get</code>).
+                </td>
+              </tr>
+              <tr>
                 <td><code>shareAll(options, opts?)</code></td>
                 <td>function</td>
                 <td>
@@ -213,6 +223,14 @@
                 <td>function</td>
                 <td>
                   Share a hand-picked set of packages with per-entry options.
+                </td>
+              </tr>
+              <tr>
+                <td><code>setInferVersion(fn)</code></td>
+                <td>function</td>
+                <td>
+                  Override how shared-dependency versions are inferred for
+                  <code>requiredVersion: 'auto'</code>.
                 </td>
               </tr>
               <tr>

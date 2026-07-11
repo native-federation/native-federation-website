@@ -101,6 +101,7 @@ type SharedInfo = {
   outFileName: string;
   bundle?: string;          // present when denseChunking is enabled
   shareScope?: string;
+  pool?: string;            // orchestrator resource-pool hint (since v4.3)
   dev?: { entryPoint: string };
 };</code></pre>
 
@@ -175,6 +176,46 @@ type SharedInfo = {
           chunk bundle by name. The result is a smaller, more cache-friendly
           <code>remoteEntry.json</code> — and the runtime can skip entire chunk
           groups whose dependencies aren't part of the final import map.
+        </p>
+
+        <h2 id="dense-externals">Dense Externals</h2>
+        <p>
+          When <code>features.denseExternals</code> is enabled (since v4.3), the
+          <code>shared</code> array groups all entrypoints of a package — its
+          primary import plus every secondary and shared mapping — under a
+          single object. Instead of the flat <code>SharedInfo</code> shape (one
+          entry per entrypoint, each with its own <code>outFileName</code>),
+          each package becomes a <code>DenseSharedInfo</code>:
+        </p>
+        <pre><code>type DenseSharedInfo = Omit&lt;SharedInfo, 'outFileName'&gt; &amp; {
+  entries: Record&lt;string, string&gt;; // import name → output file
+};</code></pre>
+        <pre><code>{
+  "shared": [
+    {
+      "packageName": "@angular/common",
+      "requiredVersion": "^18.0.0",
+      "version": "18.1.2",
+      "singleton": true,
+      "strictVersion": true,
+      "entries": {
+        "@angular/common": "angular-common-VFK9A2LE.js",
+        "@angular/common/http": "angular-common-http-Q4XS7K1T.js"
+      }
+    }
+  ]
+}</code></pre>
+        <p>
+          Entrypoints whose sharing metadata (<code>singleton</code>,
+          <code>strictVersion</code>, <code>requiredVersion</code>,
+          <code>version</code>, <code>shareScope</code>) diverges are split into
+          separate groups. Bundler chunks stay flat and
+          <code>importmap.json</code> is unaffected. The format is opt-in and
+          fully backward compatible: the runtime detects each entry by shape
+          (<code>entries</code> map vs. <code>outFileName</code>), so both
+          classic and dense <code>remoteEntry.json</code> load.
+          <code>denseExternals</code> and <code>denseChunking</code> are
+          orthogonal and can be combined.
         </p>
 
         <h2>Integrity map</h2>

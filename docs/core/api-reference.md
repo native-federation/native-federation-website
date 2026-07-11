@@ -32,8 +32,10 @@ Configuration DSL used inside `federation.config.js`.
 | Export | Kind | Summary |
 | --- | --- | --- |
 | `withNativeFederation(config)` | function | Normalize a user-supplied `FederationConfig` — applies defaults, prepares the skip list, resolves mapped paths. |
+| `fromPackageJson(baseCfg, projectPath?)` | function | Recommended dep-sharing builder (since v4.3). Shares all `package.json` deps and returns a fluent builder (`.skip` / `.override` / `.patch` / `.get`). |
 | `shareAll(options, opts?)` | function | Share every dependency found in `package.json`. Accepts `overrides` for per-package deviation. |
 | `share(entries, projectPath?, skipList?)` | function | Share a hand-picked set of packages with per-entry options. |
+| `setInferVersion(fn)` | function | Override how shared-dependency versions are inferred for `requiredVersion: 'auto'`. |
 | `findRootTsConfigJson()` | function | Locate the root `tsconfig.base.json` or `tsconfig.json` for mapped-path resolution. |
 | `DEFAULT_SKIP_LIST` | const | The baseline skip list `withNativeFederation` merges with your `skip`. |
 

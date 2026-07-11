@@ -8,6 +8,7 @@ Repo: https://github.com/native-federation/native-federation-core
 
 | Date       | Version | Commit    |
 | ---------- | ------- | --------- |
+| 2026-07-11 | `4.3.0` | `ea4c502` |
 | 2026-05-26 | `4.1.3` | `a56b11a` |
 
 ## `@softarc/native-federation-orchestrator`
