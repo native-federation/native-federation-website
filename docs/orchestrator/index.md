@@ -39,6 +39,7 @@ On **v4** the Orchestrator runs server-side too, so remote modules **execute dur
 - [Version Resolver](version-resolver.md) — how shared dependencies are resolved across scopes, the `shareScope` mechanism, the strict scope, and dynamic init.
 - [Event Registry](event-registry.md) — the `window.__NF_REGISTRY__` event bus: race-free init, cross-MFE resources, and event streams.
 - [Node.js / SSR](node.md) — `initNodeFederation`, the `module.register()` loader hook, and migration from `@softarc/native-federation-node`.
+- [Module Federation](module-federation.md) — `createGetShared`, the bridge that hands Native Federation's resolved singletons to webpack Module Federation's `shared` config.
 - [Security & Subresource Integrity](security.md) — CSP setup for the built-in Trusted Types policy and the SRI trust chain (manifest → `remoteEntry.json` → modules).
 
 ## Example repositories

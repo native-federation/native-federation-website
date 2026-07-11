@@ -17,6 +17,7 @@ Repo: https://github.com/native-federation/orchestrator
 
 | Date       | Version | Commit    |
 | ---------- | ------- | --------- |
+| 2026-07-11 | `4.5.0` | `1245145` |
 | 2026-06-01 | `4.2.2` | `4c9f8cc` |
 | 2026-05-26 | `4.2.1` | `3da79c8` |
 

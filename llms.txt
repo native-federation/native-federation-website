@@ -30,6 +30,7 @@ The ecosystem is split into four layers:
 - [Version Resolver](https://native-federation.com/docs/orchestrator/version-resolver.md): how shared-dependency version conflicts are resolved
 - [Event Registry](https://native-federation.com/docs/orchestrator/event-registry.md): `window.__NF_REGISTRY__` — race-free init, cross-MFE resources and event streams
 - [Node.js / SSR](https://native-federation.com/docs/orchestrator/node.md): `initNodeFederation` and the `module.register()` loader hook
+- [Module Federation](https://native-federation.com/docs/orchestrator/module-federation.md): `createGetShared` — bridge resolved singletons into webpack Module Federation's `shared` config
 
 ## Core (@softarc/native-federation)
 

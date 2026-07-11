@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orchestrator Module Federation — Native Federation Docs</title>
+    <meta
+      name="description"
+      content="Bridge Native Federation's resolved singletons into webpack Module Federation. The /module-federation entry converts the orchestrator's shared externals into the shared config shape MF expects, so both systems share one instance of each dependency."
+    />
+    <link
+      rel="canonical"
+      href="https://native-federation.com/docs/orchestrator/module-federation.html"
+    />
+    <link
+      rel="alternate"
+      type="text/markdown"
+      href="https://native-federation.com/docs/orchestrator/module-federation.md"
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta
+      property="og:title"
+      content="Orchestrator Module Federation — Native Federation Docs"
+    />
+    <meta
+      property="og:description"
+      content="createGetShared — bridge Native Federation's resolved singletons into webpack Module Federation's shared config."
+    />
+    <meta
+      property="og:url"
+      content="https://native-federation.com/docs/orchestrator/module-federation.html"
+    />
+    <meta
+      property="og:image"
+      content="https://native-federation.com/images/sujet-dark.jpg"
+    />
+    <meta property="og:site_name" content="Native Federation" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="../../images/favicon.png" />
+    <link rel="apple-touch-icon" href="../../images/favicon.png" />
+    <link rel="stylesheet" href="../../styles.css" />
+  </head>
+  <body>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" aria-label="Documentation navigation"></aside>
+
+      <main class="docs-content">
+        <h1>Module Federation integration — <code>getShared</code></h1>
+        <div class="version-support">
+          <span class="version-support__label">Applies to</span>
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v3</span></label
+          >
+          <label class="version-check version-check--active"
+            ><input type="checkbox" disabled checked /><span>v4</span></label
+          >
+        </div>
+        <p class="doc-lead">
+          Bridge Native Federation's resolved singletons into webpack
+          <strong>Module Federation</strong>. The
+          <code>/module-federation</code> entry converts the orchestrator's
+          globally shared externals into the <code>shared</code> config shape MF
+          expects, so both systems share one instance of each dependency.
+        </p>
+
+        <p>
+          If an application uses <strong>both</strong> Native Federation (via
+          this orchestrator) <strong>and</strong> webpack
+          <strong>Module Federation</strong> (MF), the two systems must share
+          the <em>same</em> singleton instances — one
+          <code>@angular/core</code>, one <code>rxjs</code>, and so on.
+          Otherwise a webpack remote loads its own copy of Angular and
+          dependency injection breaks (e.g. <code>NG0203</code>).
+        </p>
+        <p>
+          The <code>module-federation</code> entry point converts the
+          orchestrator's globally shared externals into the
+          <code>shared</code> config shape webpack MF expects, so you can hand
+          Native Federation's already-resolved singletons straight to MF.
+        </p>
+
+        <h2 id="usage">Usage</h2>
+        <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
+import { createGetShared } from '@softarc/native-federation-orchestrator/module-federation';
+import { init } from '@module-federation/enhanced/runtime';
+
+// 1. Initialise Native Federation as usual.
+const result = await initFederation({
+  'team/mfe1': 'http://localhost:3000/remoteEntry.json',
+});
+
+// 2. Build the webpack-MF shared config from the resolved externals.
+const getShared = createGetShared(result.adapters);
+
+// 3. Hand the singletons to Module Federation.
+init({
+  name: 'host',
+  remotes: [
+    /* your MF remotes */
+  ],
+  shared: getShared(),
+});</code></pre>
+
+        <p>
+          <code>createGetShared</code> reads the resolved externals straight
+          from the orchestrator's <code>shared-externals</code> storage and
+          derives each URL from the providing remote's scope — the same way the
+          import map is generated — so it never re-derives the resolver's
+          scope/skip/override decisions and needs no persisted import map.
+        </p>
+
+        <h2 id="options">Options</h2>
+        <pre><code>getShared({
+  // Mark the externals as MF singletons. When omitted, an external is a
+  // singleton only when Native Federation resolved exactly one shared version
+  // for it (the strict scope may share several exact versions side by side).
+  singleton: true,
+
+  // When set, requiredVersion is built as `prefix + version` (the v3 behaviour),
+  // e.g. '^' -> '^20.0.0'. When omitted, the range negotiated by Native
+  // Federation is used, falling back to a caret range.
+  requiredVersionPrefix: '^',
+});</code></pre>
+
+        <h2 id="share-scopes">Share scopes</h2>
+        <p>
+          Every share scope Native Federation resolved is bridged, and only
+          versions resolved as <code>action: 'share'</code> are emitted
+          (packages that were deliberately <em>scoped</em> or <em>skipped</em>
+          are not shared):
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Native Federation scope</th>
+                <th>Module Federation result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Global (<code>singleton: true</code>)</td>
+                <td>
+                  Shared singleton in MF's default scope (no
+                  <code>scope</code> set).
+                </td>
+              </tr>
+              <tr>
+                <td>Custom <code>shareScope: "team-a"</code></td>
+                <td>Shared singleton with <code>scope: "team-a"</code>.</td>
+              </tr>
+              <tr>
+                <td><code>shareScope: "strict"</code></td>
+                <td>
+                  Every shared version, emitted with
+                  <code>scope: "strict"</code>, <code>singleton: false</code>,
+                  <code>strictVersion: true</code>, and
+                  <code>requiredVersion</code> pinned to the exact version. It is
+                  a version → location map: remotes dedupe only on an identical
+                  version, never a range. The <code>singleton</code> and
+                  <code>requiredVersionPrefix</code> options do not apply here.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <pre><code>getShared();
+// {
+//   '@angular/core':         [{ version: '20.0.0', get, shareConfig: { singleton: true, requiredVersion: '^20.0.0' } }],
+//   '@angular/core/testing': [{ version: '20.0.0', get, shareConfig: { singleton: true, requiredVersion: '^20.0.0' } }],
+//   'ui-lib':                [{ version: '3.0.0', scope: 'team-a', get, shareConfig: { singleton: true, requiredVersion: '^3.0.0' } }],
+// }</code></pre>
+
+        <h2 id="secondary-entrypoints">Secondary entrypoints</h2>
+        <p>
+          MF's <code>shared</code> config is flat — one key per import
+          specifier, with no nested <code>entries</code> shape it can consume.
+          So each secondary entrypoint of a shared package is emitted as its own
+          top-level key (<code>@angular/core/testing</code> above), resolving to
+          its own file/url alongside the primary entrypoint. See
+          <a href="version-resolver.html#secondary-entrypoints"
+            >Secondary entrypoints in the version resolver</a
+          >.
+        </p>
+
+        <h2 id="see-also">See also</h2>
+        <ul>
+          <li>
+            <a
+              href="https://github.com/native-federation/orchestrator/blob/main/docs/module-federation.md"
+              target="_blank"
+              rel="noopener"
+              >The orchestrator docs</a
+            >
+            — the upstream reference for the <code>getShared</code> bridge.
+          </li>
+          <li>
+            <a href="version-resolver.html">Version Resolver</a> — how
+            <code>share</code> / <code>skip</code> / <code>scope</code>
+            decisions and the <code>entries</code> map are produced, which is
+            exactly what <code>getShared</code> reads.
+          </li>
+          <li>
+            <a href="configuration.html">Configuration</a> — the
+            <code>initFederation</code> options that shape those resolution
+            decisions.
+          </li>
+        </ul>
+      </main>
+    </div>
+
+    <button class="sidebar-toggle" aria-label="Toggle documentation menu">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <script src="../../components.js"></script>
+    <script
+      async
+      src="https://scripts.simpleanalyticscdn.com/latest.js"
+    ></script>
+  </body>
+</html>

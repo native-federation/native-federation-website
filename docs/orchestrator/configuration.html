@@ -394,8 +394,14 @@ initFederation('http://example.org/manifest.json', {
   };
   profile?: {
     latestSharedExternal?: boolean;
+    skipInvalidExternalVersions?: boolean;
     overrideCachedRemotes?: 'always' | 'never' | 'init-only';
     overrideCachedRemotesIfURLMatches?: boolean;
+    cacheTag?: string;
+  };
+  feature?: {
+    convertFlatSharedInfo?: boolean;
+    useAutoExternalPooling?: boolean;
   };
 };</code></pre>
 
@@ -452,8 +458,12 @@ initFederation('http://example.org/manifest.json', {
                 <td><code>strict.strictExternalVersion</code></td>
                 <td>
                   Throws if a shared external's <code>version</code> is missing
-                  or not valid semver. When <code>false</code>, the first entry
-                  matching <code>requiredVersion</code> is picked.
+                  or not valid semver. When <code>false</code>, the external is
+                  instead coerced to the smallest version matching its
+                  <code>requiredVersion</code> range — unless
+                  <code>profile.skipInvalidExternalVersions</code> is on, in
+                  which case it is skipped. This flag takes precedence over
+                  <code>profile.skipInvalidExternalVersions</code>.
                 </td>
               </tr>
               <tr>
@@ -493,6 +503,18 @@ initFederation('http://example.org/manifest.json', {
                 </td>
               </tr>
               <tr>
+                <td><code>profile.skipInvalidExternalVersions</code></td>
+                <td><code>false</code></td>
+                <td>
+                  When <code>true</code>, an external whose <code>version</code>
+                  is missing or not valid semver is skipped (never stored)
+                  instead of being coerced to the smallest version of its
+                  <code>requiredVersion</code> range. Has no effect when
+                  <code>strict.strictExternalVersion</code> is set — that throws
+                  instead.
+                </td>
+              </tr>
+              <tr>
                 <td><code>profile.overrideCachedRemotes</code></td>
                 <td><code>'init-only'</code></td>
                 <td>
@@ -507,6 +529,18 @@ initFederation('http://example.org/manifest.json', {
                   By default, a cached remote is only overridden when its URL
                   changed. Set this to <code>true</code> to force refetch even
                   when the URL is identical.
+                </td>
+              </tr>
+              <tr>
+                <td><code>profile.cacheTag</code></td>
+                <td><em>none</em></td>
+                <td>
+                  When set, appended as a
+                  <code>?cacheTag=&lt;value&gt;</code> query parameter to
+                  <strong>every</strong> remote's <code>remoteEntry.json</code>
+                  request, letting you bust HTTP caches across all remotes at
+                  once. The host's own <code>hostRemoteEntry.cacheTag</code>
+                  takes precedence for the host entry when both are set.
                 </td>
               </tr>
             </tbody>
@@ -530,15 +564,69 @@ initFederation('http://example.org/manifest.json', {
           </li>
         </ul>
 
+        <h3 id="features">Features</h3>
+        <p>
+          Opt-in behaviors that change how shared externals are grouped. Both
+          default to <code>false</code>.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>feature.convertFlatSharedInfo</code></td>
+                <td><code>false</code></td>
+                <td>
+                  Opts into runtime densification of a remote's shared
+                  externals. Core v4.3.0 emits <code>DenseSharedInfo</code> (a
+                  per-package <code>entries</code> map covering primary
+                  <strong>and</strong> secondary entrypoints) natively, and
+                  those pass through unchanged. For older/flat remote builds
+                  that emit one flat <code>SharedInfo</code> per entrypoint,
+                  enabling this groups secondary entrypoints under their parent
+                  package (by npm scope) so they resolve as one shared external.
+                  See
+                  <a href="version-resolver.html#secondary-entrypoints"
+                    >Version Resolver — Secondary entrypoints</a
+                  >.
+                </td>
+              </tr>
+              <tr>
+                <td><code>feature.useAutoExternalPooling</code></td>
+                <td><code>false</code></td>
+                <td>
+                  When <code>true</code>, shared externals are grouped into
+                  pools by their npm scope (<code>@framework/core</code>,
+                  <code>@framework/common</code> → pool <code>framework</code>)
+                  so a coupled family resolves to one mutually-compatible
+                  version from a single remote build. Unscoped packages are not
+                  auto-pooled; a remote can also opt a specific external into a
+                  pool with a <code>pool</code> tag regardless of this flag. See
+                  <a href="version-resolver.html#dependency-pooling"
+                    >Version Resolver — Dependency Pooling</a
+                  >.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <h3>Two ready-made profiles</h3>
         <pre><code>import { initFederation } from '@softarc/native-federation-orchestrator';
 import { defaultProfile, cachingProfile } from '@softarc/native-federation-orchestrator/options';
 
 // defaultProfile
-// { latestSharedExternal: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false }
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false }
 
 // cachingProfile
-// { latestSharedExternal: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false }
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false }
 
 initFederation('http://example.org/manifest.json', {
   strict: true,

@@ -174,6 +174,57 @@
           no resolution needed, no interference with other remotes.
         </p>
 
+        <h2 id="secondary-entrypoints">
+          Secondary entrypoints — the <code>entries</code> map
+        </h2>
+        <p>
+          A package can expose more than one import specifier: a primary
+          entrypoint (<code>@angular/core</code>) and one or more secondary
+          entrypoints (<code>@angular/core/testing</code>,
+          <code>@angular/core/rxjs-interop</code>, …). Core v4.3.0 groups these
+          under a single <code>DenseSharedInfo</code>, replacing the flat
+          <code>outFileName</code> with an <code>entries</code> map from each
+          specifier to its output file:
+        </p>
+
+        <pre><code>// In remoteEntry.json
+{
+  "shared": [{
+    "packageName": "@angular/core",
+    "singleton": true,
+    "version": "20.0.0",
+    "requiredVersion": "^20.0.0",
+    "entries": {
+      "@angular/core": "core.js",
+      "@angular/core/testing": "core-testing.js"
+    }
+  }]
+}</code></pre>
+
+        <p>
+          The resolver treats the whole <code>entries</code> map as
+          <strong>one</strong> shared external: version negotiation happens once
+          per package, and every specifier in <code>entries</code> follows the
+          winning version's placement — scoped, share-scope, global, or a
+          skip/override redirect. When a shared version wins, the winning
+          remote's <code>entries</code> serve <strong>all</strong> consumers of
+          that version, so each secondary entrypoint resolves to the same
+          provider as its parent.
+        </p>
+
+        <div class="callout callout-info">
+          <p>
+            <strong>Older/flat remote builds</strong> emit one
+            <code>SharedInfo</code> per specifier instead of an
+            <code>entries</code> map. Set
+            <a href="configuration.html#features"
+              ><code>feature.convertFlatSharedInfo</code></a
+            >
+            to group them under their parent package (by npm scope) at runtime
+            so they resolve together.
+          </p>
+        </div>
+
         <h2 id="share-scopes">Share scopes</h2>
         <p>
           By default, all <code>singleton: true</code> externals compete in a
@@ -310,6 +361,37 @@
           </li>
         </ul>
 
+        <h3 id="version-validation">Version validation</h3>
+        <p>
+          An external's <code>version</code> is optional and may be missing or
+          non-semver. Before it is stored, an invalid version is handled in
+          precedence order — the result is always valid semver:
+        </p>
+        <ol>
+          <li>
+            <strong>Throw</strong> — if
+            <code>strict.strictExternalVersion</code> is on, an invalid or
+            missing version raises <code>NFError</code>.
+          </li>
+          <li>
+            <strong>Skip</strong> — else if
+            <a href="configuration.html#profile"
+              ><code>profile.skipInvalidExternalVersions</code></a
+            >
+            is on, the external is dropped and never stored.
+          </li>
+          <li>
+            <strong>Coerce</strong> (default) — otherwise the version is coerced
+            to the <strong>smallest</strong> version matching the external's
+            <code>requiredVersion</code> range.
+          </li>
+        </ol>
+
+        <pre><code>await initFederation(manifest, {
+  // Drop externals with a missing/invalid version instead of coercing them.
+  profile: { skipInvalidExternalVersions: true },
+});</code></pre>
+
         <h3>Step 2 — Resolve each dirty scope</h3>
         <p>For every package in every dirty scope:</p>
         <ol>
@@ -398,6 +480,192 @@
             </tbody>
           </table>
         </div>
+
+        <h2 id="dependency-pooling">Dependency Pooling</h2>
+        <p>
+          The algorithm above resolves every shared external
+          <strong>independently</strong>: each one picks its own shared version,
+          sourced from whichever remote contributed the winning tag. Packages
+          that must move together can therefore split —
+          <code>@framework/core</code> and <code>@framework/common</code>
+          resolved against different versions, or served from different remotes,
+          even when one coherent version exists.
+        </p>
+        <p>
+          The sharper hazard is <strong>transitive coupling</strong> through a
+          shared intermediary. Suppose a design system
+          <code>@design-system/ui</code> is built against
+          <code>@framework/core</code>, shared from mfe-A (framework 15), and
+          mfe-B (framework 16) consumes that shared design system. mfe-B now
+          loads two framework runtimes — its own <code>core@16</code> plus the
+          <code>core@15</code> the design system drags in — and breaks (e.g. two
+          DI containers that cannot see each other). The coupled group must
+          resolve to one mutually-compatible version <em>together</em>, and that
+          has to hold transitively through the intermediary.
+        </p>
+        <p>
+          <strong>Pooling</strong> groups such externals and reconciles the
+          whole group onto a single source. It is a re-resolution layered on top
+          of normal resolution: it rewrites the resolver's output but emits no
+          new versions.
+        </p>
+
+        <h3 id="enabling-pooling">Enabling pooling</h3>
+        <p>Pooling is opt-in and inert by default. An external joins a pool in one of two ways:</p>
+        <ul>
+          <li>
+            <strong>Auto (by npm scope).</strong> Set
+            <a href="configuration.html#features"
+              ><code>feature.useAutoExternalPooling: true</code></a
+            >. Scoped packages are grouped by their scope —
+            <code>@framework/core</code>, <code>@framework/common</code> → pool
+            <code>framework</code>. Unscoped packages (<code>utils</code>,
+            <code>tslib</code>) are never auto-pooled. The scope is derived from
+            the package name, so this grouping is global and cannot drift.
+          </li>
+          <li>
+            <strong>Remote-declared tag.</strong> A remote adds an optional
+            <code>pool</code> field to a shared external in its
+            <code>remoteEntry.json</code> (it mirrors <code>shareScope</code>). A
+            tag is <strong>remote-local</strong>: it groups only the externals
+            that <em>one</em> remote tags together. This is how a transitive
+            coupling is expressed — auto-pooling groups by scope and can never
+            connect <code>@design-system/ui</code> to
+            <code>@framework/core</code>, so the remote co-tags both.
+          </li>
+        </ul>
+
+        <pre><code>await initFederation(manifest, {
+  feature: { useAutoExternalPooling: true },
+});</code></pre>
+
+        <p>
+          <strong>Membership is by shared members, not by name.</strong> Pool
+          identity is not a string that remotes must agree on — it is the
+          <strong>connected component</strong> of a graph. Each external is a
+          node, joined by an edge to its npm scope (auto-pooling, global) and to
+          each <code>(remote, tag)</code> that declares it (remote-local). Two
+          remotes' groups merge only when they <strong>share a member</strong>,
+          never because they chose the same tag string. Drift is therefore
+          harmless: mfe-A calling a group <code>"framework"</code> and mfe-B
+          calling it <code>"design-system"</code> still pool together when they
+          overlap on one external, while two unrelated groups that happen to
+          reuse a label stay separate.
+        </p>
+        <p>
+          To pull a cross-scope sibling into a family, co-tag a
+          <strong>bridge member</strong>: tagging both
+          <code>@design-system/ui</code> and <code>@framework/core</code> with
+          the same label connects the tag group to
+          <code>@framework/core</code>'s auto scope through the shared
+          <code>@framework/core</code> node.
+        </p>
+
+        <h3 id="how-pooling-resolves">How pooling resolves</h3>
+        <p>
+          Pooling never re-runs the compatibility search. The resolver has
+          already, per member, elected a winning version (<code>share</code>)
+          and marked every other version <code>skip</code> (compatible) or
+          <code>scope</code> (strict-incompatible). Pooling reads those verdicts
+          and reconciles the family — it makes no compatibility calls of its
+          own.
+        </p>
+        <p>
+          Per pool, per scope, it picks one <strong>anchor remote</strong>: the
+          remote providing the winning tag for the most members, with the remote
+          name as a deterministic tiebreak. Host and
+          <code>latestSharedExternal</code> precedence are inherited for free —
+          the resolver already applied them — and selection is stable across
+          page reloads. When one remote provides the winning tag of every member
+          (the common case under lockstep bumps), the family simply shares its
+          build. Every other remote is then classified once for the whole pool:
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Classification</th>
+                <th>Condition</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Follow</strong></td>
+                <td>
+                  Every member it uses is <code>skip</code> against the winner
+                  (compatible).
+                </td>
+                <td>Falls through to the shared build.</td>
+              </tr>
+              <tr>
+                <td><strong>Scope</strong> (incompatibility-forced)</td>
+                <td>
+                  The resolver marked its version <code>scope</code> on
+                  <em>any</em> member.
+                </td>
+                <td>
+                  Its <strong>entire</strong> family is served from its own
+                  build, with <strong>no</strong> dedup — deduping a same-version
+                  sibling is exactly what would leak a foreign build in through a
+                  shared intermediary. Incompatibility dominates coverage.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Scope</strong> (coverage-forced)</td>
+                <td>
+                  Compatible everywhere the anchor covers, but uses a member the
+                  anchor lacks.
+                </td>
+                <td>
+                  Scopes that member's own copy, but <strong>may dedup</strong>:
+                  any member whose version equals the shared version falls
+                  through to the shared build — safe, since there is no version
+                  conflict to transmit.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          <strong>Scoped-only members.</strong> When no anchor provides a member
+          (an orphan), it has no shared build: every remote using it serves its
+          own copy, and pooling logs a warning. A best partial anchor is always
+          chosen rather than bailing on the whole pool. Under
+          <code>strictExternalCompatibility</code> only an
+          incompatibility-forced scope (a genuine version conflict) throws,
+          matching the per-external resolver; a coverage-forced scope (the
+          anchor simply does not ship a member) is not a conflict and resolves
+          scoped without aborting.
+        </p>
+
+        <div class="callout">
+          <p>
+            <strong>Conservative by construction.</strong> The anchor is chosen
+            from members' <em>winning tags</em> only, so a member whose winning
+            tag came from a remote other than the anchor becomes scoped-only —
+            even if the anchor happens to ship a coherent older build of it.
+            Pooling trusts the resolver's per-member verdicts rather than
+            re-searching raw versions, so a genuinely drifted portfolio may
+            scope more than an exhaustive download-minimizing search would. This
+            trades optimal sharing for a cheap single pass; coherent and lockstep
+            families — the overwhelmingly common case — are unaffected.
+          </p>
+        </div>
+
+        <h3 id="pooling-scope-dynamic-init">Scope and dynamic init</h3>
+        <p>
+          Pooling applies to the <strong>global scope and named share
+          scopes</strong>; the <code>strict</code> scope is never pooled. It runs
+          in both the initial pipeline and dynamic init
+          (<code>initRemoteEntry</code>). Because the import map is immutable once
+          committed, the dynamic pass is <strong>additive</strong> — it adjusts
+          only the newly loaded remote and never retro-corrects committed
+          remotes, honoring the same distinction between incompatibility-forced
+          and coverage-forced scoping.
+        </p>
 
         <h2 id="dynamic-init">Dynamic init — adding remotes after the fact</h2>
         <div class="callout callout-info">

@@ -8,7 +8,7 @@ applies_to: [v4]
 
 The `/node` subpath gives you the same orchestrator runtime — version resolver, SRI verification, shared-scope handling, dynamic-init flow — running in a Node process. Use it for SSR, edge rendering, integration tests, server-side prerendering, or any other long-lived Node runtime that needs to import federated modules.
 
-It supersedes the deprecated [`@softarc/native-federation-node`](https://www.npmjs.com/package/@softarc/native-federation-node) package: the orchestrator's version resolver, integrity verification, shared-scope handling, and dynamic-init flow are now all available on the server side. See [Migrating from `@softarc/native-federation-node`](#migrating) below.
+It supersedes the deprecated [`@softarc/native-federation-node`](https://www.npmjs.com/package/@softarc/native-federation-node) package: the orchestrator's version resolver, integrity verification, shared-scope handling, and dynamic remote initialization (`initRemoteEntry`) are now all available on the server side. See [Migrating from `@softarc/native-federation-node`](#migrating) below.
 
 ## Prerequisites
 
