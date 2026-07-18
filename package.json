@@ -3,15 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Static site for native-federation.com — Markdown docs generated to HTML.",
+  "description": "Static site for native-federation.com — Markdown docs built with Astro.",
   "scripts": {
-    "build": "node build.mjs",
-    "preview": "node build.mjs && python3 -m http.server 8080 --directory dist"
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
   },
   "dependencies": {
-    "github-slugger": "^2.0.0",
-    "gray-matter": "^4.0.3",
-    "markdown-it": "^14.1.0",
-    "markdown-it-anchor": "^9.2.0"
+    "@astrojs/markdown-remark": "^7.2.1",
+    "@astrojs/sitemap": "^3.7.3",
+    "astro": "^7.1.1",
+    "astro-mermaid": "^2.1.0",
+    "mermaid": "^11.16.0"
   }
 }

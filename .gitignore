@@ -1,3 +1,4 @@
 prompts
 node_modules
 dist
+.astro

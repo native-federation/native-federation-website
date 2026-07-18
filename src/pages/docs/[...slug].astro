@@ -1,0 +1,45 @@
+---
+import { getCollection, render } from 'astro:content';
+import DocPage from '../../layouts/DocPage.astro';
+
+export async function getStaticPaths() {
+	const docs = await getCollection('docs');
+	return docs.map((entry) => ({
+		params: { slug: entry.id },
+		props: { entry },
+	}));
+}
+
+const { entry } = Astro.props;
+const { Content, headings, remarkPluginFrontmatter } = await render(entry);
+
+const SITE = 'https://native-federation.com';
+const OG_IMAGE = `${SITE}/images/sujet-dark.jpg`;
+
+// Title: explicit frontmatter title, else the first H1 (matches extractTitle()).
+const h1 = headings.find((h) => h.depth === 1)?.text ?? '';
+const title = entry.data.title ?? h1;
+// Description parity with the old build's `fm.description || extractLead()`: the
+// remark-doc-lead plugin sets frontmatter.description from the first blockquote (unless
+// already set), surfaced here via remarkPluginFrontmatter; fall back to the title.
+const description = remarkPluginFrontmatter?.description ?? entry.data.description ?? title;
+
+// Clean URL /docs/<id>/ — the glob loader already strips `/index`, matching the old
+// build's cleanPath. `directory` build format emits <path>/index.html.
+const canonical = `${SITE}/docs/${entry.id}/`;
+// alternate text/markdown link -> original source path (e.g. adapters/esbuild/index.md).
+const relMd = entry.filePath.replace(/^src\/content\/docs\//, '');
+const mdUrl = `${SITE}/docs/${relMd}`;
+---
+
+<DocPage
+	title={title}
+	description={description}
+	canonical={canonical}
+	mdUrl={mdUrl}
+	ogImage={OG_IMAGE}
+	activeDoc={entry.id}
+	headings={headings}
+>
+	<Content />
+</DocPage>

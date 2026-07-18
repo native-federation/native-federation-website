@@ -1,0 +1,25 @@
+---
+import { nav } from '../data/nav';
+
+interface Props {
+	/** Current doc slug (entry.id), e.g. 'core' or 'adapters/esbuild'. */
+	activeDoc: string;
+}
+
+const { activeDoc } = Astro.props;
+---
+
+{
+	nav.map((group) => (
+		<div class="sidebar-section">
+			<div class="sidebar-label">{group.section}</div>
+			<nav class="sidebar-nav">
+				{group.items.map((item) => (
+					<a href={`/docs/${item.id}/`} class={activeDoc === item.id ? 'active' : ''}>
+						{item.label}
+					</a>
+				))}
+			</nav>
+		</div>
+	))
+}

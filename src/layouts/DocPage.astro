@@ -1,0 +1,72 @@
+---
+import '../styles/styles.css';
+import Sidebar from '../components/Sidebar.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Toc from '../components/Toc.astro';
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+	title: string;
+	description: string;
+	canonical: string;
+	mdUrl: string;
+	ogImage: string;
+	activeDoc: string;
+	headings: MarkdownHeading[];
+}
+
+const { title, description, canonical, mdUrl, ogImage, activeDoc, headings } = Astro.props;
+const pageTitle = `${title} — Native Federation Docs`;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{pageTitle}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={canonical} />
+		<link rel="alternate" type="text/markdown" href={mdUrl} />
+		<meta name="robots" content="index, follow" />
+		<meta property="og:type" content="article" />
+		<meta property="og:title" content={pageTitle} />
+		<meta property="og:description" content={description} />
+		<meta property="og:url" content={canonical} />
+		<meta property="og:image" content={ogImage} />
+		<meta property="og:site_name" content="Native Federation" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<link rel="icon" type="image/png" href="/images/favicon.png" />
+		<link rel="apple-touch-icon" href="/images/favicon.png" />
+	</head>
+	<body>
+		<Header activePage="docs" />
+
+		<div class="docs-layout">
+			<aside class="docs-sidebar" aria-label="Documentation navigation">
+				<Sidebar activeDoc={activeDoc} />
+			</aside>
+
+			<main class="docs-content">
+				<slot />
+			</main>
+
+			<aside class="docs-toc-panel">
+				<Toc headings={headings} />
+			</aside>
+		</div>
+
+		<button class="sidebar-toggle" aria-label="Toggle documentation menu">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<line x1="3" y1="6" x2="21" y2="6"></line>
+				<line x1="3" y1="12" x2="21" y2="12"></line>
+				<line x1="3" y1="18" x2="21" y2="18"></line>
+			</svg>
+		</button>
+
+		<Footer />
+
+		<script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+	</body>
+</html>

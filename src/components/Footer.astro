@@ -1,0 +1,22 @@
+---
+// Build-time copyright year. (The old components.js computed this client-side from the
+// viewer's clock; a static build stamps the build year, which is the conventional choice.)
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer" role="contentinfo">
+	<div class="footer-inner">
+		<div class="footer-brand">
+			<img src="/images/logo-neu3.png" alt="" width="28" height="28" />
+			<span>Native Federation</span>
+		</div>
+		<div class="footer-links">
+			<a href="/">Home</a>
+			<a href="/docs/getting-started/">Docs</a>
+			<a href="/team/">Team</a>
+			<a href="/resources/">Resources</a>
+			<a href="https://github.com/native-federation" target="_blank" rel="noopener">GitHub</a>
+		</div>
+		<p class="footer-copy">&copy; {year} Native Federation. All rights reserved.</p>
+	</div>
+</footer>

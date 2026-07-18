@@ -1,0 +1,65 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+	headings: MarkdownHeading[];
+}
+
+const { headings } = Astro.props;
+// Right-hand rail lists H2/H3 only (ports collectHeadings()); hidden under 2 (ports tocNav()).
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const show = items.length >= 2;
+---
+
+{
+	show && (
+		<nav class="docs-toc" aria-label="On this page">
+			<span class="docs-toc__label">On this page</span>
+			{items.map((h) => (
+				<a class={`docs-toc__link docs-toc__link--h${h.depth}`} href={`#${h.slug}`}>
+					{h.text}
+				</a>
+			))}
+		</nav>
+	)
+}
+
+<script>
+	// Scroll-spy: port of initTocScrollSpy() from components.js.
+	const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('.docs-toc__link'));
+	if (links.length) {
+		const byId: Record<string, HTMLAnchorElement> = {};
+		const headings: HTMLElement[] = [];
+		links.forEach((link) => {
+			const id = decodeURIComponent((link.getAttribute('href') || '').slice(1));
+			const heading = id ? document.getElementById(id) : null;
+			if (!heading) return;
+			byId[id] = link;
+			headings.push(heading);
+		});
+
+		if (headings.length) {
+			const setActive = (id: string) => {
+				links.forEach((l) => l.classList.remove('active'));
+				if (byId[id]) byId[id].classList.add('active');
+			};
+
+			const observer = new IntersectionObserver(
+				() => {
+					// Last heading whose top has scrolled past the header line.
+					const line =
+						parseInt(
+							getComputedStyle(document.documentElement).getPropertyValue('--header-height'),
+						) || 64;
+					let current = headings[0];
+					headings.forEach((h) => {
+						if (h.getBoundingClientRect().top <= line + 24) current = h;
+					});
+					setActive(current.id);
+				},
+				{ rootMargin: '0px 0px -70% 0px', threshold: [0, 1] },
+			);
+			headings.forEach((h) => observer.observe(h));
+		}
+	}
+</script>

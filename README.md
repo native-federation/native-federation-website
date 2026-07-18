@@ -1,18 +1,37 @@
 # native-federation.com
 
-Static site for [native-federation.com](https://native-federation.com). The
-documentation is written in **Markdown** under `docs/` and generated to HTML by
-`build.mjs`. The landing pages (`index.html`, `team.html`, `resources.html`) and
-the shared chrome (`components.js`, `styles.css`) are hand-authored.
+Static site for [native-federation.com](https://native-federation.com), built with
+**[Astro](https://astro.build)**. The documentation is written in **Markdown** under
+`src/content/docs/` (an Astro content collection) and the landing pages, chrome, and
+Markdown conventions are Astro components — there is no hand-written HTML output.
+
+## Project layout
+
+```
+astro.config.mjs          # site config: Prism highlighting, remark/rehype plugins, mermaid, sitemap
+src/
+  content/docs/**/*.md      # the docs (content collection); content.config.ts defines the schema
+  content.config.ts         # docs collection + Zod frontmatter schema
+  pages/
+    index.astro team.astro resources.astro   # landing pages
+    docs/[...slug].astro                      # renders every doc at its clean URL
+  layouts/    DocPage.astro LandingPage.astro
+  components/ Header.astro Footer.astro Sidebar.astro Toc.astro
+  data/nav.ts               # sidebar navigation tree
+  plugins/                  # remark/rehype ports of the doc conventions (below)
+  integrations/raw-md.mjs   # emits raw .md sources to dist/docs/ for llms.txt
+  styles/styles.css
+public/                     # images/, robots.txt, llms.txt, CNAME, favicon
+```
 
 ## Editing docs
 
-Just edit the Markdown under `docs/`. Every `docs/**/*.md` file becomes a
-clean-URL page at build time (`docs/foo.md` → `docs/foo/index.html`, served at
-`/docs/foo/`) — you never write docs HTML by hand.
+Just edit the Markdown under `src/content/docs/`. Every `**/*.md` file becomes a
+clean-URL page (`foo.md` → `/docs/foo/`, `foo/index.md` → `/docs/foo/`) — you never
+write docs HTML by hand.
 
 When you add a **new** docs page, also add it to the sidebar navigation tree in
-`components.js` (`renderDocsSidebar`), which is the one place the nav is listed.
+`src/data/nav.ts`, which is the one place the nav is listed.
 
 ### Frontmatter
 
@@ -32,29 +51,31 @@ description: ...        # optional; defaults to the first blockquote (the lead)
 | `> [!NOTE]` or `> **Note:** …` | `<div class="callout">` |
 | `> [!INFO]` / `> [!TIP]` | `<div class="callout callout-info">` |
 | `> [!WARNING]` or `> **Warning:** …` | `<div class="callout callout-warning">` |
-| `**On this page**` followed by a bullet list | `<nav class="page-toc">` |
 | A Markdown table | wrapped in `<div class="table-wrap">` |
 | A link to `other-page.md` | rewritten to the clean URL `other-page/` |
+| A ` ```mermaid ` fence | rendered client-side as a diagram (`astro-mermaid`) |
 
-Heading IDs use GitHub-style slugs, so `**On this page**` anchors match. Raw HTML
-in Markdown passes through untouched if you ever need a bespoke component.
+Code fences are highlighted by **Prism** (`syntaxHighlight: 'prism'`) using the existing
+`.token.*` theme in `styles.css`. Heading IDs use GitHub-style slugs, so `#anchors` match.
+Raw HTML in Markdown passes through untouched.
 
 ## Local development
 
 ```bash
 npm install
-npm run build      # generate into dist/
-npm run preview    # build + serve dist/ at http://localhost:8080
+npm run dev        # Astro dev server with hot reload
+npm run build      # build the static site into dist/
+npm run preview    # preview the built dist/ locally
 ```
 
 The generated `dist/` is git-ignored.
 
 ## Deployment
 
-Pushing to `main` triggers `.github/workflows/deploy.yml`, which runs the build
-and publishes `dist/` to GitHub Pages.
+Pushing to `main` triggers `.github/workflows/deploy.yml`, which runs `npm run build`
+(`astro build`) and publishes `dist/` to GitHub Pages.
 
-> **One-time setup:** in the repo, go to **Settings → Pages → Build and
-> deployment → Source** and select **GitHub Actions** (instead of "Deploy from a
-> branch"). The `CNAME` file is included in `dist/`, so the custom domain carries
-> over automatically.
+> **One-time setup:** in the repo, go to **Settings → Pages → Build and deployment →
+> Source** and select **GitHub Actions** (instead of "Deploy from a branch"). The `CNAME`
+> file (in `public/`) is included in `dist/`, so the custom domain carries over
+> automatically.

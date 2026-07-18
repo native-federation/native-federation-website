@@ -1,0 +1,72 @@
+---
+import '../styles/styles.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+	title: string;
+	description: string;
+	canonical: string;
+	ogType?: string;
+	ogTitle?: string;
+	ogDescription?: string;
+	/** Twitter card copy; defaults to the OG values (some pages differ). */
+	twitterTitle?: string;
+	twitterDescription?: string;
+	image?: string;
+	/** Header/footer active nav item: 'home' | 'team' | 'resources'. */
+	activePage?: string;
+}
+
+const {
+	title,
+	description,
+	canonical,
+	ogType = 'website',
+	ogTitle = title,
+	ogDescription = description,
+	twitterTitle = ogTitle,
+	twitterDescription = ogDescription,
+	image = 'https://native-federation.com/images/sujet-dark.jpg',
+	activePage = '',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={canonical} />
+		<meta name="robots" content="index, follow" />
+
+		<meta property="og:type" content={ogType} />
+		<meta property="og:title" content={ogTitle} />
+		<meta property="og:description" content={ogDescription} />
+		<meta property="og:url" content={canonical} />
+		<meta property="og:image" content={image} />
+		<meta property="og:site_name" content="Native Federation" />
+		<meta property="og:locale" content="en_US" />
+
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={twitterTitle} />
+		<meta name="twitter:description" content={twitterDescription} />
+		<meta name="twitter:image" content={image} />
+
+		<link rel="icon" type="image/png" href="/images/favicon.png" />
+		<link rel="apple-touch-icon" href="/images/favicon.png" />
+
+		<slot name="head" />
+	</head>
+	<body>
+		<Header activePage={activePage} />
+
+		<slot />
+
+		<Footer />
+
+		<script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+	</body>
+</html>
