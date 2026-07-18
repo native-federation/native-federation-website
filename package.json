@@ -1,0 +1,17 @@
+{
+  "name": "native-federation-website",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Static site for native-federation.com — Markdown docs generated to HTML.",
+  "scripts": {
+    "build": "node build.mjs",
+    "preview": "node build.mjs && python3 -m http.server 8080 --directory dist"
+  },
+  "dependencies": {
+    "github-slugger": "^2.0.0",
+    "gray-matter": "^4.0.3",
+    "markdown-it": "^14.1.0",
+    "markdown-it-anchor": "^9.2.0"
+  }
+}
