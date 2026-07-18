@@ -7,8 +7,9 @@ the shared chrome (`components.js`, `styles.css`) are hand-authored.
 
 ## Editing docs
 
-Just edit the Markdown under `docs/`. Every `docs/**/*.md` file becomes the
-matching `docs/**/*.html` page at build time — you never write docs HTML by hand.
+Just edit the Markdown under `docs/`. Every `docs/**/*.md` file becomes a
+clean-URL page at build time (`docs/foo.md` → `docs/foo/index.html`, served at
+`/docs/foo/`) — you never write docs HTML by hand.
 
 When you add a **new** docs page, also add it to the sidebar navigation tree in
 `components.js` (`renderDocsSidebar`), which is the one place the nav is listed.
@@ -33,7 +34,7 @@ description: ...        # optional; defaults to the first blockquote (the lead)
 | `> [!WARNING]` or `> **Warning:** …` | `<div class="callout callout-warning">` |
 | `**On this page**` followed by a bullet list | `<nav class="page-toc">` |
 | A Markdown table | wrapped in `<div class="table-wrap">` |
-| A link to `other-page.md` | rewritten to `other-page.html` |
+| A link to `other-page.md` | rewritten to the clean URL `other-page/` |
 
 Heading IDs use GitHub-style slugs, so `**On this page**` anchors match. Raw HTML
 in Markdown passes through untouched if you ever need a bespoke component.

@@ -12,7 +12,11 @@
      - > [!WARNING]                -> <div class="callout callout-warning">
      - **On this page** + list     -> <nav class="page-toc">
      - markdown tables             -> wrapped in <div class="table-wrap">
-     - internal links to *.md      -> rewritten to *.html
+     - internal links to *.md      -> rewritten to clean directory URLs
+
+   Every page is emitted as <clean-path>/index.html so the site serves
+   extensionless URLs (e.g. /docs/orchestrator/) on any static host,
+   including the `python3 -m http.server` preview.
    ========================================================================== */
 
 import { readFile, writeFile, mkdir, readdir, copyFile, rm, stat } from 'node:fs/promises';
@@ -35,8 +39,6 @@ const SUPPORTED_VERSIONS = ['v3', 'v4'];
 /* Top-level files/dirs copied verbatim into dist/ (hand-authored, not generated). */
 const STATIC_ASSETS = [
   'index.html',
-  'team.html',
-  'resources.html',
   'components.js',
   'styles.css',
   'robots.txt',
@@ -44,6 +46,14 @@ const STATIC_ASSETS = [
   'CNAME',
   'images',
 ];
+
+/* Hand-authored top-level pages relocated to a clean URL: team.html -> team/index.html.
+   Their root-relative asset refs are re-based one level deeper at copy time so the
+   source files stay valid as-is. */
+const TOP_LEVEL_PAGES = {
+  'team.html': 'team',
+  'resources.html': 'resources',
+};
 
 /* -------------------------------------------------------------------------- */
 /* Markdown renderer                                                          */
@@ -71,6 +81,7 @@ const CALLOUT_RULES = [
 md.core.ruler.before('inline', 'nf_blocks', (state) => {
   const tokens = state.tokens;
   let blockquoteSeen = 0;
+  const dropRanges = []; // [start, end] token ranges to remove (legacy inline TOCs)
 
   for (let i = 0; i < tokens.length; i++) {
     const tok = tokens[i];
@@ -117,7 +128,10 @@ md.core.ruler.before('inline', 'nf_blocks', (state) => {
       continue;
     }
 
-    /* ---- "**On this page**" + list -> page-toc ---- */
+    /* ---- legacy "**On this page**" + list ----
+       The right-hand TOC is now generated automatically from the page's
+       headings (see collectHeadings / tocNav), so drop any hand-authored
+       inline list to avoid a duplicate table of contents. */
     if (
       tok.type === 'paragraph_open' &&
       tokens[i + 1]?.type === 'inline' &&
@@ -125,22 +139,24 @@ md.core.ruler.before('inline', 'nf_blocks', (state) => {
       tokens[i + 2]?.type === 'paragraph_close' &&
       tokens[i + 3]?.type === 'bullet_list_open'
     ) {
-      tokens[i + 1].content = 'On this page'; // re-tokenized by the inline rule (runs after this)
-      tok.meta = { ...(tok.meta || {}), toc: 'open' };
-      tokens[i + 2].meta = { ...(tokens[i + 2].meta || {}), toc: 'label' };
-      // find matching bullet_list_close
       let depth = 1;
       for (let j = i + 4; j < tokens.length; j++) {
         if (tokens[j].type === 'bullet_list_open') depth++;
         else if (tokens[j].type === 'bullet_list_close') {
           depth--;
           if (depth === 0) {
-            tokens[j].meta = { ...(tokens[j].meta || {}), toc: 'close' };
+            dropRanges.push([i, j]);
             break;
           }
         }
       }
     }
+  }
+
+  // Remove collected ranges back-to-front so earlier indices stay valid.
+  for (let k = dropRanges.length - 1; k >= 0; k--) {
+    const [start, end] = dropRanges[k];
+    tokens.splice(start, end - start + 1);
   }
 });
 
@@ -153,27 +169,6 @@ md.renderer.rules.blockquote_close = (tokens, idx) => {
   const m = tokens[idx].meta;
   if (m?.lead) return '';
   return '</div>\n';
-};
-
-const defaultParagraphOpen =
-  md.renderer.rules.paragraph_open ||
-  ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
-md.renderer.rules.paragraph_open = (tokens, idx, options, env, self) => {
-  if (tokens[idx].meta?.toc === 'open') {
-    return '<nav class="page-toc" aria-label="On this page">\n<strong>';
-  }
-  return defaultParagraphOpen(tokens, idx, options, env, self);
-};
-md.renderer.rules.paragraph_close = (tokens, idx, options, env, self) => {
-  if (tokens[idx].meta?.toc === 'label') return '</strong>\n';
-  return self.renderToken(tokens, idx, options);
-};
-const defaultBulletClose =
-  md.renderer.rules.bullet_list_close ||
-  ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
-md.renderer.rules.bullet_list_close = (tokens, idx, options, env, self) => {
-  if (tokens[idx].meta?.toc === 'close') return '</ul>\n</nav>\n';
-  return defaultBulletClose(tokens, idx, options, env, self);
 };
 
 md.renderer.rules.table_open = () => '<div class="table-wrap">\n<table>\n';
@@ -192,6 +187,47 @@ function extractTitle(tokens) {
     }
   }
   return '';
+}
+
+/** Plain heading text for the TOC: drop links and code fences, but keep
+    literal `_`/`*` (identifiers like NG_SKIP_LIST, not emphasis). */
+function headingText(text) {
+  return text
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/`/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Collect H2/H3 headings (id + text) for the on-this-page rail. */
+function collectHeadings(tokens) {
+  const out = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const tok = tokens[i];
+    if (tok.type !== 'heading_open') continue;
+    if (tok.tag !== 'h2' && tok.tag !== 'h3') continue;
+    const id = tok.attrGet('id');
+    const inline = tokens[i + 1];
+    if (!id || !inline) continue;
+    out.push({ level: Number(tok.tag.slice(1)), id, text: headingText(inline.content) });
+  }
+  return out;
+}
+
+/** Build the right-hand "On this page" navigation, or '' when too small. */
+function tocNav(headings) {
+  if (headings.length < 2) return '';
+  const links = headings
+    .map(
+      (h) =>
+        `      <a class="docs-toc__link docs-toc__link--h${h.level}" href="#${h.id}">${escapeHtml(h.text)}</a>`
+    )
+    .join('\n');
+  return `<nav class="docs-toc" aria-label="On this page">
+    <span class="docs-toc__label">On this page</span>
+${links}
+    </nav>`;
 }
 
 /** First blockquote's text (the lead) — used as the meta description. */
@@ -226,9 +262,22 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
-/** Rewrite relative links to *.md so they point at the generated *.html. */
-function rewriteMdLinks(html) {
-  return html.replace(/href="(?!https?:|mailto:|#)([^"]*?)\.md(#[^"]*)?"/g, 'href="$1.html$2"');
+/** Rewrite relative *.md links to clean directory URLs (e.g. ../orchestrator/).
+    `srcRelNoExt` is the current page's docs-relative source path without the
+    extension (e.g. 'orchestrator/index'); links are authored relative to it. */
+function rewriteMdLinks(html, srcRelNoExt) {
+  const cleanOf = (p) => p.replace(/(^|\/)index$/, '');
+  const srcClean = cleanOf(srcRelNoExt); // URL of this page is /docs/<srcClean>/
+  const srcDir = path.posix.dirname(srcRelNoExt);
+  return html.replace(
+    /href="(?!https?:|mailto:|#)([^"#]*?)\.md(#[^"]*)?"/g,
+    (_m, linkPath, hash = '') => {
+      const targetClean = cleanOf(path.posix.normalize(path.posix.join(srcDir, linkPath)));
+      const rel = path.posix.relative(srcClean || '.', targetClean || '.');
+      const href = rel === '' ? './' : `${rel}/`;
+      return `href="${href}${hash}"`;
+    }
+  );
 }
 
 function versionBadge(appliesTo) {
@@ -254,10 +303,10 @@ function injectBadge(html, badge) {
   return html.slice(0, after) + '\n' + badge + html.slice(after);
 }
 
-function pageTemplate({ title, description, rel, rootPrefix, body }) {
+function pageTemplate({ title, description, urlPath, relMd, rootPrefix, body, toc }) {
   const pageTitle = `${title} — Native Federation Docs`;
-  const canonical = `${SITE_ORIGIN}/docs/${rel}`;
-  const mdUrl = canonical.replace(/\.html$/, '.md');
+  const canonical = `${SITE_ORIGIN}/docs/${urlPath}`;
+  const mdUrl = `${SITE_ORIGIN}/docs/${relMd}`;
   const desc = escapeHtml(description || title);
   const t = escapeHtml(pageTitle);
   return `<!doctype html>
@@ -288,6 +337,10 @@ function pageTemplate({ title, description, rel, rootPrefix, body }) {
       <main class="docs-content">
 ${body}
       </main>
+
+      <aside class="docs-toc-panel">
+    ${toc}
+      </aside>
     </div>
 
     <button class="sidebar-toggle" aria-label="Toggle documentation menu">
@@ -341,6 +394,17 @@ async function copyRecursive(src, dest) {
   }
 }
 
+/** Re-base a hand-authored top-level page for serving one directory deep.
+    Root-relative asset refs gain a `../`, and the canonical URL drops `.html`. */
+function relocateTopLevelPage(html, slug) {
+  let out = html.replace(
+    /\b(href|src)="(?!https?:|\/\/|#|mailto:|data:)([^"]*)"/g,
+    (_m, attr, val) => `${attr}="../${val}"`
+  );
+  out = out.replaceAll(`${SITE_ORIGIN}/${slug}.html`, `${SITE_ORIGIN}/${slug}/`);
+  return out;
+}
+
 async function buildDoc(mdPath) {
   const raw = await readFile(mdPath, 'utf8');
   const { data: fm, content } = matter(raw);
@@ -348,28 +412,34 @@ async function buildDoc(mdPath) {
   const tokens = md.parse(content, {});
   const title = fm.title || extractTitle(tokens);
   const description = fm.description || extractLead(tokens);
+  const toc = tocNav(collectHeadings(tokens));
+
+  const relMd = path.relative(DOCS, mdPath).split(path.sep).join('/'); // e.g. adapters/esbuild/index.md
+  const relNoExt = relMd.replace(/\.md$/, '');                        // adapters/esbuild/index
+  const cleanPath = relNoExt.replace(/(^|\/)index$/, '');             // adapters/esbuild  ('' for a root index)
 
   let body = md.render(content, {});
-  body = rewriteMdLinks(body);
+  body = rewriteMdLinks(body, relNoExt);
   body = injectBadge(body, versionBadge(fm.applies_to));
   body = indentBody(body);
 
-  const rel = path.relative(DOCS, mdPath).replace(/\.md$/, '.html'); // e.g. adapters/esbuild/index.html
-  const dirDepth = rel.split('/').length - 1;
-  const rootPrefix = '../'.repeat(dirDepth + 1);
+  const depth = cleanPath ? cleanPath.split('/').length : 0;
+  const rootPrefix = '../'.repeat(depth + 1);
+  const urlPath = cleanPath ? `${cleanPath}/` : ''; // canonical is /docs/<urlPath>
 
-  const html = pageTemplate({ title, description, rel, rootPrefix, body });
+  const html = pageTemplate({ title, description, urlPath, relMd, rootPrefix, body, toc });
 
-  const outPath = path.join(DIST, 'docs', rel);
+  // Emit <clean-path>/index.html so the page serves at an extensionless URL.
+  const outPath = path.join(DIST, 'docs', cleanPath, 'index.html');
   await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, html, 'utf8');
 
-  // Publish the markdown source alongside the HTML (for llms.txt / alternate links).
-  const mdOut = path.join(DIST, 'docs', path.relative(DOCS, mdPath));
+  // Publish the markdown source at its original path (for llms.txt / alternate links).
+  const mdOut = path.join(DIST, 'docs', relMd);
   await mkdir(path.dirname(mdOut), { recursive: true });
   await copyFile(mdPath, mdOut);
 
-  return rel;
+  return urlPath;
 }
 
 async function main() {
@@ -388,6 +458,19 @@ async function main() {
       continue;
     }
     await copyRecursive(src, path.join(DIST, asset));
+  }
+
+  // 3. Relocate hand-authored top-level pages to clean URLs (team/index.html, ...).
+  for (const [file, slug] of Object.entries(TOP_LEVEL_PAGES)) {
+    const src = path.join(ROOT, file);
+    if (!existsSync(src)) {
+      console.warn(`  ! top-level page missing, skipped: ${file}`);
+      continue;
+    }
+    const html = relocateTopLevelPage(await readFile(src, 'utf8'), slug);
+    const dest = path.join(DIST, slug, 'index.html');
+    await mkdir(path.dirname(dest), { recursive: true });
+    await writeFile(dest, html, 'utf8');
   }
 
   console.log(`Built ${files.length} docs pages + ${STATIC_ASSETS.length} static assets -> dist/`);
