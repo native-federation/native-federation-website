@@ -41,7 +41,11 @@ const pageTitle = `${title} — Native Federation Docs`;
 		<link rel="apple-touch-icon" href="/images/favicon.png" />
 	</head>
 	<body>
-		<Header activePage="docs" />
+		<Header activePage="docs">
+			<div slot="mobile-docs" class="mobile-nav-docs">
+				<Sidebar activeDoc={activeDoc} />
+			</div>
+		</Header>
 
 		<div class="docs-layout">
 			<aside class="docs-sidebar" aria-label="Documentation navigation">
@@ -56,14 +60,6 @@ const pageTitle = `${title} — Native Federation Docs`;
 				<Toc headings={headings} />
 			</aside>
 		</div>
-
-		<button class="sidebar-toggle" aria-label="Toggle documentation menu">
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-				<line x1="3" y1="6" x2="21" y2="6"></line>
-				<line x1="3" y1="12" x2="21" y2="12"></line>
-				<line x1="3" y1="18" x2="21" y2="18"></line>
-			</svg>
-		</button>
 
 		<Footer />
 

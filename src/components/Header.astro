@@ -50,6 +50,7 @@ const { activePage = '' } = Astro.props;
 	<a href="/team/" class={activePage === 'team' ? 'active' : ''}>Team</a>
 	<a href="/resources/" class={activePage === 'resources' ? 'active' : ''}>Resources</a>
 	<a href="https://github.com/native-federation" target="_blank" rel="noopener">GitHub</a>
+	<slot name="mobile-docs" />
 </nav>
 
 <script>
