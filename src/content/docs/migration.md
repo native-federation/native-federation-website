@@ -32,11 +32,11 @@ Native Federation 4 is fully ESM — both the config file and the emitted artifa
   "name": "mfe1",
   "version": "1.2.3",
   "dependencies": {
-    "@softarc/native-federation-runtime": "~4.0.0",
+    // Your dependencies
   },
   "devDependencies": {
-    "@softarc/native-federation": "~4.0.0",
-    "@softarc/native-federation-orchestrator": "^4.0.0",
+    "@softarc/native-federation": "~4.3.0",
+    "@softarc/native-federation-orchestrator": "^4.5.0",
   },
 }
 ```
