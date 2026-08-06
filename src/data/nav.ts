@@ -32,6 +32,7 @@ export const nav: NavSection[] = [
 			{ label: 'Architecture', id: 'orchestrator/architecture' },
 			{ label: 'Configuration', id: 'orchestrator/configuration' },
 			{ label: 'Version Resolver', id: 'orchestrator/version-resolver' },
+			{ label: 'Dependency Pooling', id: 'orchestrator/pooling' },
 			{ label: 'Event Registry', id: 'orchestrator/event-registry' },
 			{ label: 'Node.js / SSR', id: 'orchestrator/node' },
 			{ label: 'Module Federation', id: 'orchestrator/module-federation' },

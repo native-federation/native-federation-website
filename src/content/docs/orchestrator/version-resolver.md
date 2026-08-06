@@ -105,9 +105,43 @@ A package can expose more than one import specifier: a primary entrypoint (`@ang
 }
 ```
 
-The resolver treats the whole `entries` map as **one** shared external: version negotiation happens once per package, and every specifier in `entries` follows the winning version's placement — scoped, share-scope, global, or a skip/override redirect. When a shared version wins, the winning remote's `entries` serve **all** consumers of that version, so each secondary entrypoint resolves to the same provider as its parent.
+The resolver treats the whole `entries` map as **one** shared external: version negotiation happens once per package, and every specifier in `entries` follows the winning version's placement — scoped, share-scope, global, or a skip/override redirect. When a shared version wins, the **union** of everything its copies declare is the surface served to all consumers of that version, so each secondary entrypoint resolves to the same version as its primary.
 
 > **Older/flat remote builds** emit one `SharedInfo` per specifier instead of an `entries` map. Set [`feature.convertFlatSharedInfo`](configuration.md#features) to group them under their parent package (by npm scope) at runtime so they resolve together.
+
+### Copies of one version always merge
+
+Several remotes can ship the same version of a package, and each bundles only the entrypoints it actually imports — so two copies of `@angular/core@20.0.0` can declare `{ @angular/core }` and `{ @angular/core, @angular/core/testing }`. They built the same tag, so this is not a conflict: the version exposes the **union**, and each specifier is served by the first copy that declares it. Copy order is fixed by the orchestrator:
+
+1. **The host's copy** — already loaded in the browser and cannot be repointed.
+2. **An already-served copy** — repointing it would invalidate a committed import map and force a redundant download.
+3. **The widest copy** — the one declaring the most entrypoints, so the fewest builds are needed.
+4. **Arrival order** — ties keep the incumbent, so the generated import map stays byte-stable.
+
+Merging within a version is unconditional: no copy is pushed out of sharing because it bundles more than the others, and the coverage settings below never apply here.
+
+### Entrypoint coverage and tearing
+
+What the merged entries do _not_ guarantee is that they cover every specifier a consumer needs. A remote deduped onto the shared version can import a secondary entrypoint that **no copy of that version** contains:
+
+```
+@angular/core  20.0.0  share  mfe-a  entries { @angular/core }
+@angular/core  20.1.0  skip   mfe-b  entries { @angular/core, @angular/core/testing }
+```
+
+Serving those two specifiers from two _different_ versions is a **tear**. It is harmless for most libraries, but it can break packages whose secondary entrypoints share module-singleton state with the primary. Three behaviours are available, in precedence order:
+
+| Setting | What happens to an entrypoint the shared version cannot cover |
+| --- | --- |
+| [`strict.strictEntryPointCoverage`](configuration.md#strictness) | **Throws.** The resolver refuses to share a package it cannot serve coherently. |
+| [`profile.scopeUncoveredEntrypoints`](configuration.md#resolution-profile) | **Scopes.** The uncovered copy is split off and serves its whole `entries` bunch from its own build. The copies that _are_ covered keep sharing. |
+| neither (default) | **Self-fills.** The specifier is served from the declaring remote's own build and a warning is logged. Nothing is lost; the package tears. |
+
+Both settings only govern tears **between** versions — copies of the shared version itself always merge, whatever you set. Scoping is per remote copy, not per version: given a shared surface `{ table, sort }`, a deduped `{ table }` and a deduped `{ table, paginator }`, only the third is split off.
+
+To keep tears rare in the first place, coverage is also a **tiebreaker** when picking the shared version: among candidates that tie on the extra-downloads heuristic, the resolver prefers the one that leaves the fewest specifiers uncovered. A decisive extra-downloads winner is never overridden.
+
+> **Inside a pool a tear cannot happen at all**, whichever of the three is configured — [pooling](pooling.md) checks coverage per specifier itself, and a remote that no single build covers takes its whole family from its own build.
 
 ## Share scopes
 
@@ -207,7 +241,7 @@ For every external in every fetched `remoteEntry.json`:
 An external's `version` is optional and may be missing or non-semver. Before it is stored, an invalid version is handled in precedence order — the result is always valid semver:
 
 1. **Throw** — if `strict.strictExternalVersion` is on, an invalid or missing version raises `NFError`.
-2. **Skip** — else if [`profile.skipInvalidExternalVersions`](configuration.md#profile) is on, the external is dropped and never stored.
+2. **Skip** — else if [`profile.skipInvalidExternalVersions`](configuration.md#resolution-profile) is on, the external is dropped and never stored.
 3. **Coerce** (default) — otherwise the version is coerced to the **smallest** version matching the external's `requiredVersion` range.
 
 ```ts
@@ -229,6 +263,8 @@ For every package in every dirty scope:
    - Incompatible + `strictVersion: true` → `SCOPE` (download individually).
    - Incompatible + `strictVersion: false` → `SKIP` + warning (use the shared version anyway).
 
+> **A verdict belongs to the copy, not the version.** `requiredVersion` and `strictVersion` are per-build settings, so two remotes shipping the same tag can disagree about the winner. When they do, the version is **split**: only the copies that actually reject the shared version get `SCOPE`; the rest stay `SKIP` and keep deduping. The winner itself is never split, and a copy declaring `strictVersion: false` always dedups — that is what the flag asks for.
+
 ### Step 3 — Generate the import map
 
 | Scope | Action | Where it goes |
@@ -241,18 +277,9 @@ For every package in every dirty scope:
 
 ## Dependency Pooling
 
-The algorithm above resolves every shared external **independently**: each one picks its own shared version, sourced from whichever remote contributed the winning tag. Packages that must move together can therefore split — `@framework/core` and `@framework/common` resolved against different versions, or served from different remotes, even when one coherent version exists.
+The algorithm above resolves every shared external **independently**: each one picks its own shared version, sourced from whichever remote contributed the winning tag. Packages that ship as a **family** are not independent, so this can hand a remote a combination nobody built — `@acme/ui@3.4.0` from one remote beside `@acme/tokens@3.2.0` from another, both "compatible" by their declared ranges. The sharper case is transitive: a design system compiled against `@framework/core@15`, shared into a remote running `core@16`, drags a second framework runtime in behind it.
 
-The sharper hazard is **transitive coupling** through a shared intermediary. Suppose a design system `@design-system/ui` is built against `@framework/core`, shared from mfe-A (framework 15), and mfe-B (framework 16) consumes that shared design system. mfe-B now loads two framework runtimes — its own `core@16` plus the `core@15` the design system drags in — and breaks (e.g. two DI containers that cannot see each other). The coupled group must resolve to one mutually-compatible version _together_, and that has to hold transitively through the intermediary.
-
-**Pooling** groups such externals and reconciles the whole group onto a single source. It is a re-resolution layered on top of normal resolution: it rewrites the resolver's output but emits no new versions.
-
-### Enabling pooling
-
-Pooling is opt-in and inert by default. An external joins a pool in one of two ways:
-
-- **Auto (by npm scope).** Set [`feature.useAutoExternalPooling: true`](configuration.md#features). Scoped packages are grouped by their scope — `@framework/core`, `@framework/common` → pool `framework`. Unscoped packages (`utils`, `tslib`) are never auto-pooled. The scope is derived from the package name, so this grouping is global and cannot drift.
-- **Remote-declared tag.** A remote adds an optional `pool` field to a shared external in its `remoteEntry.json` (it mirrors `shareScope`). A tag is **remote-local**: it groups only the externals that _one_ remote tags together. This is how a transitive coupling is expressed — auto-pooling groups by scope and can never connect `@design-system/ui` to `@framework/core`, so the remote co-tags both.
+**Pooling** is the opt-in feature that prevents this. It groups coupled externals — automatically by npm scope, or explicitly through a `pool` tag on a shared external — and makes each remote take the whole group from a single build that shipped them together, its own included. It is a re-resolution layered on top of the resolution above: it rewrites the verdicts, but elects no versions of its own and grants no dedup the resolver did not.
 
 ```ts
 await initFederation(manifest, {
@@ -260,29 +287,11 @@ await initFederation(manifest, {
 });
 ```
 
-**Membership is by shared members, not by name.** Pool identity is not a string that remotes must agree on — it is the **connected component** of a graph. Each external is a node, joined by an edge to its npm scope (auto-pooling, global) and to each `(remote, tag)` that declares it (remote-local). Two remotes' groups merge only when they **share a member**, never because they chose the same tag string. Drift is therefore harmless: mfe-A calling a group `"framework"` and mfe-B calling it `"design-system"` still pool together when they overlap on one external, while two unrelated groups that happen to reuse a label stay separate.
+Two gates decide, per remote: a remote the resolver marked `scope` on _any_ member is **islanded** onto its own build for the whole family, and every remaining remote must either already be resolving through builds that shipped what it imports, dedup onto one build that covers it whole, or serve its own family. Pooling applies to the global scope and named share scopes; the `strict` scope is never pooled, and a warm init that re-elects nothing does no pooling work.
 
-To pull a cross-scope sibling into a family, co-tag a **bridge member**: tagging both `@design-system/ui` and `@framework/core` with the same label connects the tag group to `@framework/core`'s auto scope through the shared `@framework/core` node.
+> **Pooling buys coherence, not downloads** — on every portfolio measured it left the download count unchanged or increased it, never reduced it.
 
-### How pooling resolves
-
-Pooling never re-runs the compatibility search. The resolver has already, per member, elected a winning version (`share`) and marked every other version `skip` (compatible) or `scope` (strict-incompatible). Pooling reads those verdicts and reconciles the family — it makes no compatibility calls of its own.
-
-Per pool, per scope, it picks one **anchor remote**: the remote providing the winning tag for the most members, with the remote name as a deterministic tiebreak. Host and `latestSharedExternal` precedence are inherited for free — the resolver already applied them — and selection is stable across page reloads. When one remote provides the winning tag of every member (the common case under lockstep bumps), the family simply shares its build. Every other remote is then classified once for the whole pool:
-
-| Classification | Condition | Result |
-| --- | --- | --- |
-| **Follow** | Every member it uses is `skip` against the winner (compatible). | Falls through to the shared build. |
-| **Scope** (incompatibility-forced) | The resolver marked its version `scope` on _any_ member. | Its **entire** family is served from its own build, with **no** dedup — deduping a same-version sibling is exactly what would leak a foreign build in through a shared intermediary. Incompatibility dominates coverage. |
-| **Scope** (coverage-forced) | Compatible everywhere the anchor covers, but uses a member the anchor lacks. | Scopes that member's own copy, but **may dedup**: any member whose version equals the shared version falls through to the shared build — safe, since there is no version conflict to transmit. |
-
-**Scoped-only members.** When no anchor provides a member (an orphan), it has no shared build: every remote using it serves its own copy, and pooling logs a warning. A best partial anchor is always chosen rather than bailing on the whole pool. Under `strictExternalCompatibility` only an incompatibility-forced scope (a genuine version conflict) throws, matching the per-external resolver; a coverage-forced scope (the anchor simply does not ship a member) is not a conflict and resolves scoped without aborting.
-
-> **Conservative by construction.** The anchor is chosen from members' _winning tags_ only, so a member whose winning tag came from a remote other than the anchor becomes scoped-only — even if the anchor happens to ship a coherent older build of it. Pooling trusts the resolver's per-member verdicts rather than re-searching raw versions, so a genuinely drifted portfolio may scope more than an exhaustive download-minimizing search would. This trades optimal sharing for a cheap single pass; coherent and lockstep families — the overwhelmingly common case — are unaffected.
-
-### Scope and dynamic init
-
-Pooling applies to the **global scope and named share scopes**; the `strict` scope is never pooled. It runs in both the initial pipeline and dynamic init (`initRemoteEntry`). Because the import map is immutable once committed, the dynamic pass is **additive** — it adjusts only the newly loaded remote and never retro-corrects committed remotes, honoring the same distinction between incompatibility-forced and coverage-forced scoping.
+> **See [Dependency Pooling](pooling.md)** for the full picture: whether you need it, how membership is decided, both gates in detail, the measured cost, tagging guidance for unscoped lockstep families, and the diagnostics.
 
 ## <a id="dynamic-init"></a> Dynamic init — adding remotes after the fact
 
@@ -490,7 +499,7 @@ await initFederation(manifest, {
 });
 ```
 
-> **Note:** When a remote _is_ overridden, the orchestrator performs a clean cache purge: old `RemoteInfo`, old scoped externals and old shared externals (in every scope) are removed first, then the fresh `remoteEntry.json` is processed from scratch. Stale entries can't leak.
+> **Note:** When a remote _is_ overridden, the orchestrator performs a clean cache purge: old `RemoteInfo`, old [shared chunks](architecture.md#shared-chunks-cache), old scoped externals and old shared externals (in every scope) are removed first, then the fresh `remoteEntry.json` is processed from scratch. Each of those is a whole-remote removal rather than a merge with what the replacement declares — a build that stops chunking a bundle omits the key instead of sending an empty list, so a per-bundle replace would leave the old chunk files mapped and 404-ing. Removing the host's own copy also clears the host flag on that version, so a version the host has moved off can't keep host precedence.
 
 ## Troubleshooting
 
@@ -544,6 +553,7 @@ Pre-release versions are only considered compatible with matching pre-release ra
 ## See also
 
 - [The orchestrator docs](https://github.com/native-federation/orchestrator/blob/main/docs/version-resolver.md) — The orchestrator docs regarding the version resolver.
+- [Dependency Pooling](pooling.md) — the opt-in layer that keeps a coupled package family coherent across remotes.
 - [Architecture](architecture.md) — the caches the resolver reads and writes.
-- [Configuration — modes](configuration.md#modes) — every knob that tunes resolution behavior.
+- [Configuration — modes](configuration.md#4-modes--strictness--resolution-profile) — every knob that tunes resolution behavior.
 - [Core — sharing dependencies](../core/sharing.md) — the build-side config that produces the inputs to this resolver.

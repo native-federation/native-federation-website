@@ -8,11 +8,11 @@ applies_to: [v3, v4]
 
 Everything you pass as the second argument to `initFederation` lives on this page. Options are grouped into five concerns — host entry, import-map implementation, logging, modes, and storage — and every option ships with a sensible default, so a bare `initFederation(manifest)` is already a valid call.
 
-- [1. Host configuration](#host)
-- [2. Import-map implementation](#import-map)
-- [3. Logging](#logging)
-- [4. Modes — strictness & resolution profile](#modes)
-- [5. Storage](#storage)
+- [1. Host configuration](#1-host-configuration)
+- [2. Import-map implementation](#2-import-map-implementation)
+- [3. Logging](#3-logging)
+- [4. Modes — strictness & resolution profile](#4-modes--strictness--resolution-profile)
+- [5. Storage](#5-storage)
 
 ## <a id="host"></a> 1. Host configuration
 
@@ -71,7 +71,7 @@ Per-remote pinning lives in the manifest itself — entries can be either the ex
 
 ## <a id="import-map"></a> 2. Import-map implementation
 
-The orchestrator commits a standard [import map](https://caniuse.com/import-maps) to the DOM and uses the browser's own `import()` to load modules. For older browsers — or whenever you need [dynamic init](version-resolver.md#dynamic-init) — swap in [es-module-shims](https://www.npmjs.com/package/es-module-shims).
+The orchestrator commits a standard [import map](https://caniuse.com/import-maps) to the DOM and uses the browser's own `import()` to load modules. For older browsers — or whenever you need [dynamic init](version-resolver.md#dynamic-init--adding-remotes-after-the-fact) — swap in [es-module-shims](https://www.npmjs.com/package/es-module-shims).
 
 ```ts
 type ImportMapOptions = {
@@ -176,10 +176,12 @@ type ModeOptions = {
         strictExternalSameVersionCompatibility?: boolean;
         strictExternalVersion?: boolean;
         strictImportMap?: boolean;
+        strictEntryPointCoverage?: boolean;
       };
   profile?: {
     latestSharedExternal?: boolean;
     skipInvalidExternalVersions?: boolean;
+    scopeUncoveredEntrypoints?: boolean;
     overrideCachedRemotes?: "always" | "never" | "init-only";
     overrideCachedRemotesIfURLMatches?: boolean;
     cacheTag?: string;
@@ -203,6 +205,7 @@ All flags default to `false`, which means "log and continue". Setting `strict: t
 | `strict.strictExternalSameVersionCompatibility` | Niche edge case — throws when an already-cached shared version is re-submitted with a different `requiredVersion` range. Otherwise, the cached entry is preserved.                                                                                                                                                                           |
 | `strict.strictExternalVersion`                  | Throws if a shared external's `version` is missing or not valid semver. When `false`, the external is instead coerced to the smallest version matching its `requiredVersion` range — unless `profile.skipInvalidExternalVersions` is on, in which case it is skipped. This flag takes precedence over `profile.skipInvalidExternalVersions`. |
 | `strict.strictImportMap`                        | Throws when the import-map builder encounters corrupt cache state.                                                                                                                                                                                                                                                                           |
+| `strict.strictEntryPointCoverage`               | Throws when a shared external cannot be served coherently — a remote on _another_ version imports a secondary entrypoint that no copy of the shared version contains ("entrypoint tearing"). When `false`, the entrypoint is served from the consuming remote's own build with a warning, unless `profile.scopeUncoveredEntrypoints` is on. Copies of the shared version itself always merge, so this never fires within one version. See [Version Resolver — Entrypoint coverage and tearing](version-resolver.md#entrypoint-coverage-and-tearing). |
 
 ### <a id="profile"></a> Resolution profile
 
@@ -212,6 +215,7 @@ The profile controls _how_ the resolver picks winners and _whether_ it refreshes
 | ------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `profile.latestSharedExternal`              | `false`       | When `true`, always pick the highest version in the scope. When `false` (default), pick the version that minimizes extra scoped downloads.                                                                                                                              |
 | `profile.skipInvalidExternalVersions`       | `false`       | When `true`, an external whose `version` is missing or not valid semver is skipped (never stored) instead of being coerced to the smallest version of its `requiredVersion` range. Has no effect when `strict.strictExternalVersion` is set — that throws instead.      |
+| `profile.scopeUncoveredEntrypoints`         | `false`       | When `true`, a remote copy on another version whose secondary entrypoints the shared version cannot cover is split off and serves its whole `entries` bunch from its own build, instead of tearing the package across two builds. Sharing continues for the copies the shared version _does_ cover. Only governs tears **between** versions — copies of the shared version always merge. Has no effect when `strict.strictEntryPointCoverage` is set — that throws instead. |
 | `profile.overrideCachedRemotes`             | `'init-only'` | When to refetch a remote that already lives in cache — see below.                                                                                                                                                                                                       |
 | `profile.overrideCachedRemotesIfURLMatches` | `false`       | By default, a cached remote is only overridden when its URL changed. Set this to `true` to force refetch even when the URL is identical.                                                                                                                                |
 | `profile.cacheTag`                          | _none_        | When set, appended as a `?cacheTag=<value>` query parameter to **every** remote's `remoteEntry.json` request, letting you bust HTTP caches across all remotes at once. The host's own `hostRemoteEntry.cacheTag` takes precedence for the host entry when both are set. |
@@ -228,8 +232,8 @@ Opt-in behaviors that change how shared externals are processed and stored. Both
 
 | Option                           | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `feature.convertFlatSharedInfo`  | `false` | Opts into runtime densification of a remote's shared externals. Core v4.3.0 emits `DenseSharedInfo` (a per-package `entries` map covering primary **and** secondary entrypoints) natively, and those pass through unchanged. For older/flat remote builds that emit one flat `SharedInfo` per entrypoint, enabling this groups secondary entrypoints under their parent package (by npm scope) so they resolve as one shared external. See [Version Resolver — Secondary entrypoints](version-resolver.md#secondary-entrypoints). |
-| `feature.useAutoExternalPooling` | `false` | When `true`, shared externals are grouped into pools by their npm scope (`@framework/core`, `@framework/common` → pool `framework`) so a coupled family resolves to one mutually-compatible version from a single remote build. Unscoped packages are not auto-pooled; a remote can also opt a specific external into a pool with a `pool` tag regardless of this flag. See [Version Resolver — Dependency Pooling](version-resolver.md#dependency-pooling).                                                                      |
+| `feature.convertFlatSharedInfo`  | `false` | Opts into runtime densification of a remote's shared externals. Core v4.3.0 emits `DenseSharedInfo` (a per-package `entries` map covering primary **and** secondary entrypoints) natively, and those pass through unchanged. For older/flat remote builds that emit one flat `SharedInfo` per entrypoint, enabling this groups secondary entrypoints under their parent package (by npm scope) so they resolve as one shared external. See [Version Resolver — Secondary entrypoints](version-resolver.md#secondary-entrypoints--the-entries-map). |
+| `feature.useAutoExternalPooling` | `false` | When `true`, shared externals are grouped into pools by their npm scope (`@framework/core`, `@framework/common` → pool `framework`) so that no remote draws a coupled family from builds that never shipped it together: a remote either takes the whole family from one build, or serves the whole family from its own. Buys coherence at a possible cost in downloads, never a reduction. Unscoped packages are not auto-pooled; a remote can also opt a specific external into a pool with a `pool` tag regardless of this flag. See [Dependency Pooling](pooling.md).                                                                      |
 
 ### Two ready-made profiles
 
@@ -241,10 +245,10 @@ import {
 } from "@softarc/native-federation-orchestrator/options";
 
 // defaultProfile
-// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false }
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, scopeUncoveredEntrypoints: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false }
 
 // cachingProfile
-// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false }
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, scopeUncoveredEntrypoints: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false }
 
 initFederation("http://example.org/manifest.json", {
   strict: true,
@@ -337,5 +341,5 @@ const { loadRemoteModule } = await initFederation(manifest, {
 - [The orchestrator docs](https://github.com/native-federation/orchestrator/blob/main/docs/config.md) — Which shows a bit more in-depth how the orchestrator can be configured.
 - [Security & Subresource Integrity](security.md) — CSP setup for the built-in Trusted Types policy and the SRI trust chain (manifest → `remoteEntry.json` → modules).
 - [Version Resolver](version-resolver.md) — how the profile and strictness flags actually shape resolution output.
-- [Architecture — caches](architecture.md#caches) — what lives in the storage namespace.
+- [Architecture — caches](architecture.md#internal-caches) — what lives in the storage namespace.
 - [Getting Started](getting-started.md) — worked examples for the quickstart, registry and custom setups.

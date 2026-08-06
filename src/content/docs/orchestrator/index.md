@@ -37,6 +37,7 @@ On **v4** the Orchestrator runs server-side too, so remote modules **execute dur
 - [Architecture](architecture.md) — the manifest, `remoteEntry.json`, the internal caches, and how the final import map is built.
 - [Configuration](configuration.md) — the full `initFederation` options reference: host entry, import-map implementation, logging, modes and storage.
 - [Version Resolver](version-resolver.md) — how shared dependencies are resolved across scopes, the `shareScope` mechanism, the strict scope, and dynamic init.
+- [Dependency Pooling](pooling.md) — the opt-in feature that keeps a coupled package family (`@angular/*`, `react`/`react-dom`, your own design system) from being assembled out of builds that never shipped together.
 - [Event Registry](event-registry.md) — the `window.__NF_REGISTRY__` event bus: race-free init, cross-MFE resources, and event streams.
 - [Node.js / SSR](node.md) — `initNodeFederation`, the `module.register()` loader hook, and migration from `@softarc/native-federation-node`.
 - [Module Federation](module-federation.md) — `createGetShared`, the bridge that hands Native Federation's resolved singletons to webpack Module Federation's `shared` config.

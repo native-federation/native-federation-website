@@ -272,4 +272,4 @@ expect(greet('world')).toBe('hello, world!');
 - [The orchestrator node docs](https://github.com/native-federation/orchestrator/blob/main/docs/node.md) — the upstream version of this page.
 - [Configuration](configuration.md) — the full `initFederation` options surface; the Node entry accepts the same shape.
 - [Security — Subresource Integrity](security.md#subresource-integrity) — pinning manifest, `remoteEntry.json` and modules; works the same way on Node as in the browser.
-- [Version Resolver — Dynamic init](version-resolver.md#dynamic-init) — adding remotes at runtime; the Node entry's `initRemoteEntry` follows the same rules.
+- [Version Resolver — Dynamic init](version-resolver.md#dynamic-init--adding-remotes-after-the-fact) — adding remotes at runtime; the Node entry's `initRemoteEntry` follows the same rules.
