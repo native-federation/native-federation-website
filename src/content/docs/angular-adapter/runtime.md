@@ -6,7 +6,7 @@ applies_to: [v3, v4]
 
 > The runtime side of the Angular adapter — initFederation, loadRemoteModule, lazy routes, and the optional orchestrator runtime.
 
-On v3 the adapter re-exported `initFederation` and `loadRemoteModule` from the classic `@softarc/native-federation-runtime`. On v4 the adapter ships its own `initFederation` (and a deprecated top-level `loadRemoteModule`) from `@angular-architects/native-federation` that bridge to the [orchestrator](../runtime/index.md) runtime by default. The generated `main.ts` goes one step further and calls the orchestrator directly. This page covers how these integrate with an Angular bootstrap.
+On v3 the adapter re-exported `initFederation` and `loadRemoteModule` from the classic `@softarc/native-federation-runtime`. On v4 the adapter ships its own `initFederation` (and a deprecated top-level `loadRemoteModule`) from `@angular-architects/native-federation` that bridge to the [orchestrator](../orchestrator/index.md) runtime by default. The generated `main.ts` goes one step further and calls the orchestrator directly. This page covers how these integrate with an Angular bootstrap.
 
 **On this page**
 
@@ -221,6 +221,6 @@ Slightly more boilerplate, but the loader is guaranteed to exist by the time any
 
 ## Related
 
-- [Runtime overview](../runtime/index.md) — the orchestrator's full feature set.
+- [Orchestrator overview](../orchestrator/index.md) — the orchestrator's full feature set.
 - [SSR & Hydration](ssr.md) — initialising federation on the Node side.
 - [Migration to v4](migration-v4.md) — switching from the legacy runtime to the orchestrator.

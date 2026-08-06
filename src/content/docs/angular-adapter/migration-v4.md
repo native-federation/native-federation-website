@@ -6,7 +6,7 @@ applies_to: [v3, v4]
 
 > Migrate the Native Federation Angular adapter from v3 to v4 — ESM, builder rename, federation.config.mjs rewrite, and the optional orchestrator runtime.
 
-v4 of the Angular adapter is a packaging and runtime upgrade — full ESM, the [orchestrator](../runtime/index.md) runtime by default, and a few `angular.json` tidy-ups. This guide targets **Angular 22**, where the adapter ships under its original name, `@angular-architects/native-federation` (22.x). If you're still on **Angular 20 or 21**, the same v4 release is published under `@angular-architects/native-federation-v4` — see [Angular 20/21 — the `-v4` package](#angular-2021--the--v4-package) at the bottom.
+v4 of the Angular adapter is a packaging and runtime upgrade — full ESM, the [orchestrator](../orchestrator/index.md) runtime by default, and a few `angular.json` tidy-ups. This guide targets **Angular 22**, where the adapter ships under its original name, `@angular-architects/native-federation` (22.x). If you're still on **Angular 20 or 21**, the same v4 release is published under `@angular-architects/native-federation-v4` — see [Angular 20/21 — the `-v4` package](#angular-2021--the--v4-package) at the bottom.
 
 The `ng update` migration does the work for you, but the steps below are useful when migrating by hand or auditing the diff.
 
@@ -49,7 +49,7 @@ Update the packages:
 }
 ```
 
-`@softarc/native-federation-runtime` is only needed if you deliberately stay on the classic runtime — v4 runs on the orchestrator by default, so for most projects you can drop it.
+`@softarc/native-federation-runtime` — the classic runtime — is deprecated and unused on v4: the adapter runs on the orchestrator, so drop the dependency.
 
 > **Note:** You do **not** need to add `"type": "module"` to `package.json`. The federation config is renamed to `federation.config.mjs` (step 2), which Node loads as ESM regardless of the package-wide setting. Renaming the config — which the migration does for you — is enough.
 

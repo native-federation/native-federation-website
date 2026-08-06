@@ -1,10 +1,13 @@
 ---
 applies_to: [v3, v4]
+deprecated: true
 ---
 
 # Getting Started with the Runtime
 
 > Install @softarc/native-federation-runtime, add es-module-shims, split your bootstrap, and load your first remote module.
+
+> **Warning:** **Deprecated.** `@softarc/native-federation-runtime` has reached end-of-life and is no longer maintained. New hosts should use the [Orchestrator](../orchestrator/getting-started.md) instead.
 
 This page walks through the minimum setup needed to load remotes in the browser with the classic runtime — install the package, add `es-module-shims` to your HTML, split your bootstrap, and call `initFederation` and `loadRemoteModule`.
 

@@ -33,10 +33,10 @@ v4 moves to a new GitHub organisation. The v3 source stays in the original Angul
 | ----------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Angular adapter package | `@angular-architects/native-federation`       | `@angular-architects/native-federation` on Angular 22+, `@angular-architects/native-federation-v4` on Angular 20/21            |
 | Core package            | `@softarc/native-federation` (v3.x)           | `@softarc/native-federation` (v4.x)                                                                                            |
-| Runtime package         | `@softarc/native-federation-runtime`          | `@softarc/native-federation-runtime` (still supported) or `@softarc/native-federation-orchestrator` (recommended)              |
+| Runtime package         | `@softarc/native-federation-runtime`          | `@softarc/native-federation-orchestrator` (`@softarc/native-federation-runtime` is deprecated)                                 |
 | Module format           | CommonJS (`require`)                          | ESM (`import` / `export default`)                                                                                              |
 | Angular version         | Angular 14-21                                 | Angular 20+ (one backwards-compatible major)                                                                                   |
-| Default browser runtime | Classic Runtime                               | Orchestrator (Classic Runtime still supported)                                                                                 |
+| Default browser runtime | Classic Runtime                               | Orchestrator (Classic Runtime deprecated)                                                                                      |
 | Builder name (Angular)  | `@angular-architects/native-federation:build` | `@angular-architects/native-federation:build` (Angular 22+) / `@angular-architects/native-federation-v4:build` (Angular 20/21) |
 
 ## Package Names
@@ -46,7 +46,7 @@ The core packages keep the same name but bump their major version. The Angular a
 | Package         | v3                                       | v4                                                                                                                       |
 | --------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Core builder    | `@softarc/native-federation@3.x`         | `@softarc/native-federation@4.x`                                                                                         |
-| Classic Runtime | `@softarc/native-federation-runtime@3.x` | `@softarc/native-federation-runtime@4.x`                                                                                 |
+| Classic Runtime | `@softarc/native-federation-runtime@3.x` | `@softarc/native-federation-runtime@4.x` — deprecated, end-of-life at `4.1.2`; use the Orchestrator                      |
 | Orchestrator    | —                                        | `@softarc/native-federation-orchestrator@4.x`                                                                            |
 | Angular adapter | `@angular-architects/native-federation`  | `@angular-architects/native-federation@22.x` on Angular 22+; `@angular-architects/native-federation-v4` on Angular 20/21 |
 
@@ -77,9 +77,9 @@ v4 introduces the **Orchestrator** (`@softarc/native-federation-orchestrator`) a
 - **Persistent caching** — `remoteEntry.json` files are cached in `localStorage` or `sessionStorage`, so the manifest fetch is skipped on repeat visits.
 - **Share scopes** — fine-grained sharing boundaries for complex multi-team setups.
 
-The Classic Runtime is still fully supported in v4 and remains the right choice when you need SSR on the host or want the simplest possible setup. It is _not_ deprecated — but new v4 projects should prefer the Orchestrator.
+The Classic Runtime is **deprecated and end-of-life**. A v4 line was published up to `4.1.2`, but the npm package now carries a deprecation notice pointing at `@softarc/native-federation-orchestrator`. Existing hosts keep working — it speaks the same `remoteEntry.json` contract, so v4-built remotes still load — but there are no further fixes or features, and v4's own tooling (the Angular adapter included) targets the Orchestrator. Use the Orchestrator for new projects, and plan to move existing hosts across.
 
-> **Note:** The Orchestrator is **client-side only**. If your host renders on the server, keep the Classic Runtime for the SSR path and optionally use the Orchestrator on the browser path.
+> **Note:** SSR is no longer a reason to stay on the Classic Runtime. On v4 the Orchestrator runs server-side through its [`/node` entry](orchestrator/node.md), so remote modules execute during SSR itself. (On v3 the Orchestrator was browser-only.)
 
 ## Migrating
 

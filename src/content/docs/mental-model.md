@@ -36,7 +36,7 @@ Version negotiation is the part most people discover the hard way, so it's worth
 ## How the Pieces Line Up at Runtime
 
 1. Each project builds and publishes its `remoteEntry.json` + shared bundles to a URL.
-2. The host's manifest lists those URLs. The [runtime](runtime/index.md) (or [orchestrator](orchestrator/index.md)) fetches each one at startup.
+2. The host's manifest lists those URLs. The [orchestrator](orchestrator/index.md) on the host fetches each one at startup.
 3. It merges the shared-dependency declarations, resolves version conflicts using the flags above, and injects the combined import map.
 4. When the user hits a route backed by a remote, `loadRemoteModule` triggers a plain dynamic `import()` — resolved through the injected map.
 

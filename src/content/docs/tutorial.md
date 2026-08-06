@@ -171,7 +171,7 @@ initFederation('/assets/federation.manifest.json', {
   .catch((err) => console.error(err));
 ```
 
-> **Note:** The Orchestrator is the new default in v4. It adds semver-aware version resolution and caches `remoteEntry.json` files across reloads. The Classic Runtime is still supported — see [v3 vs v4](v3-vs-v4.md#runtime-orchestrator-vs-classic).
+> **Note:** The Orchestrator is the runtime in v4. It adds semver-aware version resolution and caches `remoteEntry.json` files across reloads. The Classic Runtime it replaces is deprecated — see [v3 vs v4](v3-vs-v4.md#runtime-orchestrator-vs-classic).
 
 ## 8. Federation Manifest
 

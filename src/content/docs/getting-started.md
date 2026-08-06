@@ -8,7 +8,7 @@ applies_to: [v3, v4]
 
 Native Federation consists of two components — a **builder** for the remotes (micro frontends), and a **runtime** for the shell/host.
 
-The builder itself splits in two: a [Core](core/index.md) that does the heavy lifting, and a bundler-specific [Adapter](adapters/index.md) (Angular, esbuild, …) that wires the Core into your build pipeline. The runtime comes in two flavours: the classic [Runtime](runtime/index.md), or the newer [Orchestrator](orchestrator/index.md) with semver-aware version resolution and cross-reload caching.
+The builder itself splits in two: a [Core](core/index.md) that does the heavy lifting, and a bundler-specific [Adapter](adapters/index.md) (Angular, esbuild, …) that wires the Core into your build pipeline. On the host side that runtime is the [Orchestrator](orchestrator/index.md), with semver-aware version resolution and cross-reload caching; the classic [Runtime](runtime/index.md) it replaces is deprecated and end-of-life.
 
 Each piece has its own getting-started page — pick the one that matches what you're building.
 
@@ -21,7 +21,7 @@ Each piece has its own getting-started page — pick the one that matches what y
 ## Load remotes on a host at runtime
 
 - [Orchestrator — Getting Started](orchestrator/getting-started.md) — the drop-in quickstart bundle, the event registry, and writing your own `initFederation` script. _v3 & v4._
-- [Classic Runtime — Getting Started](runtime/getting-started.md) — install `@softarc/native-federation-runtime`, add `es-module-shims`, split your bootstrap, and load your first remote module. _v3 & v4._
+- [Classic Runtime — Getting Started](runtime/getting-started.md) — install `@softarc/native-federation-runtime`, add `es-module-shims`, split your bootstrap, and load your first remote module. _v3 & v4 — deprecated, end-of-life._
 
 ## New to Native Federation?
 

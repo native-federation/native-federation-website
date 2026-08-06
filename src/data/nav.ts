@@ -25,7 +25,7 @@ export const nav: NavSection[] = [
 		],
 	},
 	{
-		section: 'Orchestrator',
+		section: 'Runtime / Orchestrator',
 		items: [
 			{ label: 'Overview', id: 'orchestrator' },
 			{ label: 'Getting Started', id: 'orchestrator/getting-started' },
@@ -37,6 +37,7 @@ export const nav: NavSection[] = [
 			{ label: 'Node.js / SSR', id: 'orchestrator/node' },
 			{ label: 'Module Federation', id: 'orchestrator/module-federation' },
 			{ label: 'Security & SRI', id: 'orchestrator/security' },
+			{ label: 'Legacy Runtime', id: 'runtime' },
 		],
 	},
 	{
@@ -51,17 +52,6 @@ export const nav: NavSection[] = [
 			{ label: 'Build Adapters', id: 'core/build-adapters' },
 			{ label: 'Build Artifacts', id: 'core/artifacts' },
 			{ label: 'API Reference', id: 'core/api-reference' },
-		],
-	},
-	{
-		section: 'Runtime',
-		items: [
-			{ label: 'Overview', id: 'runtime' },
-			{ label: 'Getting Started', id: 'runtime/getting-started' },
-			{ label: 'initFederation', id: 'runtime/init-federation' },
-			{ label: 'loadRemoteModule', id: 'runtime/load-remote-module' },
-			{ label: 'The Import Map', id: 'runtime/import-map' },
-			{ label: 'API Reference', id: 'runtime/api-reference' },
 		],
 	},
 	{

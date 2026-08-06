@@ -24,11 +24,11 @@ A remote, viewed through the lens of the micro-frontend architecture. The terms 
 
 ### Runtime
 
-The small browser library that boots federation on the host — initializes federation (`initFederation`), fetches remote manifests, resolves shared dependencies and exposes `loadRemoteModule`. The default runtime is `@softarc/native-federation-runtime`. See [Runtime](runtime/index.md).
+The browser library that boots federation on the host — initializes federation (`initFederation`), fetches remote manifests, resolves shared dependencies and exposes `loadRemoteModule`. On v4 that is the Orchestrator; the classic `@softarc/native-federation-runtime` is deprecated and end-of-life. See [Legacy Runtime](runtime/index.md).
 
 ### Orchestrator
 
-The next-generation browser runtime — `@softarc/native-federation-orchestrator` — intended to replace the default Runtime as the recommended way to load remotes on the host. It speaks the same `remoteEntry.json` contract but adds semver-range resolution for shared dependencies and persistent caching of `remoteEntry.json` in `localStorage` or `sessionStorage`. Works in SPAs, plain HTML pages and server-rendered hosts; does not yet have direct SSR support. See [Orchestrator](orchestrator/index.md).
+The browser runtime for v4 — `@softarc/native-federation-orchestrator` — which replaces v3's classic Runtime as the way to load remotes on the host. It speaks the same `remoteEntry.json` contract but adds semver-range resolution for shared dependencies and persistent caching of `remoteEntry.json` in `localStorage` or `sessionStorage`. Works in SPAs, plain HTML pages and server-rendered hosts, and on v4 runs during SSR itself through its `/node` entry. See [Orchestrator](orchestrator/index.md).
 
 ### Build Adapter
 

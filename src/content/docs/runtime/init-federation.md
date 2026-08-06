@@ -1,10 +1,13 @@
 ---
 applies_to: [v3, v4]
+deprecated: true
 ---
 
 # `initFederation`
 
 > initFederation — how the host discovers remotes, builds the import map, and handles manifest URLs, cache busting and remote load errors.
+
+> **Warning:** **Deprecated.** This is the classic runtime's `initFederation`; the package has reached end-of-life. See the [Orchestrator's `initFederation`](../orchestrator/configuration.md) for the maintained equivalent.
 
 `initFederation` is the one call a host needs to make before any remote can be loaded. It fetches the host's own `remoteEntry.json`, fetches every configured remote's `remoteEntry.json` in parallel, merges everything into a single import map and injects it into the DOM.
 

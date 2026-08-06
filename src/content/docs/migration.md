@@ -126,9 +126,9 @@ export default withNativeFederation({
 
 > **Note:** The `features` block is new in v4. See [Configuration -> Feature Flags](core/configuration.md#feature-flags) for the full list.
 
-## 4. Adopt the Orchestrator (recommended)
+## 4. Adopt the Orchestrator
 
-The [Orchestrator](orchestrator/index.md) — `@softarc/native-federation-orchestrator` — is now **stable** and is the recommended browser runtime for v4 hosts. It speaks the same `remoteEntry.json` contract as the default `@softarc/native-federation-runtime`, so remotes built by the Core work unchanged. On top of that it adds:
+The [Orchestrator](orchestrator/index.md) — `@softarc/native-federation-orchestrator` — is **stable** and is the browser runtime for v4 hosts; the classic `@softarc/native-federation-runtime` it replaces is deprecated and no longer maintained. It speaks the same `remoteEntry.json` contract, so remotes built by the Core work unchanged. On top of that it adds:
 
 - Semver-range resolution when remotes disagree on a shared version.
 - Persistent caching of `remoteEntry.json` in `localStorage` or `sessionStorage`.
@@ -136,7 +136,7 @@ The [Orchestrator](orchestrator/index.md) — `@softarc/native-federation-orches
 
 Switching is an install + import change on the host; the emitted artifacts stay the same. The exact host bootstrap code depends on your framework — see the [Orchestrator overview](orchestrator/index.md) for configuration options, or [Angular Adapter -> Runtime](angular-adapter/runtime.md) for the Angular-specific bootstrap.
 
-> **Warning:** **SSR note.** The Orchestrator is client-side only today. If you need remote modules to execute during server-side rendering, keep using the default Runtime on the SSR path.
+> **Note:** **SSR.** On v4 the Orchestrator also runs server-side: its [`/node` entry](orchestrator/node.md) installs a `module.register()` loader hook so remote modules execute during server-side rendering. See [SSR & Hydration](ssr-hydration.md).
 
 ## That's it
 
