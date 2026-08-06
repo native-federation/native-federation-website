@@ -76,7 +76,7 @@ The manifest is just JSON mapping remote names to `remoteEntry.json` URLs:
 
 Ship a different manifest per environment to re-point remotes without rebuilding the host. Relative URLs are resolved by the browser against the page, so `./remoteEntry.json` and absolute URLs both work.
 
-## Cache busting with `cacheTag`
+## <a id="cache-tag"></a> Cache busting with `cacheTag`
 
 If you set `options.cacheTag`, the runtime appends `?t=<cacheTag>` (or `&t=...` when the URL already has a query string) to _every_ network request it makes — the manifest URL, the host `remoteEntry.json`, and every remote `remoteEntry.json`:
 

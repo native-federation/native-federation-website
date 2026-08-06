@@ -52,27 +52,31 @@ node_modules/.cache/native-federation/mfe1/
 ├── _angular_core_primitives_signals.5PqDyOp3np.js
 ├── chunk-IXOA6WTM.js
 ├── chunk-WDE5IQ2F.js
-└── chunk-2VMXMS7J.js
+├── chunk-2VMXMS7J.js
+└── .nf-cjs-entries/                    # synthetic ESM entries for CommonJS externals
 ```
+
+The `.nf-cjs-entries` folder holds the generated entries for [CommonJS externals](sharing.md#commonjs-externals). They are build inputs — nothing from it is copied into `outputPath`.
 
 Because the cache is scoped by project name, two remotes in the same monorepo don't stomp on each other. If `name` is missing, the core falls back to `'shell'` and logs a warning — with multiple nameless projects that fallback *will* cause collisions.
 
 ## The checksum
 
-A cache hit is decided by a SHA-256 checksum of everything that affects the bundle's output. Per bundle, the core builds a deterministic key by:
+A cache hit is decided by a SHA-256 checksum over everything that affects a bundle's output:
 
-1. sorting the package names in the bundle alphabetically,
-2. concatenating each `<packageName>@<version>` pair,
-3. appending a `dev=0` or `dev=1` flag,
-4. hashing the result with SHA-256.
+- the packages in the bundle and their **installed** versions — the version actually resolved from `node_modules`, not the range declared in your config,
+- their sharing metadata: `requiredVersion`, `singleton`, `strictVersion`, `shareScope` and `pool`,
+- the [feature flags](configuration.md#feature-flags), the builder version, and whether it's a dev or a prod build.
 
-A concrete example, before hashing:
+Change any of those and the affected bundles rebuild. Leave them alone and the cache is reused.
 
-```
-deps:@angular/core@21.0.6:@angular/core/primitives/di@21.0.6:@angular/core/primitives/signals@21.0.6:dev=0
-```
+Sharing metadata is in the key because a cache hit replays the recorded externals into `remoteEntry.json` verbatim — if `singleton` changed but the checksum didn't, the runtime would negotiate versions against stale metadata.
 
-As long as every package in the bundle keeps the same version, the checksum is stable and the cache is reused. Bumping any package, adding a new one, or flipping between dev and prod invalidates only the bundles that actually contain that change.
+### Symlinked (`npm link`) packages
+
+A dependency resolved through a symlink — a library you're actively editing via `npm link` — keeps the same version across builds, so a version-based checksum alone would pin the cache to the first build forever.
+
+For those packages the core additionally folds in a content signal derived from the package directory, so editing the linked library and rebuilding picks up your changes. Packages resolved normally out of `node_modules` are unaffected.
 
 ## The cache meta file
 
@@ -173,7 +177,7 @@ Adapters use the `bundlerCache` slot on `FederationCache` to persist bundler-spe
 
 ## Invalidation & recovery
 
-Versions change far more often than the skip list or build modes, so the checksum is deliberately narrow: it folds in *only* the packages and their versions. That means a few edits that you'd expect to invalidate the cache don't, on their own — for example changing `singleton` on an already-bundled external, or tweaking `includeSecondaries` filters in a way that doesn't add or remove packages from the bundle.
+The checksum covers the packages in a bundle, their installed versions, their sharing metadata and the feature flags — so most edits that change the output invalidate the cache on their own. Code-splitting is the notable exception: `chunks` is not part of the key, so toggling it on a `build: 'package'` external keeps serving the previously bundled output.
 
 If a build ever produces surprising output and you suspect a stale entry, wipe the cache folder and let the next build recreate it:
 
@@ -188,6 +192,17 @@ rm -rf node_modules/.cache/native-federation/mfe1
 ```
 
 There is no built-in "force rebuild one bundle" flag — deleting the corresponding `.meta.json` is the manual way.
+
+### A corrupted cache fails the build
+
+If a file listed in a meta file's `files` array is missing from the cache folder, the build now stops with an actionable error instead of silently emitting an incomplete output directory:
+
+```
+Cached artifact 'x.js' recorded in '…/browser-shared.meta.json' is missing.
+Delete '…' and rebuild.
+```
+
+The alternative would be an output directory whose `remoteEntry.json` advertises a file that was never written — a failure that only surfaces in the browser as a 404 on a shared bundle. Deleting the cache folder is the fix.
 
 ## Observability
 

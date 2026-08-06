@@ -13,9 +13,11 @@ The Angular adapter re-exports the core's `withNativeFederation`, `share` and `s
 - [Imports](#imports)
 - [withNativeFederation differences](#what-withnativefederation-adds)
 - [NG_SKIP_LIST](#ng_skip_list)
+- [Building the shared config from package.json](#building-the-shared-config-from-packagejson)
 - [Platform inference](#platform-inference)
 - [shareAngularLocales & locale handling](#shareangularlocales--locale-handling)
 - [Version-pinned share scopes](#version-pinned-share-scopes)
+- [Shared mappings](#shared-mappings)
 - [What the schematic generates](#what-the-schematic-generates)
 
 ## Imports
@@ -25,13 +27,15 @@ import {
   withNativeFederation,
   share,
   shareAll,
+  fromPackageJson,
   shareAngularLocales,
   autoShareScope,
+  mappingsFromWorkspace,
   NG_SKIP_LIST,
-} from '@angular-architects/native-federation/config';
+} from "@angular-architects/native-federation/config";
 ```
 
-All six symbols are Angular-specific exports. Anything else (helpers, types, advanced overrides) lives in the core — import it from `@softarc/native-federation/config` or `@softarc/native-federation/domain`.
+Everything except `mappingsFromWorkspace` is an Angular-aware wrapper; `mappingsFromWorkspace` is a plain re-export of the core builder (see [below](#shared-mappings)). Anything else (helpers, types, advanced overrides) lives in the core — import it from `@softarc/native-federation/config` or `@softarc/native-federation/domain`.
 
 ## What `withNativeFederation` Adds
 
@@ -50,15 +54,15 @@ The Angular `share` and `shareAll` default to `NG_SKIP_LIST` instead of the core
 ```ts
 export const NG_SKIP_LIST: SkipList = [
   ...DEFAULT_SKIP_LIST,
-  '@angular-architects/native-federation',
-  'zone.js',
-  '@angular/localize',
-  '@angular/localize/init',
-  '@angular/localize/tools',
-  '@angular/router/upgrade',
-  '@angular/common/upgrade',
+  "@angular-architects/native-federation",
+  "zone.js",
+  "@angular/localize",
+  "@angular/localize/init",
+  "@angular/localize/tools",
+  "@angular/router/upgrade",
+  "@angular/common/upgrade",
   /^@nx\/angular/,
-  pkg => pkg.startsWith('@angular/') && !!pkg.match(/\/testing(\/|$)/),
+  (pkg) => pkg.startsWith("@angular/") && !!pkg.match(/\/testing(\/|$)/),
 ];
 ```
 
@@ -74,12 +78,36 @@ You can pass your own skip list to `shareAll` or `share`:
 
 ```ts
 shareAll(
-  { singleton: true, strictVersion: true, requiredVersion: 'auto' },
+  { singleton: true, strictVersion: true, requiredVersion: "auto" },
   { skipList: [...NG_SKIP_LIST, /^@my-org\//] },
 );
 ```
 
 For the broader semantics of `skip` (entry-by-entry exclusion vs. the global skip list), see [core configuration → skip](../core/configuration.md#skip).
+
+## Building the Shared Config from package.json
+
+As an alternative to `shareAll`, the `fromPackageJson` builder derives the shared config from your `package.json` and returns a fluent builder you can refine before handing it to `withNativeFederation`:
+
+```ts
+import {
+  withNativeFederation,
+  fromPackageJson,
+} from "@angular-architects/native-federation/config";
+
+export default withNativeFederation({
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: "auto",
+  })
+    .skip(["rxjs/ajax", "rxjs/fetch"])
+    .override({ "large-lib": { singleton: false } })
+    .get(),
+});
+```
+
+Unlike the core's `fromPackageJson`, this adapter's version pre-seeds `NG_SKIP_LIST` — the same list `shareAll` uses — so Angular-internal and localization packages are skipped out of the box and `.skip()` only lists what is specific to your app. The builder methods (`.skip`, `.override`, `.patch`, `.get`) are otherwise identical; see [core configuration → shared](../core/configuration.md#shared--the-share-helpers).
 
 ## Platform Inference
 
@@ -123,13 +151,17 @@ import {
   withNativeFederation,
   shareAll,
   shareAngularLocales,
-} from '@angular-architects/native-federation/config';
+} from "@angular-architects/native-federation/config";
 
 export default withNativeFederation({
-  name: 'mfe1',
+  name: "mfe1",
   shared: {
-    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
-    ...shareAngularLocales(['en', 'de', 'fr']),
+    ...shareAll({
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: "auto",
+    }),
+    ...shareAngularLocales(["en", "de", "fr"]),
   },
 });
 ```
@@ -143,76 +175,129 @@ See [Localization](localization.md) for the wider context.
 _Since adapter 22.0.4 / 21.2.x._ A `shareScope` isolates shared dependencies into a named bucket, so packages are only shared between remotes that use the same scope. The `autoShareScope` helper derives that name from a dependency's declared version, letting you pin sharing to a version line without hardcoding the number:
 
 ```ts
-import { withNativeFederation, shareAll, autoShareScope } from '@angular-architects/native-federation/config';
+import {
+  withNativeFederation,
+  shareAll,
+  autoShareScope,
+} from "@angular-architects/native-federation/config";
 
 export default withNativeFederation({
   // Only share with remotes built against the same Angular minor, e.g. "ng21.1"
   shareScope: autoShareScope(),
 
   shared: {
-    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
+    ...shareAll({
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: "auto",
+    }),
   },
 });
 ```
 
 `autoShareScope(opts?)` reads the version from `dependencies`, `devDependencies` or `peerDependencies` in your `package.json` and returns a scope string. It accepts:
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `level` | `'major' \| 'minor' \| 'patch'` | `'minor'` | Granularity of the generated scope. |
-| `dependency` | `string` | `'@angular/core'` | The package whose version drives the scope. |
-| `prefix` | `string` | `'ng'` | Prepended to the generated name. |
-| `projectPath` | `string` | `cwd()` | Where to start looking for `package.json`. |
+| Option        | Type                            | Default           | Description                                 |
+| ------------- | ------------------------------- | ----------------- | ------------------------------------------- |
+| `level`       | `'major' \| 'minor' \| 'patch'` | `'minor'`         | Granularity of the generated scope.         |
+| `dependency`  | `string`                        | `'@angular/core'` | The package whose version drives the scope. |
+| `prefix`      | `string`                        | `'ng'`            | Prepended to the generated name.            |
+| `projectPath` | `string`                        | `cwd()`           | Where to start looking for `package.json`.  |
 
 The `level` controls the granularity of the generated scope (given `@angular/core` is `21.1.4`):
 
-| `level` | Result |
-| --- | --- |
-| `'major'` | `"ng21"` |
+| `level`   | Result               |
+| --------- | -------------------- |
+| `'major'` | `"ng21"`             |
 | `'minor'` | `"ng21.1"` (default) |
-| `'patch'` | `"ng21.1.4"` |
+| `'patch'` | `"ng21.1.4"`         |
 
 You can also point it at another package or set a per-dependency scope:
 
 ```ts
 export default withNativeFederation({
-  shareScope: autoShareScope({ level: 'patch' }),
+  shareScope: autoShareScope({ level: "patch" }),
 
   shared: {
     // Override the scope for a single package
-    rxjs: { singleton: true, shareScope: autoShareScope({ dependency: 'rxjs' }) },
+    rxjs: {
+      singleton: true,
+      shareScope: autoShareScope({ dependency: "rxjs" }),
+    },
   },
 });
 ```
 
 `autoShareScope` throws if the dependency isn't declared, or if the declared version lacks enough segments for the requested `level`.
 
+## Shared Mappings
+
+Workspace libraries mapped in `compilerOptions.paths` are shared via `sharedMappings`. Besides plain strings, an entry can pair a list of patterns with an `ExternalConfig`, so a mapped path carries the same metadata as a shared npm package:
+
+```ts
+export default withNativeFederation({
+  sharedMappings: [
+    "@my-org/auth-lib",
+    [["@my-org/ui/*"], { singleton: false }],
+  ],
+});
+```
+
+For more than a couple of entries, the adapter re-exports the core's `mappingsFromWorkspace` builder, so a config file can reach it without depending on `@softarc/native-federation` directly:
+
+```ts
+import {
+  withNativeFederation,
+  mappingsFromWorkspace,
+} from "@angular-architects/native-federation/config";
+
+export default withNativeFederation({
+  sharedMappings: mappingsFromWorkspace({
+    singleton: true,
+    strictVersion: true,
+  })
+    .filter(["@my-org/ui/*", "@my-org/auth-lib"])
+    .patch(["@my-org/ui/*"], { singleton: false })
+    .get(),
+});
+```
+
+See [core configuration → sharedMappings](../core/configuration.md#sharedmappings) for the builder methods, which `ExternalConfig` properties a mapping honours, how `includeSecondaries: { keepAll: true, resolveGlob: true }` keeps mappings nothing imports, and why only barrel imports can be shared as a mapped path.
+
 ## What the Schematic Generates
 
 For reference, this is the `federation.config.mjs` that `ng add` emits for a remote on v4:
 
 ```ts
-import { withNativeFederation, shareAll } from '@angular-architects/native-federation/config';
+import {
+  withNativeFederation,
+  shareAll,
+} from "@angular-architects/native-federation/config";
 
 export default withNativeFederation({
-  name: 'mfe1',
+  name: "mfe1",
 
   exposes: {
-    './Component': './projects/mfe1/src/app/app.component.ts',
+    "./Component": "./projects/mfe1/src/app/app.component.ts",
   },
 
   shared: {
     ...shareAll(
-      { singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package' },
+      {
+        singleton: true,
+        strictVersion: true,
+        requiredVersion: "auto",
+        build: "package",
+      },
       {
         overrides: {
           // includeSecondaries is an opt-out of ignoreUnusedDeps, so all of
           // @angular/core is shared to prevent mismatches.
-          '@angular/core': {
+          "@angular/core": {
             singleton: true,
             strictVersion: true,
-            requiredVersion: 'auto',
-            build: 'package',
+            requiredVersion: "auto",
+            build: "package",
             includeSecondaries: { keepAll: true },
           },
         },
@@ -221,10 +306,10 @@ export default withNativeFederation({
   },
 
   skip: [
-    'rxjs/ajax',
-    'rxjs/fetch',
-    'rxjs/testing',
-    'rxjs/webSocket',
+    "rxjs/ajax",
+    "rxjs/fetch",
+    "rxjs/testing",
+    "rxjs/webSocket",
     // Add further packages you don't need at runtime
   ],
 
@@ -238,7 +323,7 @@ export default withNativeFederation({
 });
 ```
 
-Notable defaults: `build: 'package'` for the per-package build mode (each external gets its own meta file — see [build modes](../core/configuration.md#build-modes)), `includeSecondaries.keepAll` for `@angular/core` only (see [below](#why-keepall-for-angularcore)), and `denseChunking: true` to compress the `remoteEntry.json`. The schematic doesn't generate an override for `@angular/common`; only `@angular/core` gets the `keepAll` guard out of the box.
+Notable defaults: `build: 'package'` for the per-package build mode (each external gets its own meta file — see [build modes](../core/configuration.md#build-modes-on-a-shared-entry)), `includeSecondaries.keepAll` for `@angular/core` only (see [below](#why-keepall-for-angularcore)), and `denseChunking: true` to compress the `remoteEntry.json`. The schematic doesn't generate an override for `@angular/common`; only `@angular/core` gets the `keepAll` guard out of the box.
 
 ### Why `keepAll` for `@angular/core`?
 

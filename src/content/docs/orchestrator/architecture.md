@@ -99,7 +99,7 @@ The optional `integrity` map (added by `@softarc/native-federation` when built w
 | `bundle`          | Optional name of the shared bundle this external belongs to — the key the orchestrator uses to look up sibling chunk files in the shared-chunks cache (v4 opt-in). |
 | `dev`             | Optional dev-mode metadata (original source path, etc).                                                                                                            |
 
-## Internal caches
+## <a id="caches"></a> Internal caches
 
 After fetching metadata, the orchestrator keeps four caches in memory (and optionally mirrors them to `sessionStorage`/`localStorage`). Everything the resolver and the import-map builder need lives in these structures — they're accessible via `@softarc/native-federation-orchestrator/sdk` if you need to introspect.
 

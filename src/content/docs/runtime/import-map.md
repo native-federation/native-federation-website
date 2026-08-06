@@ -81,7 +81,7 @@ Because the scope key is the remote's base URL, browser import-map matching ensu
 
 If the build emitted a `chunks` map in `remoteEntry.json` (shared code split across multiple files), each chunk file is also added to the map. Host chunks go into root imports; remote chunks go into the remote's scope. The key is derived from the chunk's filename via the core's `toChunkImport` helper, so the runtime does not have to invent names itself.
 
-## The externals registry
+## <a id="externals"></a> The externals registry
 
 The runtime maintains a small in-memory registry — a `Map<string, string>` keyed by `<packageName>@<version>`:
 

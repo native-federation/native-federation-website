@@ -147,7 +147,7 @@ An array of strings, regular expressions, or predicates that opts specific packa
 
 ### Feature Flag
 
-A behavior toggle under `features` on the federation config — currently `ignoreUnusedDeps` (opt-out, default `true`), `mappingVersion` (opt-out, default `true`) and `denseChunking` (opt-in, default `false`). See [Feature Flags](core/configuration.md#features).
+A behavior toggle under `features` on the federation config — currently `ignoreUnusedDeps` (opt-out, default `true`), `mappingVersion` (opt-out, default `true`) and `denseChunking` (opt-in, default `false`). See [Feature Flags](core/configuration.md#feature-flags).
 
 ## Build & runtime
 

@@ -135,7 +135,7 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
 
 > **Important:** `window.__NF_REGISTRY__` only exists after `init-registry.mjs` runs (or after you call `createRegistry` yourself in a custom orchestrator setup). If the script tag is missing, the orchestrator quietly falls back to the legacy `mfe-loader-available` `CustomEvent` and any consumer that calls `__NF_REGISTRY__.onReady(...)` will throw. See [Event Registry — Installation](event-registry.md#installation).
 
-## 3. Custom orchestrator — production builds
+## <a id="custom-implementation"></a> 3. Custom orchestrator — production builds
 
 For production-grade hosts you usually want a bundled orchestrator you control: custom loggers (Sentry, Bugsnag), remote discovery over HTTP, integration with a framework bootstrap, explicit error handling. That's what `initFederation` is for.
 
@@ -226,7 +226,7 @@ await esbuild.build({
 });
 ```
 
-## Loading remote modules
+## <a id="load-remote-module"></a> Loading remote modules
 
 `initFederation` resolves with a `NativeFederationResult` that exposes six properties. `loadRemoteModule`, `load`, and both functions inside `as<T>()` all delegate to the same underlying loader — they only differ in their TypeScript types.
 

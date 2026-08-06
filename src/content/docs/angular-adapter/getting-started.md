@@ -23,7 +23,7 @@ npm i @angular-architects/native-federation -D
 > | 22+ | `@angular-architects/native-federation` |
 > | 20 – 21 | `@angular-architects/native-federation-v4` |
 
-The package brings `@softarc/native-federation` (`^4.3.0`) and `@softarc/native-federation-orchestrator` (`^4.5.0`) as dependencies. The `ng add` step below adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` (as a devDependency) on top — nothing else to install up front.
+The package brings `@softarc/native-federation` (`^4.4.0`) and `@softarc/native-federation-orchestrator` (`^4.5.2`) as dependencies. The `ng add` step below adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` (as a devDependency) on top — nothing else to install up front.
 
 ## 2. Scaffold a Remote (Micro Frontend)
 
@@ -31,7 +31,7 @@ The package brings `@softarc/native-federation` (`^4.3.0`) and `@softarc/native-
 ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote
 ```
 
-This runs the `init` schematic against `mfe1`. See [Schematics → init](schematics.md#init) for the full list of changes; in summary it:
+This runs the `init` schematic against `mfe1`. See [Schematics → init](schematics.md#init--ng-add) for the full list of changes; in summary it:
 
 - Adds `es-module-shims` to the polyfills.
 - Generates `projects/mfe1/federation.config.mjs` with one entry exposed (`./Component` → the project's `app.component.ts`).

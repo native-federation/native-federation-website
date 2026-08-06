@@ -14,7 +14,7 @@ Everything you pass as the second argument to `initFederation` lives on this pag
 - [4. Modes — strictness & resolution profile](#modes)
 - [5. Storage](#storage)
 
-## 1. Host configuration
+## <a id="host"></a> 1. Host configuration
 
 A **host remote entry** is a `remoteEntry.json` published by the host itself. Whenever an external appears both in the host entry and in a regular remote, the host version wins — making this the right escape hatch for locking a framework or design-system version globally.
 
@@ -69,7 +69,7 @@ Per-remote pinning lives in the manifest itself — entries can be either the ex
 
 > See [Security — Subresource Integrity](security.md#subresource-integrity) for the full trust chain (manifest → `remoteEntry.json` → modules) and the supported hash algorithms.
 
-## 2. Import-map implementation
+## <a id="import-map"></a> 2. Import-map implementation
 
 The orchestrator commits a standard [import map](https://caniuse.com/import-maps) to the DOM and uses the browser's own `import()` to load modules. For older browsers — or whenever you need [dynamic init](version-resolver.md#dynamic-init) — swap in [es-module-shims](https://www.npmjs.com/package/es-module-shims).
 
@@ -123,7 +123,7 @@ initFederation("http://example.org/manifest.json", {
 
 > **Note:** `useShimImportMap` is required for dynamic init — native import maps can be committed to the DOM only once, while es-module-shims accepts additional maps at runtime.
 
-## 3. Logging
+## <a id="logging"></a> 3. Logging
 
 Diagnostics for both development and production. Ships with two built-in loggers and accepts any object that matches the `Logger` interface.
 
@@ -162,7 +162,7 @@ initFederation("http://example.org/manifest.json", {
 });
 ```
 
-## 4. Modes — strictness & resolution profile
+## <a id="modes"></a> 4. Modes — strictness & resolution profile
 
 Mode options are the hyperparameters for the [Version Resolver](version-resolver.md): how strict to be when something unexpected happens, and how aggressively to reuse cached state.
 
@@ -204,7 +204,7 @@ All flags default to `false`, which means "log and continue". Setting `strict: t
 | `strict.strictExternalVersion`                  | Throws if a shared external's `version` is missing or not valid semver. When `false`, the external is instead coerced to the smallest version matching its `requiredVersion` range — unless `profile.skipInvalidExternalVersions` is on, in which case it is skipped. This flag takes precedence over `profile.skipInvalidExternalVersions`. |
 | `strict.strictImportMap`                        | Throws when the import-map builder encounters corrupt cache state.                                                                                                                                                                                                                                                                           |
 
-### Resolution profile
+### <a id="profile"></a> Resolution profile
 
 The profile controls _how_ the resolver picks winners and _whether_ it refreshes cached remotes.
 
@@ -254,7 +254,7 @@ initFederation("http://example.org/manifest.json", {
 
 > **Note:** The caching profile is tempting but comes with a trade-off: newly deployed remote versions won't be picked up until the cache is explicitly cleared. Pair it with `clearStorage: true` on cache-busting events, or stick with `defaultProfile` when remotes change frequently.
 
-## 5. Storage
+## <a id="storage"></a> 5. Storage
 
 The orchestrator keeps its internal caches (remote info, shared externals, scoped externals) inside a **storage entry**. The default is an in-memory map on `globalThis`, but any `Storage`-compatible backend works.
 

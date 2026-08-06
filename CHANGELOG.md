@@ -8,6 +8,7 @@ Repo: https://github.com/native-federation/native-federation-core
 
 | Date       | Version | Commit    |
 | ---------- | ------- | --------- |
+| 2026-08-06 | `4.4.0` | `1b2499b` |
 | 2026-07-11 | `4.3.0` | `ea4c502` |
 | 2026-05-26 | `4.1.3` | `a56b11a` |
 
@@ -41,6 +42,7 @@ Repo: https://github.com/native-federation/angular-adapter
 
 | Date       | Version  | Package | Commit    |
 | ---------- | -------- | ------- | --------- |
+| 2026-08-06 | `22.1.0` | base    | `c2941ef` |
 | 2026-07-11 | `22.0.5` | base    | `8647b2c` |
 | 2026-06-01 | `21.2.3` | `-v4`   | `fafd466` |
 | 2026-05-26 | `21.2.1` | `-v4`   | `576f192` |

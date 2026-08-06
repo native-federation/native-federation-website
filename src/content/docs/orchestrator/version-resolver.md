@@ -85,7 +85,7 @@ Candidates for deduplication. The resolver pools them by `shareScope` and picks 
 
 Never shared. Every remote gets its own copy in its own scope entry — no resolution needed, no interference with other remotes.
 
-## Secondary entrypoints — the `entries` map
+## <a id="secondary-entrypoints"></a> Secondary entrypoints — the `entries` map
 
 A package can expose more than one import specifier: a primary entrypoint (`@angular/core`) and one or more secondary entrypoints (`@angular/core/testing`, `@angular/core/rxjs-interop`, …). Core v4.3.0 groups these under a single `DenseSharedInfo`, replacing the flat `outFileName` with an `entries` map from each specifier to its output file:
 
@@ -284,7 +284,7 @@ Per pool, per scope, it picks one **anchor remote**: the remote providing the wi
 
 Pooling applies to the **global scope and named share scopes**; the `strict` scope is never pooled. It runs in both the initial pipeline and dynamic init (`initRemoteEntry`). Because the import map is immutable once committed, the dynamic pass is **additive** — it adjusts only the newly loaded remote and never retro-corrects committed remotes, honoring the same distinction between incompatibility-forced and coverage-forced scoping.
 
-## Dynamic init — adding remotes after the fact
+## <a id="dynamic-init"></a> Dynamic init — adding remotes after the fact
 
 > **Note:** Dynamic init currently requires `useShimImportMap({ shimMode: true })` — native import maps can only be committed to the DOM once.
 
@@ -446,7 +446,7 @@ await initFederation(manifest, {
 // Available: [18.1.0, 18.2.0, 18.0.5] → picks 18.2.0
 ```
 
-### 3. Optimal version strategy — default
+### <a id="optimal"></a> 3. Optimal version strategy — default
 
 Picks the version that minimizes extra scoped downloads within the scope. For each candidate version, count how many other versions would be forced to `SCOPE` (incompatible + strict) if that candidate were the shared one, then pick the candidate with the lowest cost.
 

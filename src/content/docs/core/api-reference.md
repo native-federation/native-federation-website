@@ -6,7 +6,7 @@ applies_to: [v4]
 
 > The public API surface of @softarc/native-federation — exports from the main, /config and /domain entry points.
 
-`@softarc/native-federation` exposes three import subpaths. The default entry covers the build-time API; `/config` is the configuration DSL; `/domain` re-exports the TypeScript contracts so adapter authors can type against them.
+`@softarc/native-federation` exposes several import subpaths. The default entry covers the build-time API; `/config` is the configuration DSL; `/domain` re-exports the TypeScript contracts so adapter authors can type against them; `/internal` and `/internal/browser` hold semi-public utilities for adapter authors.
 
 ## `@softarc/native-federation`
 
@@ -35,6 +35,7 @@ Configuration DSL used inside `federation.config.js`.
 | `fromPackageJson(baseCfg, projectPath?)` | function | Recommended dep-sharing builder (since v4.3). Shares all `package.json` deps and returns a fluent builder (`.skip` / `.override` / `.patch` / `.get`). |
 | `shareAll(options, opts?)` | function | Share every dependency found in `package.json`. Accepts `overrides` for per-package deviation. |
 | `share(entries, projectPath?, skipList?)` | function | Share a hand-picked set of packages with per-entry options. |
+| `mappingsFromWorkspace(baseCfg?)` | function | Since v4.4. Builder for `sharedMappings` — `.filter()` narrows the selection, `.patch()` annotates a subset, `.get()` returns the entry array. See [sharedMappings](configuration.md#mappingsfromworkspace). |
 | `setInferVersion(fn)` | function | Override how shared-dependency versions are inferred for `requiredVersion: 'auto'`. |
 | `findRootTsConfigJson()` | function | Locate the root `tsconfig.base.json` or `tsconfig.json` for mapped-path resolution. |
 | `DEFAULT_SKIP_LIST` | const | The baseline skip list `withNativeFederation` merges with your `skip`. |
@@ -61,7 +62,16 @@ Utility exports intended for adapter authors. Treated as semi-public; breaking c
 - the `hashFile` checksum helper and `getChecksum` / `getDefaultCachePath` cache helpers,
 - the `logger` and `setLogLevel`,
 - the `RebuildQueue` plus the `createBuildResultMap` / `lookupInResultMap` / `popFromResultMap` helpers,
-- the `NfFileWatcher` contract and the `createNfWatcher` / `syncNfFileWatcher` implementations,
-- the `writeImportMap`, `prepareSkipList` and `isInSkipList` helpers used by the build pipeline.
+- the `NfFileWatcher` contract and the `createNfWatcher` / `syncNfFileWatcher` implementations, plus `linkedSharedDirs` / `sharedMappingDirs` for deciding what to watch (since v4.4),
+- the `writeImportMap`, `prepareSkipList` and `isInSkipList` helpers used by the build pipeline,
+- `densifyExternals` / `toDenseSharedInfoFormat` for producing the [dense externals](artifacts.md#dense-externals) shape.
+
+> **Note:** `getChecksum` gained three optional parameters in v4.4 — the feature flags, per-package content signals and installed versions that now take part in the [cache key](caching.md#the-checksum). Existing calls keep working; a caller that omits them reproduces the old key.
+
+## `@softarc/native-federation/internal/browser`
+
+Since v4.4, the browser-safe subset of `/internal` — the exports that carry no Node dependencies, so a runtime or a browser-side tool can import them without pulling in `fs` and `path`. It covers the error types, `densifyExternals` / `toDenseSharedInfoFormat`, `prepareSkipList` / `isInSkipList` and the config contract types.
+
+Everything here is also re-exported from `/internal`, so a build-time consumer only needs the one import.
 
 > **Note:** Application developers almost never import from this package directly. Consume an [adapter](../adapters/index.md) instead.

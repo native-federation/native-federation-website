@@ -10,7 +10,7 @@ v4 of the Angular adapter is a packaging and runtime upgrade — full ESM, the [
 
 The `ng update` migration does the work for you, but the steps below are useful when migrating by hand or auditing the diff.
 
-> **Note:** The fastest path is `ng update @angular-architects/native-federation` — it pulls the Angular 22 release and runs the bundled **`update22`** migration, which rewrites your project to the v22 ESM standard automatically. Coming straight from v3, you can run this in one step. See [Schematics → update22](schematics.md#update22).
+> **Note:** The fastest path is `ng update @angular-architects/native-federation` — it pulls the Angular 22 release and runs the bundled **`update22`** migration, which rewrites your project to the v22 ESM standard automatically. Coming straight from v3, you can run this in one step. See [Schematics → update22](schematics.md#update22-angular-22).
 
 ## Files Touched
 
@@ -42,9 +42,9 @@ Update the packages:
     // your dependencies
   },
   "devDependencies": {
-    "@angular-architects/native-federation": "~22.0.6",
-    "@softarc/native-federation": "~4.3.2",
-    "@softarc/native-federation-orchestrator": "^4.5.2"
+    "@angular-architects/native-federation": "~22.1.0",
+    "@softarc/native-federation": "~4.4.0",
+    "@softarc/native-federation-orchestrator": "^4.6.0"
   }
 }
 ```
@@ -116,6 +116,39 @@ export default withNativeFederation({
 The `shareAll` call now accepts a second argument with `overrides` — handy for keeping `@angular/core`'s secondary entry points together (see [Angular Config → keepAll](configuration.md#why-keepall-for-angularcore)).
 
 Code-splitting (`chunks`) and dense chunking (`denseChunking`) are configured here in `federation.config.mjs`, not in the builder options anymore.
+
+### Optional — the config builders
+
+Both halves of the config have a builder-style alternative to the `shareAll` + `skip` + `share` stack. `fromPackageJson` starts from your `package.json` dependencies, `mappingsFromWorkspace` from the workspace libraries in your root tsconfig's `compilerOptions.paths`:
+
+```ts
+import {
+  withNativeFederation,
+  fromPackageJson,
+  mappingsFromWorkspace,
+} from "@angular-architects/native-federation/config";
+
+export default withNativeFederation({
+  name: "mfe1",
+  exposes: { "./Component": "./projects/mfe1/src/bootstrap.ts" },
+
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: "auto",
+  })
+    .skip(["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"])
+    .patch(["@angular/core"], { includeSecondaries: { keepAll: true } })
+    .get(),
+
+  sharedMappings: mappingsFromWorkspace({ singleton: true, strictVersion: true })
+    .filter(["@my-org/ui/*", "@my-org/auth-lib"])
+    .patch(["@my-org/ui/*"], { singleton: false })
+    .get(),
+});
+```
+
+Nothing is lost by not using them: each `.get()` returns exactly the object or array you could have written by hand, so the old forms keep working and the two styles can be mixed per project. See [Angular Config → fromPackageJson](configuration.md#building-the-shared-config-from-packagejson) and [Angular Config → shared mappings](configuration.md#shared-mappings).
 
 ## 3. `angular.json`
 
@@ -234,7 +267,7 @@ import { initFederation } from "@angular-architects/native-federation";
 import { initFederation } from "@angular-architects/native-federation-v4";
 ```
 
-### Moving from `-v4` to Angular 22
+### <a id="updating-to-angular-22"></a> Moving from `-v4` to Angular 22
 
 When you're ready to move from Angular 20/21 to Angular 22, dropping the `-v4` suffix is part of the jump. You don't have to do it by hand — run the Angular CLI update:
 
@@ -258,7 +291,7 @@ If anything is off — corrupted cache, missing peer deps, weird ESM resolution 
 
 ## Related
 
-- [Schematics → update22](schematics.md#update22) — the automated Angular 22 migration.
+- [Schematics → update22](schematics.md#update22-angular-22) — the automated Angular 22 migration.
 - [Schematics → update-v4](schematics.md#update-v4) — the automated migration for the Angular 20/21 `-v4` package.
 - [Runtime → The orchestrator runtime](runtime.md#the-orchestrator-runtime) — full orchestrator wiring details.
 - [Angular Config](configuration.md) — what changed in `federation.config.mjs` defaults.
