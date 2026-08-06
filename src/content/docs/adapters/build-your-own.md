@@ -101,12 +101,13 @@ The reason this matters is the file watcher — covered next.
 
 ## 7. The file watcher
 
-Native Federation ships a lightweight recursive `fs.watch`-based watcher in `@softarc/native-federation/internal`. You don't have to use it — any watcher that produces changed paths works — but it's designed to pair with the bundler cache:
+Native Federation ships a lightweight `fs.watch`-based watcher in `@softarc/native-federation/internal`. You don't have to use it — any watcher that produces changed paths works — but it's designed to pair with the bundler cache:
 
 ```ts
 import {
   createNfWatcher,
   syncNfFileWatcher,
+  linkedSharedDirs,
   type NfFileWatcher,
 } from '@softarc/native-federation/internal';
 
@@ -120,16 +121,41 @@ const watcher: NfFileWatcher = createNfWatcher({
 });
 
 // After each build: subscribe to every input file we just compiled.
-syncNfFileWatcher(watcher, bundlerCache);
+syncNfFileWatcher(watcher, bundlerCache, linkedSharedDirs(config, options));
 ```
 
 `syncNfFileWatcher` reads the keys from `bundlerCache`, filters out `node_modules`, and calls `watcher.addPaths()` with anything it hasn't seen before. That's why the bundler cache is keyed by input path: one successful build automatically produces the watch set for the next one.
 
+> **Note:** The cache must be keyed **by input path**. A cache that records its inputs somewhere else yields an empty watch set — and the symptom is silent: the dev server keeps serving stale bundles until you restart it.
+
+### What to watch
+
+Since v4.4 two helpers tell you what belongs in the watch set beyond your own compiled inputs:
+
+- **`linkedSharedDirs(config, options)`** — the directories of shared packages resolved through a symlink (`npm link`). Pass them as the third argument to `syncNfFileWatcher`; it registers them for **polling**, because tools that rewrite their `dist` atomically (ng-packagr, for one) replace the inode and defeat `fs.watch`.
+- **`sharedMappingDirs(config)`** — the source directory of every `sharedMappings` entry point, derived from config alone. Coarser than a build's compiled inputs, but it covers what those can't: files *added* to a library since the last build. It doesn't follow imports out of the library, so an adapter that can enumerate its build inputs should watch both. How coarse it gets is up to the config — an entry point that isn't a library barrel widens the watch to whatever folder it sits in, and with `sharedMappings` unset every tsconfig path counts. Watch these natively, not polled: they're source trees, not the `dist` output `linkedSharedDirs` exists for.
+
+Registering the same directory twice is free — one directory means one handle no matter how many tracked files live under it, and a recursive watch supersedes the narrower ones it covers, so each save is still delivered once.
+
 The watcher API:
 
-- `addPaths(paths)` — start watching files or directories. Directory watches are recursive.
+- `addPaths(paths, opts?)` — start watching files or directories. Directory watches are recursive; pass `{ poll: true }` for paths that need polling instead of native watching.
 - `close()` — stop all watches. Always call before process exit.
 - `get() / clear() / mutate()` — for drivers that want to batch dirty paths manually instead of via `onChange`.
+
+> **Note:** The dirty set is filled on every change, **including** when you pass `onChange`. A listener-only consumer still has to call `clear()`, or the set grows for the lifetime of the process.
+
+`createNfWatcher` takes a few options worth knowing about:
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `onChange` | – | Called with each changed path. |
+| `debounceMs` | `0` | Coalesce bursts of events before reporting them. |
+| `pollIntervalMs` | `300` | Interval for paths registered with `{ poll: true }`. |
+| `dedupeReplays` | `true` | Drop events for files whose content hasn't actually changed. macOS re-delivers "changed" for recently edited files every ~30s; with a few thousand watched sources that replay alone keeps a rebuild loop awake forever. |
+| `replayGraceMs` | `2000` | How long after a recorded change an identical-looking event is still let through, so a second save inside one filesystem timestamp tick isn't mistaken for a replay. Raise it on a filesystem with coarse timestamps (NFS, WSL2 drvfs, HFS+) or on a network mount whose clock lags. |
+
+Watch failures are reported: if a directory watch can't be opened — descriptor exhaustion, most often — the first failure logs a warning, because a failed watch means silent staleness rather than a visible error.
 
 ## 8. The rebuild queue
 
@@ -308,6 +334,7 @@ import {
   RebuildQueue,
   createNfWatcher,
   syncNfFileWatcher,
+  linkedSharedDirs,
   type NfFileWatcher,
 } from '@softarc/native-federation/internal';
 import { createMyAdapter } from './my-adapter';
@@ -340,7 +367,8 @@ export async function runMyBuilder(federationConfigPath: string, options: MyOpti
       void triggerRebuild();
     },
   });
-  syncNfFileWatcher(watcher, bundlerCache);
+  const linkedDirs = linkedSharedDirs(config, fedOptions);
+  syncNfFileWatcher(watcher, bundlerCache, linkedDirs);
 
   async function triggerRebuild() {
     await rebuildQueue.track(async signal => {
@@ -352,7 +380,7 @@ export async function runMyBuilder(federationConfigPath: string, options: MyOpti
         federationInfo = await rebuildForFederation(
           config, fedOptions, externals, files, signal,
         );
-        syncNfFileWatcher(watcher, bundlerCache);
+        syncNfFileWatcher(watcher, bundlerCache, linkedDirs);
         return { success: true };
       } catch (error) {
         if (error instanceof AbortedError) return { success: false, cancelled: true };

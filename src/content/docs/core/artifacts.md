@@ -27,6 +27,7 @@ The remote's public manifest. Hosts fetch it when loading a remote:
 
 ```ts
 interface FederationInfo {
+  $version?: string; // manifest format marker, since v4.4
   name: string;
   exposes: ExposesInfo[];
   shared: SharedInfo[];
@@ -60,6 +61,7 @@ type SharedInfo = {
 
 ```json
 {
+  "$version": "v4",
   "name": "mfe1",
   "exposes": [{ "key": "./component", "outFileName": "component-Q4XS7K1T.js" }],
   "shared": [
@@ -74,6 +76,12 @@ type SharedInfo = {
   ]
 }
 ```
+
+### The `$version` marker
+
+Since v4.4, every `remoteEntry.json` is written with `$version: "v4"` as its first key. It identifies the manifest format so a consumer — the orchestrator, a tool reading manifests, a future major — can branch on the format it was handed instead of inferring it from which fields happen to be present.
+
+It is additive and purely informational: v4 runtimes ignore it, and a manifest written by an older v4 build without the key stays valid.
 
 ## `importmap.json`
 
@@ -143,7 +151,22 @@ type DenseSharedInfo = Omit<SharedInfo, "outFileName"> & {
 }
 ```
 
-Entrypoints whose sharing metadata (`singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`) diverges are split into separate groups. Bundler chunks stay flat and `importmap.json` is unaffected. The format is opt-in and fully backward compatible: the runtime detects each entry by shape (`entries` map vs. `outFileName`), so both classic and dense `remoteEntry.json` load. `denseExternals` and `denseChunking` are orthogonal and can be combined.
+Entrypoints whose sharing metadata (`singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`) diverges are split into separate groups. `importmap.json` is unaffected.
+
+Since v4.4 the array is **uniformly dense**: bundler chunks use the same shape rather than staying flat, so a consumer only ever handles one entry shape. A chunk is never grouped with anything else — it becomes its own object with a single-key `entries` map:
+
+```json
+{
+  "packageName": "@nf-internal/chunk-IXOA6WTM",
+  "singleton": false,
+  "strictVersion": false,
+  "version": "0.0.0",
+  "requiredVersion": "0.0.0",
+  "entries": { "@nf-internal/chunk-IXOA6WTM": "chunk-IXOA6WTM.js" }
+}
+```
+
+The format is opt-in and fully backward compatible: the runtime detects each entry by shape (`entries` map vs. `outFileName`), so both classic and dense `remoteEntry.json` load. `denseExternals` and `denseChunking` are orthogonal and can be combined — with `denseChunking` on, chunks leave the `shared` array entirely and this conversion never applies to them.
 
 ## Integrity map
 

@@ -44,13 +44,13 @@ export default withNativeFederation({
 | `name` | `string` | `''` | The remote's name. Used as the key in the host manifest and in the generated `remoteEntry.json`. |
 | `exposes` | `Record<string, string \| { file, element? }>` | `{}` | Map of public keys (e.g. `'./component'`) to file paths. Every entry becomes a module a host can load via `loadRemoteModule`. A value can be a path string or an object with an explicit `file` and an optional `element` tag name. |
 | `shared` | `SharedExternalsConfig` | *all deps* | Packages to share between host and remotes. If omitted, the core shares every dependency found in `package.json` with sensible defaults. See [Sharing Dependencies](sharing.md). |
-| `sharedMappings` | `string[]` | all `tsconfig` paths | Paths mapped in your `tsconfig` that should be treated as shared (monorepo-internal libraries). |
+| `sharedMappings` | `Array<string \| [string[], ExternalConfig]>` | all `tsconfig` paths | Paths mapped in your `tsconfig` that should be treated as shared (monorepo-internal libraries). Entries are matched as **patterns**, and since v4.4 each can carry its own `ExternalConfig`. |
 | `platform` | `'browser' \| 'node'` | `'browser'` | Default platform for shared externals that don't set their own. |
 | `chunks` | `boolean` | `true` | Default code-splitting behavior for shared dependencies. Set to `false` to bundle each shared package as a single file. |
 | `skip` | `string[]` | *see skip list* | Packages (or mapped paths) to exclude from sharing. Merged with the built-in skip list. |
 | `externals` | `string[]` | `[]` | Extra externals to expose to your bundler via `federationBuilder.externals` on top of the shared ones. |
 | `shareScope` | `string` | *undefined* | Optional share scope name, propagated to every shared external. |
-| `features` | `{ mappingVersion?, ignoreUnusedDeps?, denseChunking?, denseExternals?, integrityHashes? }` | see below | Feature flags — [details below](#feature-flags). |
+| `features` | `{ mappingVersion?, ignoreUnusedDeps?, denseChunking?, denseExternals?, integrityHashes?, synthesizeCjsExports? }` | see below | Feature flags — [details below](#feature-flags). |
 
 ## name
 
@@ -170,7 +170,88 @@ Paths declared in your `tsconfig.json` (or `tsconfig.base.json`) are treated as 
 }
 ```
 
-Use `sharedMappings` to limit the set of mapped paths considered, or `skip` to drop specific ones. Wildcard paths (`@org/lib/*`) are supported but only when `features.ignoreUnusedDeps` is enabled — without it, the builder can't know which expansions are actually imported and strips them to stay safe.
+Use `sharedMappings` to limit the set of mapped paths considered, or `skip` to drop specific ones. Entries are matched as **patterns**, so `'@my-org/*'` selects every mapped path under that scope:
+
+```js
+sharedMappings: ['@my-org/auth-lib', '@my-org/ui/*'],
+```
+
+Notes:
+
+- `sharedMappings` is optional. Omit it and **all** mapped paths are shared.
+- `skip` still applies on top. For wildcard mappings it is matched against each resolved import (`@my-org/ui/button`), not against the pattern.
+- Mapped paths are read from the workspace root tsconfig — `tsconfig.base.json` if present, otherwise `tsconfig.json`. The workspace root is found by searching upward from the current working directory until a `package.json` turns up.
+
+### Per-mapping configuration
+
+Since v4.4, a mapped path can carry the same kind of metadata as a shared npm package. Pair a list of patterns with a config object:
+
+```js
+sharedMappings: [
+  '@my-org/auth-lib',
+  [['@my-org/ui/*'], { singleton: false }],
+],
+```
+
+Plain strings and annotated pairs mix freely. When several entries match the same mapped path **the first one wins**, so put specific entries before general ones.
+
+The honoured properties are `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool` and `includeSecondaries`. Anything you omit keeps its default: `singleton: true`, `strictVersion` following the [`mappingVersion`](#feature-flags) flag, and the version read from the mapped library's nearest `package.json`. Setting `version` explicitly also drives `requiredVersion` unless you set that too.
+
+> **Note:** `build`, `platform`, `chunks` and `packageInfo` are **not** honoured for mapped paths — every mapping is built into the same bundle, so there is nothing for them to select. Setting one logs a warning and is ignored.
+
+### `mappingsFromWorkspace`
+
+For more than a couple of entries, the `mappingsFromWorkspace` builder is easier to read. It is pure sugar — `.get()` returns exactly the array form above:
+
+```js
+import { withNativeFederation, mappingsFromWorkspace } from '@softarc/native-federation/config';
+
+export default withNativeFederation({
+  name: 'shell',
+  sharedMappings: mappingsFromWorkspace({ singleton: true, strictVersion: true })
+    .filter(['@my-org/ui/*', '@my-org/auth-lib'])
+    .patch(['@my-org/ui/*'], { singleton: false })
+    .get(),
+});
+```
+
+- **`.filter(patterns)`** — narrow the selection. Omit it to select every mapped path, the same default as omitting `sharedMappings`.
+- **`.patch(patterns, cfg)`** — annotate a subset. It never *widens* the selection: patching a pattern that `.filter()` excluded is ignored with a warning.
+- **`.get()`** — materialize the `sharedMappings` array.
+
+Patches are emitted ahead of the base selection, so first-match-wins resolves them first.
+
+### Keeping mappings that nothing imports
+
+With [`ignoreUnusedDeps`](#feature-flags) on (the default), mapped paths are pruned to those actually reachable from your entry points. A host that exposes little of its own but is expected to supply libraries to its remotes can opt out per mapping, exactly the way `shared` packages do:
+
+```js
+sharedMappings: mappingsFromWorkspace({
+  includeSecondaries: { keepAll: true, resolveGlob: true },
+}).get(),
+```
+
+- **`keepAll`** keeps the mapping even when nothing imports it. It is read exactly as it is for a shared package, so a bare `includeSecondaries: true` opts out too.
+- **`resolveGlob`** is additionally required for **wildcard** mappings. A wildcard is a pattern rather than an entry point; normally only the reachability scan turns it into concrete files. `resolveGlob` expands it against the filesystem instead. Without it a wildcard mapping is dropped with a warning.
+
+An expanded wildcard is named by the same rule the reachability scan uses, so `libs/ui/*` matching `libs/ui/button/index.ts` is shared as `@my-org/ui/button`.
+
+> **Note:** A host that provides the libraries its remotes depend on couples the two — the remote can no longer run standalone. Letting each application share the entry points it imports and leaving the orchestrator to deduplicate at runtime is usually the better default.
+
+### Only barrel imports can be shared
+
+A mapped path is advertised under its import specifier and left external, so the specifier has to be one a browser import map can resolve. A specifier with a dot in its last segment — `@my-org/ui/button/button.component` — does not resolve (see [vitejs/vite#21036](https://github.com/vitejs/vite/issues/21036)), so it can't be shared as a mapped path.
+
+If your app genuinely imports such a path, the build stops:
+
+```
+Invalid 'shared mappings' config. Only barrel imports can be shared as a sharedMapping:
+'@my-org/ui/button/button.component'.
+```
+
+Import the barrel instead (`@my-org/ui/button`) and re-export the symbol from it.
+
+Wildcard expansion applies the same rule quietly: matches that aren't entry points — `*.component.ts`, `*.spec.ts` — are skipped rather than shared, so pointing a glob at a library doesn't turn its internals into a build error.
 
 ## skip
 
@@ -237,15 +318,16 @@ The `build` field on each shared entry controls how the core groups packages whe
 
 ## Feature Flags
 
-All feature flags live under `features` on the config. `ignoreUnusedDeps` and `mappingVersion` are on by default (opt-out); `denseChunking`, `denseExternals` and `integrityHashes` are off by default (opt-in).
+All feature flags live under `features` on the config. `ignoreUnusedDeps`, `mappingVersion` and `synthesizeCjsExports` are on by default (opt-out); `denseChunking`, `denseExternals` and `integrityHashes` are off by default (opt-in).
 
 | Flag | Default | Effect |
 | --- | --- | --- |
-| `ignoreUnusedDeps` | `true` | Drops shared externals that aren't actually imported by the entry points. Required for wildcard mapped paths. |
+| `ignoreUnusedDeps` | `true` | Drops shared externals that aren't actually imported by the entry points. Also the pass that materializes wildcard mapped paths — with it off, a wildcard mapping needs [`includeSecondaries: { resolveGlob: true }`](#keeping-mappings-that-nothing-imports) or it is dropped with a warning. |
 | `denseChunking` | `false` | Groups chunks by bundle name in `remoteEntry.json` so each shared package references its chunk bundle by name rather than listing chunks individually. Produces a smaller, more cache-friendly `remoteEntry.json`. |
 | `denseExternals` | `false` | Since v4.3. Groups all entrypoints of a shared external (primary import, secondaries and shared mappings) under a single object with an `entries` map in `remoteEntry.json`, instead of one flat entry per entrypoint. Opt-in and backward compatible. See [Dense Externals](sharing.md#dense-externals). |
 | `mappingVersion` | `true` | Emits a real semver for every shared mapped path (monorepo-internal library) — picked up from the nearest `package.json` walking up from the entry file to the workspace root. Also sets `requiredVersion: '~<version>'` and `strictVersion: true` on the resulting shared entry, so version mismatches across remotes are detected at runtime. Set to `false` to fall back to the unversioned `version: ''` shape. |
 | `integrityHashes` | `false` | Emit SRI hashes for every shared external, exposed module and chunk under a top-level `integrity` map in `remoteEntry.json`. The orchestrator copies these onto the import map so the browser (or `es-module-shims`) can verify each module before executing it. See [Subresource Integrity](../orchestrator/security.md#subresource-integrity). |
+| `synthesizeCjsExports` | `true` | Since v4.4. For a shared external that is CommonJS, `require()`s it at build time, enumerates its runtime named exports and bundles a synthetic ESM entry that re-exports them. See [CommonJS externals](sharing.md#commonjs-externals). |
 
 ### When to leave `ignoreUnusedDeps` on (and when to override it)
 

@@ -369,6 +369,47 @@ features: {
 }
 ```
 
-When enabled, instead of one flat entry per entrypoint, each package becomes one object whose `entries` map keys the full import name to its output file (e.g. `{ "@angular/common": "…", "@angular/common/http": "…" }`). Entrypoints whose sharing metadata (`singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`) diverges are split into separate groups. Bundler chunks stay flat, and `importmap.json` is unaffected.
+When enabled, instead of one flat entry per entrypoint, each package becomes one object whose `entries` map keys the full import name to its output file (e.g. `{ "@angular/common": "…", "@angular/common/http": "…" }`). Entrypoints whose sharing metadata (`singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`) diverges are split into separate groups. `importmap.json` is unaffected.
+
+> **Note:** Since v4.4 the array is uniformly dense — bundler chunks (`@nf-internal/chunk-…`) are emitted in the same `entries` shape rather than staying flat, so a consumer only has to handle one entry shape. A chunk is never grouped with anything: it gets its own single-key `entries` map.
 
 The flag is opt-in and fully backward compatible: the runtime auto-detects each entry by shape, so both old and new `remoteEntry.json` load. It is orthogonal to `denseChunking` — the two can be combined. See [Build Artifacts](artifacts.md#dense-externals) for the resulting `remoteEntry.json` shape.
+
+## CommonJS externals
+
+Since v4.4, the `synthesizeCjsExports` feature flag (**on by default**) makes named imports work for shared dependencies that are still CommonJS.
+
+The problem it solves is the module boundary. A shared external is bundled to ESM and handed to the browser through the import map. When the package's entry point is CJS, the bundler can only see a single default export, so `import { debounce } from 'lodash'` resolves to nothing at runtime even though the property exists on the object.
+
+With the flag on, the core detects a CommonJS entry point, loads it during the build, and generates a small ESM entry that re-exports the names the module actually has. The result is a shared bundle with real named exports, so `import { debounce } from 'lodash'` works.
+
+ESM packages are left untouched, and detection is deliberately conservative: extension, the nearest `package.json` `type` and finally the source itself all have to point at CommonJS before a package is wrapped.
+
+If the package can't be loaded at build time, the external stays default-only and the build warns:
+
+```
+[native-federation] Could not enumerate named exports of "…" at build time (…);
+falling back to default-only. Named imports from this package may fail across the
+module boundary.
+```
+
+Set the flag to `false` to skip the pass entirely — worth doing if a dependency has import side effects you don't want running at build time:
+
+```js
+features: {
+  synthesizeCjsExports: false,
+}
+```
+
+## Shared mappings
+
+Monorepo-internal libraries mapped through your `tsconfig` `paths` are shared too, and since v4.4 they accept per-mapping configuration with the same vocabulary as this page: `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool` and `includeSecondaries`.
+
+```js
+sharedMappings: [
+  '@my-org/auth-lib',
+  [['@my-org/ui/*'], { singleton: false }],
+],
+```
+
+`build`, `platform`, `chunks` and `packageInfo` are ignored for mappings — they all land in one bundle. See [sharedMappings](configuration.md#sharedmappings) for the builder (`mappingsFromWorkspace`), the `keepAll` / `resolveGlob` interaction with `ignoreUnusedDeps`, and the barrel-import rule.
