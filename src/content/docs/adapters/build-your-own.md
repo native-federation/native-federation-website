@@ -412,4 +412,4 @@ That's the whole watch-mode machinery. If you squint it's 40 lines of glue: `cre
 - **Keeping state on the adapter instance instead of the cache.** The core can recreate the adapter between builds; long-lived state belongs in `options.cache.bundlerCache`.
 - **Forgetting to call `dispose()` without a name.** Many bundlers leak a subprocess (esbuild's service, swc's worker pool). Call `dispose()` on process exit.
 
-> **Note:** Built an adapter and want to share it? Open a PR against the [native-federation GitHub org](https://github.com/native-federation) or add a link to the [Resources](../../resources.md) page.
+> **Note:** Built an adapter and want to share it? Open a PR against the [native-federation GitHub org](https://github.com/native-federation) or add a link to the [Resources](/resources/) page.

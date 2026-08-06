@@ -74,4 +74,4 @@ How to subscribe to the federation build-notification stream and trigger a host 
 
 - [I18N](i18n.md) — Angular's `i18n` + translation pipeline integration.
 - [Angular Config → shareAngularLocales](configuration.md#shareangularlocales--locale-handling).
-- [Core configuration → features](../core/configuration.md#features) — the canonical reference for `ignoreUnusedDeps`.
+- [Core configuration → features](../core/configuration.md#feature-flags) — the canonical reference for `ignoreUnusedDeps`.

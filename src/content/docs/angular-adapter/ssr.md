@@ -8,7 +8,7 @@ applies_to: [v4]
 
 The Angular adapter supports Angular SSR and Incremental Hydration — both for hosts and remotes. The server side is driven by a `node --import` **preload** that registers the federation loader before Angular evaluates; most of the wiring is done by the `init` schematic when it detects an SSR-enabled project. This page documents what it generates and the moving parts behind it.
 
-> **Version note.** This page tracks the v4 adapter — `@angular-architects/native-federation` **22.x** on Angular 22 (or `@angular-architects/native-federation-v4` **21.2.x** on Angular 20/21) — and `@softarc/native-federation-orchestrator` **4.2.x** (the *runtime*). A complete worked example is the [Native Federation Angular SSR playground](https://github.com/native-federation/playground/tree/main/angular/ssr).
+> **Version note.** This page tracks the v4 adapter — `@angular-architects/native-federation` **22.x** on Angular 22 (or `@angular-architects/native-federation-v4` **21.2.x** on Angular 20/21) — and the `@softarc/native-federation-orchestrator` **4.x** runtime. A complete worked example is the [Native Federation Angular SSR playground](https://github.com/native-federation/playground/tree/main/angular/ssr).
 
 **On this page**
 

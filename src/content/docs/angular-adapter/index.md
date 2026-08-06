@@ -18,7 +18,7 @@ The Angular adapter — published as `@angular-architects/native-federation` fro
 | --- | --- | --- |
 | **Builder** | `@angular-architects/native-federation:build` | Replaces the default Angular build/serve target. Wraps `@angular/build:application`, runs the federation build, and proxies federation artifacts through the dev-server. |
 | **Schematics** | `ng add @angular-architects/native-federation` | Initializes a project as a host, dynamic-host or remote — patches `angular.json`, polyfills, `main.ts` and creates `federation.config.mjs`. Also ships `update-v4`, `appbuilder` and `remove`. |
-| **Config helpers** | `@angular-architects/native-federation/config` | `withNativeFederation`, `share`, `shareAll`, `shareAngularLocales`, `NG_SKIP_LIST` — Angular-aware wrappers around the core config helpers. |
+| **Config helpers** | `@angular-architects/native-federation/config` | `withNativeFederation`, `share`, `shareAll`, `fromPackageJson`, `shareAngularLocales`, `autoShareScope`, `NG_SKIP_LIST` — Angular-aware wrappers around the core config helpers — plus a re-export of the core's `mappingsFromWorkspace`. |
 | **Runtime helpers** | `@angular-architects/native-federation` | Provides `initFederation` and a (deprecated) top-level `loadRemoteModule` that bridge to the [orchestrator](runtime.md) runtime, plus re-exported domain types. The generated `main.ts` wires the orchestrator by default — see [Runtime](runtime.md). |
 | **Nx generator** | `@angular-architects/native-federation:native-federation` | Adds a Nx library project pre-wired to the federation builder. |
 | **Internal API** | `@angular-architects/native-federation/internal` | Exposes `runBuilder` for users who need to inject custom esbuild plugins. See [Custom Builder](custom-builder.md). |

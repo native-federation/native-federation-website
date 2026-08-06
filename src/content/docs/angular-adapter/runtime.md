@@ -46,18 +46,39 @@ The dynamic `import('./bootstrap')` is mandatory: it forces the bundler to put y
 
 ## initFederation
 
-On v4 the adapter's `initFederation` wraps the orchestrator with sensible defaults (shim import map, console logger, `globalThis` storage, `hostRemoteEntry: './remoteEntry.json'`, `logLevel: 'debug'`) and resolves to a `NativeFederationResult`:
+On v4 the adapter's `initFederation` wraps the orchestrator with sensible defaults (shim import map, console logger, `hostRemoteEntry: './remoteEntry.json'`) and resolves to a `NativeFederationResult`:
 
 ```ts
 initFederation(
   remotesOrManifestUrl?: Record<string, string> | string,
-  options?: { cacheTag?: string; logging?: LogType },
+  options?: NgNFOptions,
 ): Promise<NativeFederationResult>
 ```
 
 - **Host (dynamic).** Pass the manifest URL: `initFederation('/assets/federation.manifest.json')`.
 - **Host (static).** Pass the remote map inline: `initFederation({ mfe1: 'http://localhost:4201/remoteEntry.json' })`.
 - **Remote.** Pass a self-map: `initFederation({ mfe1: './remoteEntry.json' })`. This lets the remote's runtime register its own shared modules so the host can match versions.
+
+### Options
+
+The second argument is `NgNFOptions` — the orchestrator's full [`NFOptions`](../orchestrator/configuration.md) plus two adapter-specific keys:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `shimMode` | `boolean` | `true` | Selects `useShimImportMap({ shimMode: true })` or, when `false`, `useDefaultImportMap()` for native import maps. Must match the builder's [`esmsInitOptions`](builder.md#native-import-maps). |
+| `cacheTag` | `string` | — | **Deprecated.** Pass it on `hostRemoteEntry` instead: `hostRemoteEntry: { url: './remoteEntry.json', cacheTag: '…' }`. |
+
+Everything else is handed straight to the orchestrator and overrides the adapter's defaults, so options like `logLevel`, `sse`, `logger`, `storage` and `hostRemoteEntry` are set exactly as they are documented for the orchestrator:
+
+```ts
+initFederation('/assets/federation.manifest.json', {
+  sse: true,
+  logLevel: 'info',
+  hostRemoteEntry: { url: './remoteEntry.json', cacheTag: 'v3' },
+});
+```
+
+> **Note:** Older adapter releases took a narrow, adapter-only options type with a `logging` key. It is now called `logLevel`, like everywhere else in the orchestrator, and it is no longer forced to `'debug'` — leave it out and the orchestrator's own default applies.
 
 The resolved `NativeFederationResult` carries the `loadRemoteModule` you should use (see below). The `init` schematic emits the right call for the project type you chose — and on v4 it imports `initFederation` straight from `@softarc/native-federation-orchestrator`. See [Schematics → init](schematics.md#init--ng-add).
 
@@ -196,7 +217,7 @@ export const appConfig = (
 });
 ```
 
-Slightly more boilerplate, but the loader is guaranteed to exist by the time anything tries to use it. The full list of orchestrator options lives in the [runtime docs](../runtime/index.md).
+Slightly more boilerplate, but the loader is guaranteed to exist by the time anything tries to use it. The full list of orchestrator options lives in the [orchestrator configuration docs](../orchestrator/configuration.md).
 
 ## Related
 

@@ -124,7 +124,7 @@ export default withNativeFederation({
 });
 ```
 
-> **Note:** The `features` block is new in v4. See [Configuration -> Feature Flags](core/configuration.md#features) for the full list.
+> **Note:** The `features` block is new in v4. See [Configuration -> Feature Flags](core/configuration.md#feature-flags) for the full list.
 
 ## 4. Adopt the Orchestrator (recommended)
 
