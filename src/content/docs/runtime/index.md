@@ -1,17 +1,18 @@
 ---
 applies_to: [v3, v4]
+deprecated: true
 ---
 
-# Runtime
+# Legacy Runtime
 
 > The Native Federation Runtime — the classic browser-side library that reads remoteEntry.json files, builds an import map, and loads remote modules on demand.
 
 The runtime — `@softarc/native-federation-runtime` — is the small browser-side library that reads `remoteEntry.json` files, constructs an ES module import map, injects it into the DOM, and resolves `loadRemoteModule()` calls against it. It is the classic Native Federation runtime: one version of each shared dependency, wired up on startup, and loaded on demand.
 
-> **Warning:** **Classic runtime — not the default in v4.**
-> This runtime is the default runtime in Native Federation **v3** and is what `@angular-architects/native-federation` re-exports out of the box. It is the _legacy_ runtime going forward: in **v4** the recommended browser runtime is the new [Orchestrator](../orchestrator/index.md) (`@softarc/native-federation-orchestrator`), which adds semver-range resolution, persistent caching and share scopes on top of the same `remoteEntry.json` contract.
+> **Warning:** **Deprecated — end-of-life.**
+> This runtime is the default runtime in Native Federation **v3** and is what `@angular-architects/native-federation` v3 re-exports out of the box. A v4 line was published up to `4.1.2`, but the package is now marked deprecated on npm: _"This package has reached end-of-life and is no longer maintained. Please switch over to the `@softarc/native-federation-orchestrator` library."_
 >
-> The classic runtime is still supported — and still the right choice when you need raw simplicity, SSR compatibility on the host, or a drop-in v3 behaviour. If you are starting a new v4 project, prefer the Orchestrator.
+> The [Orchestrator](../orchestrator/index.md) is the replacement — it speaks the same `remoteEntry.json` contract and adds semver-range resolution, persistent caching and share scopes. Existing installs keep working, but expect no further fixes or features. See [Migration to v4](../migration.md) for moving a host across; these pages remain for reference.
 
 ## What the Runtime Does
 
@@ -48,4 +49,4 @@ The runtime is the consumer of the artifacts that [Core](../core/index.md) emits
 - [The Import Map](import-map.md) — how imports and scopes are constructed, how externals are deduplicated, `importmap-shim`, and Trusted Types.
 - [API Reference](api-reference.md) — the complete public surface of `@softarc/native-federation-runtime`.
 
-> **Note:** If you are an Angular user, you will normally consume the runtime through `@angular-architects/native-federation`, which re-exports `initFederation` and `loadRemoteModule` unchanged. See [Angular Adapter → Runtime](../angular-adapter/runtime.md) for the Angular-specific bootstrap split.
+> **Note:** On **v3**, Angular users consume this runtime through `@angular-architects/native-federation`, which re-exports `initFederation` and `loadRemoteModule` unchanged. On **v4** the adapter bridges to the Orchestrator instead — see [Angular Adapter → Runtime](../angular-adapter/runtime.md).

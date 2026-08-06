@@ -1,10 +1,13 @@
 ---
 applies_to: [v3, v4]
+deprecated: true
 ---
 
 # API Reference
 
 > The public API surface of @softarc/native-federation-runtime — initFederation, loadRemoteModule, registry helpers and type exports.
+
+> **Warning:** **Deprecated.** `@softarc/native-federation-runtime` has reached end-of-life and is no longer maintained. The maintained surface is documented under [Orchestrator](../orchestrator/index.md).
 
 `@softarc/native-federation-runtime` exposes a small set of functions and types. Most applications only use `initFederation` and `loadRemoteModule`; the lower-level helpers are useful when integrating with custom bootstrap flows, test setups or adapter code.
 

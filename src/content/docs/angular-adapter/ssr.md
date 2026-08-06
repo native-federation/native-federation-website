@@ -209,5 +209,5 @@ The patch is applied automatically by the adapter on every build. Treat it as an
 
 - [Orchestrator — Node.js / SSR](../orchestrator/node.md) — `initNodeFederation`, the `module.register()` loader hook, and host-singleton bridging.
 - [Native Federation Angular SSR example](https://github.com/native-federation/playground/tree/main/angular/ssr) — the full host + two-remote workspace this page describes.
-- [Runtime overview](../runtime/index.md).
+- [Orchestrator overview](../orchestrator/index.md) — the runtime behind both the browser and SSR paths.
 - [SSR & Hydration with Native Federation for Angular](https://www.angulararchitects.io/blog/ssr-and-hydration-with-native-federation-for-angular/) — the long-form article behind these features.

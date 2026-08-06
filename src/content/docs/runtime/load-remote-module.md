@@ -1,10 +1,13 @@
 ---
 applies_to: [v3, v4]
+deprecated: true
 ---
 
 # `loadRemoteModule`
 
 > loadRemoteModule — how to load an exposed module from a registered remote, plus lazy registration and fallback behaviour.
+
+> **Warning:** **Deprecated.** This is the classic runtime's `loadRemoteModule`; the package has reached end-of-life. Load remotes through the [Orchestrator](../orchestrator/getting-started.md) instead.
 
 `loadRemoteModule` resolves the URL of a remote's exposed module and performs a dynamic `import()` against the import map that [`initFederation`](init-federation.md) installed. It is the one call you make from router configs, event handlers, or anywhere else you decide a remote is needed.
 

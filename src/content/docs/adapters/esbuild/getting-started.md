@@ -150,7 +150,7 @@ The host page declares the remotes, pulls in the orchestrator runtime, and mount
     </script>
 
     <!-- 3. Include the orchestrator runtime -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.2.1/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.6.0/quickstart.mjs"></script>
   </head>
   <body>
     <!-- 4. Use your loaded components -->
@@ -159,7 +159,7 @@ The host page declares the remotes, pulls in the orchestrator runtime, and mount
 </html>
 ```
 
-See the [orchestrator docs](../../orchestrator/index.md) for the full `quickstart.mjs` story, or [initFederation](../../runtime/init-federation.md) if you want to drive loading manually.
+See the [orchestrator docs](../../orchestrator/index.md) for the full `quickstart.mjs` story, or [Configuration](../../orchestrator/configuration.md) if you want to drive `initFederation` manually.
 
 ## 5. `src/bootstrap.tsx`
 

@@ -23,7 +23,7 @@ A single `initFederation` call drives the whole lifecycle:
 5. **Write the import map.** Commit it to the DOM via `setImportMapFn` — either a native `<script type="importmap">` or the `importmap-shim` form when running under es-module-shims.
 6. **Expose loaders.** Resolve the `initFederation` promise with `loadRemoteModule`, `load`, `as`, `config`, `adapters` and `initRemoteEntry`.
 
-Steps 2–5 can happen again after initialization through [dynamic init](version-resolver.md#dynamic-init), but only additively — nothing resolved during the initial pass is ever rewritten.
+Steps 2–5 can happen again after initialization through [dynamic init](version-resolver.md#dynamic-init--adding-remotes-after-the-fact), but only additively — nothing resolved during the initial pass is ever rewritten.
 
 ## Core concepts
 
@@ -273,7 +273,7 @@ On top of storage choice, the resolver applies four optimization strategies:
 - **Skip cached remotes.** If a remote is already in cache with the same `remoteEntry.json` URL, don't refetch. Controlled by `profile.overrideCachedRemotes`.
 - **Reuse resolved versions.** Which version was picked for each shared external last time survives the reload.
 - **Host wins ties.** A `hostRemoteEntry` always dictates the shared version for its scope.
-- **Maximize sharing.** The default resolution strategy picks the version that minimizes extra downloads (see [Optimal Version Strategy](version-resolver.md#optimal)).
+- **Maximize sharing.** The default resolution strategy picks the version that minimizes extra downloads (see [Optimal Version Strategy](version-resolver.md#3-optimal-version-strategy--default)).
 
 Every knob above has a dedicated option on [Configuration](configuration.md).
 

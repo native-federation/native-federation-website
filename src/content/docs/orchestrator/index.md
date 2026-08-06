@@ -9,7 +9,7 @@ applies_to: [v3, v4]
 > **Note:** **Fully compatible with v3 and v4.**
 > The orchestrator package ships with Native Federation v4, but v3 and v4 share the same runtime contract (`remoteEntry.json`), so it loads v3 and v4 remotes side by side.
 
-The Orchestrator — `@softarc/native-federation-orchestrator` — is the next-generation browser runtime for Native Federation. It replaces the default [Runtime](../runtime/index.md) (`@softarc/native-federation-runtime`) as the recommended way to load remotes on the host, whether the host is a SPA, a plain HTML page, or a server-rendered application (PHP, Rails, Java, …).
+The Orchestrator — `@softarc/native-federation-orchestrator` — is the next-generation browser runtime for Native Federation. It replaces the [classic Runtime](../runtime/index.md) (`@softarc/native-federation-runtime`) as the way to load remotes on the host, whether the host is a SPA, a plain HTML page, or a server-rendered application (PHP, Rails, Java, …).
 
 ## What makes it different
 
@@ -29,7 +29,7 @@ On **v4** the Orchestrator runs server-side too, so remote modules **execute dur
 
 > On v3 the Orchestrator was browser-only; a server-rendered host worked but loaded its remotes client-side after the page arrived. True SSR execution is a v4 capability via the `/node` entry.
 
-> **Note:** New to Native Federation? Start with the [Architecture Overview](../architecture.md) and [Mental Model](../mental-model.md). For a focused comparison between the Orchestrator and the Classic Runtime — when to use which, semver resolution, caching — see [v3 vs v4](../v3-vs-v4.md).
+> **Note:** New to Native Federation? Start with the [Architecture Overview](../architecture.md) and [Mental Model](../mental-model.md). For a focused comparison between the Orchestrator and the deprecated Classic Runtime — semver resolution, caching, what changes when you move across — see [v3 vs v4](../v3-vs-v4.md).
 
 ## In this section
 
@@ -37,10 +37,22 @@ On **v4** the Orchestrator runs server-side too, so remote modules **execute dur
 - [Architecture](architecture.md) — the manifest, `remoteEntry.json`, the internal caches, and how the final import map is built.
 - [Configuration](configuration.md) — the full `initFederation` options reference: host entry, import-map implementation, logging, modes and storage.
 - [Version Resolver](version-resolver.md) — how shared dependencies are resolved across scopes, the `shareScope` mechanism, the strict scope, and dynamic init.
+- [Dependency Pooling](pooling.md) — the opt-in feature that keeps a coupled package family (`@angular/*`, `react`/`react-dom`, your own design system) from being assembled out of builds that never shipped together.
 - [Event Registry](event-registry.md) — the `window.__NF_REGISTRY__` event bus: race-free init, cross-MFE resources, and event streams.
 - [Node.js / SSR](node.md) — `initNodeFederation`, the `module.register()` loader hook, and migration from `@softarc/native-federation-node`.
 - [Module Federation](module-federation.md) — `createGetShared`, the bridge that hands Native Federation's resolved singletons to webpack Module Federation's `shared` config.
 - [Security & Subresource Integrity](security.md) — CSP setup for the built-in Trusted Types policy and the SRI trust chain (manifest → `remoteEntry.json` → modules).
+
+## Legacy Runtime
+
+The classic runtime — `@softarc/native-federation-runtime` — was Native Federation's original browser runtime: one version of each shared dependency per scope, no semver resolution, no persistent caching. It shipped through v3 and v4 (up to `4.1.2`) and is now **deprecated and end-of-life** on npm, with the Orchestrator named as its replacement. Existing installs keep working — same `remoteEntry.json` contract — but there will be no further fixes or features. The pages below are kept for projects still running on it; to move off, see [Migration to v4](../migration.md) and [v3 vs v4](../v3-vs-v4.md).
+
+- [Legacy Runtime overview](../runtime/index.md) — what it does, what it deliberately does not do, and where it fits.
+- [Getting Started](../runtime/getting-started.md) — install the package, add `es-module-shims`, split your bootstrap.
+- [`initFederation`](../runtime/init-federation.md) — manifest vs. inline map, cache busting, error handling.
+- [`loadRemoteModule`](../runtime/load-remote-module.md) — both call signatures, lazy remote registration and fallbacks.
+- [The Import Map](../runtime/import-map.md) — how imports and scopes are constructed and how externals are deduplicated.
+- [API Reference](../runtime/api-reference.md) — the complete public surface of `@softarc/native-federation-runtime`.
 
 ## Example repositories
 

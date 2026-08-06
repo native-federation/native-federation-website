@@ -1,10 +1,13 @@
 ---
 applies_to: [v3, v4]
+deprecated: true
 ---
 
 # The Import Map
 
 > How the classic runtime constructs the browser import map — host root imports, per-remote scopes, externals deduplication, Trusted Types and es-module-shims.
+
+> **Warning:** **Deprecated.** This describes the classic runtime's import map; the package has reached end-of-life. For the maintained runtime, see [Orchestrator → Architecture](../orchestrator/architecture.md).
 
 Everything the runtime does — resolving shared dependencies, loading exposed modules, keeping two remotes' `rxjs` apart — is implemented as entries in a single browser import map. This page walks through how that map is built, how it ends up in the DOM, and what the scoping rules actually mean at runtime.
 

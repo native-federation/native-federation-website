@@ -14,8 +14,8 @@ Native Federation is organized into four cooperating layers. Each has a single r
 | --- | --- | --- | --- |
 | [**Core**](core/index.md) | `@softarc/native-federation` | build time | Normalizes the federation config, bundles shared dependencies and exposed modules, and emits `remoteEntry.json` + the import map. Bundler-agnostic. |
 | [**Adapters**](adapters/index.md) | Angular / esbuild / Vite … | build time | Plug a specific bundler or framework into the Core via the `NFBuildAdapter` contract. Often ship a higher-level API, schematics or CLI integration on top. |
-| [**Runtime**](runtime/index.md) | in the browser | run time | Reads `remoteEntry.json` files, constructs a combined import map, and loads remote modules on demand. Small, framework-agnostic. |
-| [**Orchestrator**](orchestrator/index.md) | in the browser | run time | The next-generation runtime, intended to replace the default Runtime. Same `remoteEntry.json` contract, plus semver-range resolution for shared dependencies and persistent caching in browser storage. Client-side only — no direct SSR support yet. |
+| [**Runtime**](runtime/index.md) _(deprecated)_ | in the browser | run time | The original runtime, now end-of-life. Reads `remoteEntry.json` files, constructs a combined import map, and loads remote modules on demand. Small, framework-agnostic — superseded by the Orchestrator. |
+| [**Orchestrator**](orchestrator/index.md) | in the browser and in Node | run time | The runtime for v4. Same `remoteEntry.json` contract, plus semver-range resolution for shared dependencies and persistent caching in browser storage. Runs during SSR through its `/node` entry. |
 
 ## How They Fit Together
 
@@ -40,8 +40,8 @@ Each layer gets its own section elsewhere in these docs. The short version:
 
 - **[Core](core/index.md)** — bundler-agnostic builder. Normalizes the federation config, computes the externals your own bundler must leave unresolved, bundles shared dependencies and exposed modules, and writes `remoteEntry.json` + `importmap.json`.
 - **[Adapters](adapters/index.md)** — framework-/bundler-specific glue implementing the `NFBuildAdapter` contract. First-party adapters exist for [Angular](angular-adapter/index.md) and [esbuild](adapters/esbuild/index.md); there is a community [Vite plugin](https://www.npmjs.com/package/@gioboa/vite-module-federation), and [you can build your own](adapters/build-your-own.md).
-- **[Runtime](runtime/index.md)** — the small default browser library. Exposes `initFederation` and `loadRemoteModule`.
-- **[Orchestrator](orchestrator/index.md)** — the recommended browser runtime for v4. Same API as the Runtime, plus semver-range resolution and persistent `remoteEntry.json` caching. Client-side only today; keep the default Runtime for SSR.
+- **[Runtime](runtime/index.md)** — the original small browser library, now deprecated and end-of-life. Exposes `initFederation` and `loadRemoteModule`.
+- **[Orchestrator](orchestrator/index.md)** — the browser runtime for v4. Same API as the Runtime, plus semver-range resolution and persistent `remoteEntry.json` caching, and it runs server-side through its `/node` entry.
 
 ## Build Steps
 
