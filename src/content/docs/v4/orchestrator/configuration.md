@@ -1,0 +1,341 @@
+# Configuration
+
+> Every option you can pass to initFederation — host entry, import-map implementation, logging, resolution modes and storage.
+
+Everything you pass as the second argument to `initFederation` lives on this page. Options are grouped into five concerns — host entry, import-map implementation, logging, modes, and storage — and every option ships with a sensible default, so a bare `initFederation(manifest)` is already a valid call.
+
+- [1. Host configuration](#host)
+- [2. Import-map implementation](#import-map)
+- [3. Logging](#logging)
+- [4. Modes — strictness & resolution profile](#modes)
+- [5. Storage](#storage)
+
+## <a id="host"></a> 1. Host configuration
+
+A **host remote entry** is a `remoteEntry.json` published by the host itself. Whenever an external appears both in the host entry and in a regular remote, the host version wins — making this the right escape hatch for locking a framework or design-system version globally.
+
+```ts
+type HostOptions = {
+  hostRemoteEntry?:
+    | string
+    | false
+    | {
+        name?: string;
+        url: string;
+        cacheTag?: string;
+        integrity?: string;
+      };
+  manifestIntegrity?: string;
+};
+```
+
+| Option                      | Default | Description                                                                                                                                                                                                      |
+| --------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hostRemoteEntry`           | `false` | Adds a host `remoteEntry.json` that takes precedence during shared-version resolution. Can be a URL, the full object form, or `false` to disable.                                                                |
+| `hostRemoteEntry.cacheTag`  | _none_  | Opaque string appended as a query parameter — the orchestrator treats a new `cacheTag` as a different file and refetches. Use this to bust caches after a host redeploy.                                         |
+| `hostRemoteEntry.integrity` | _none_  | SRI hash (`sha256-…`, `sha384-…`, `sha512-…`) verified against the response bytes of the host `remoteEntry.json` before it is parsed. See [Security — Subresource Integrity](security.md#subresource-integrity). |
+| `manifestIntegrity`         | _none_  | SRI hash for the manifest URL passed as the first argument to `initFederation`. When set, the orchestrator hashes the response bytes and rejects with `NFError` on mismatch.                                     |
+
+### Example
+
+```ts
+import { initFederation } from "@softarc/native-federation-orchestrator";
+
+initFederation("http://example.org/manifest.json", {
+  manifestIntegrity: "sha384-…",
+  hostRemoteEntry: {
+    url: "./remoteEntry.json",
+    cacheTag: "v1.2.3",
+    integrity: "sha384-…",
+  },
+});
+```
+
+Per-remote pinning lives in the manifest itself — entries can be either the existing string form or a `{ url, integrity }` object, and the two forms can coexist:
+
+```json
+{
+  "team/mfe1": "https://mfe1.example.org/remoteEntry.json",
+  "team/mfe2": {
+    "url": "https://mfe2.example.org/remoteEntry.json",
+    "integrity": "sha384-…"
+  }
+}
+```
+
+> See [Security — Subresource Integrity](security.md#subresource-integrity) for the full trust chain (manifest → `remoteEntry.json` → modules) and the supported hash algorithms.
+
+## <a id="import-map"></a> 2. Import-map implementation
+
+The orchestrator commits a standard [import map](https://caniuse.com/import-maps) to the DOM and uses the browser's own `import()` to load modules. For older browsers — or whenever you need [dynamic init](version-resolver.md#dynamic-init) — swap in [es-module-shims](https://www.npmjs.com/package/es-module-shims).
+
+```ts
+type ImportMapOptions = {
+  loadModuleFn?: (url: string) => Promise<unknown>;
+  setImportMapFn?: (
+    importMap: ImportMap,
+    opts?: { override?: boolean },
+  ) => Promise<ImportMap>;
+  reloadBrowserFn?: () => void;
+  trustedTypesPolicyName?: string | false;
+};
+```
+
+| Option                   | Default                          | Description                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------ | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setImportMapFn`         | `replaceInDOM('importmap')`      | How to commit an import map — by default, replaces any existing `<script type="importmap">` in the DOM.                                                                                                                                                                                                                                                                   |
+| `loadModuleFn`           | `url => import(url)`             | How a module is actually imported. Override when you need the shim loader or custom instrumentation.                                                                                                                                                                                                                                                                      |
+| `reloadBrowserFn`        | `() => window.location.reload()` | Called when the SSE dev feature detects a rebuilt remote. Override for custom reload UX.                                                                                                                                                                                                                                                                                  |
+| `trustedTypesPolicyName` | `'nfo'`                          | Name of the [Trusted Types](security.md#trusted-types) policy that wraps import-map content and dynamic-import URLs in the default `setImportMapFn` and `loadModuleFn`. Pass `false` to opt out (e.g. when the host owns its own Trusted Types pipeline). No effect on browsers that do not support Trusted Types — the wrapper falls back to a transparent pass-through. |
+
+### Two ready-made presets
+
+```ts
+import "es-module-shims";
+import { initFederation } from "@softarc/native-federation-orchestrator";
+import {
+  useShimImportMap,
+  useDefaultImportMap,
+  replaceInDOM,
+} from "@softarc/native-federation-orchestrator/options";
+
+initFederation("http://example.org/manifest.json", {
+  // Option 1 — native import maps (default)
+  ...useDefaultImportMap(),
+
+  // Option 2 — es-module-shims
+  ...useShimImportMap({ shimMode: true }),
+
+  // Option 3 — custom
+  loadModuleFn: (url) => customImport(url),
+  setImportMapFn: replaceInDOM("importmap"),
+
+  // Option 4 — rename the Trusted Types policy to match a stricter CSP allowlist
+  trustedTypesPolicyName: "my-app-nfo",
+});
+```
+
+> See [Security — Trusted Types](security.md#trusted-types) for the recommended CSP header and how the orchestrator interacts with a host-defined policy.
+
+> **Note:** `useShimImportMap` is required for dynamic init — native import maps can be committed to the DOM only once, while es-module-shims accepts additional maps at runtime.
+
+## <a id="logging"></a> 3. Logging
+
+Diagnostics for both development and production. Ships with two built-in loggers and accepts any object that matches the `Logger` interface.
+
+```ts
+type LoggingOptions = {
+  logger?: Logger;
+  logLevel?: "debug" | "warn" | "error";
+  sse?: boolean;
+};
+
+interface Logger {
+  debug(step: number, msg: string, details?: unknown): void;
+  warn(step: number, msg: string, details?: unknown): void;
+  error(step: number, msg: string, details?: unknown): void;
+}
+```
+
+| Option     | Default      | Description                                                                                            |
+| ---------- | ------------ | ------------------------------------------------------------------------------------------------------ |
+| `logger`   | `noopLogger` | Where logs go. Use `consoleLogger` during development, or provide your own for Sentry / Bugsnag / etc. |
+| `logLevel` | `'error'`    | Level threshold. `'warn'` emits warn+error; `'debug'` emits everything.                                |
+| `sse`      | `false`      | Dev feature — listens to server-sent rebuild events from remotes and triggers `reloadBrowserFn`.       |
+
+### Example
+
+```ts
+import { initFederation } from "@softarc/native-federation-orchestrator";
+import {
+  noopLogger,
+  consoleLogger,
+} from "@softarc/native-federation-orchestrator/options";
+
+initFederation("http://example.org/manifest.json", {
+  logLevel: "debug",
+  logger: consoleLogger, // or noopLogger, or a custom Logger
+});
+```
+
+## <a id="modes"></a> 4. Modes — strictness & resolution profile
+
+Mode options are the hyperparameters for the [Version Resolver](version-resolver.md): how strict to be when something unexpected happens, and how aggressively to reuse cached state.
+
+```ts
+type ModeOptions = {
+  strict?:
+    | boolean
+    | {
+        strictRemoteEntry?: boolean;
+        strictExternalCompatibility?: boolean;
+        strictExternalSameVersionCompatibility?: boolean;
+        strictExternalVersion?: boolean;
+        strictImportMap?: boolean;
+        strictEntryPointCoverage?: boolean;
+      };
+  profile?: {
+    latestSharedExternal?: boolean;
+    skipInvalidExternalVersions?: boolean;
+    scopeUncoveredEntrypoints?: boolean;
+    overrideCachedRemotes?: "always" | "never" | "init-only";
+    overrideCachedRemotesIfURLMatches?: boolean;
+    cacheTag?: string;
+  };
+  feature?: {
+    convertFlatSharedInfo?: boolean;
+    useAutoExternalPooling?: boolean;
+  };
+};
+```
+
+### Strictness
+
+All flags default to `false`, which means "log and continue". Setting `strict: true` turns them all on at once.
+
+| Option                                          | Effect                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `strict`                                        | Shortcut — sets every specific strict flag below to `true`.                                                                                                                                                                                                                                                                                  |
+| `strict.strictRemoteEntry`                      | Throws on malformed `remoteEntry.json`. When `false`, the broken remote is skipped and initialization continues.                                                                                                                                                                                                                             |
+| `strict.strictExternalCompatibility`            | Throws when two shared externals have incompatible version ranges. When `false`, the incompatible version is demoted to a scoped external with a warning.                                                                                                                                                                                    |
+| `strict.strictExternalSameVersionCompatibility` | Niche edge case — throws when an already-cached shared version is re-submitted with a different `requiredVersion` range. Otherwise, the cached entry is preserved.                                                                                                                                                                           |
+| `strict.strictExternalVersion`                  | Throws if a shared external's `version` is missing or not valid semver. When `false`, the external is instead coerced to the smallest version matching its `requiredVersion` range — unless `profile.skipInvalidExternalVersions` is on, in which case it is skipped. This flag takes precedence over `profile.skipInvalidExternalVersions`. |
+| `strict.strictImportMap`                        | Throws when the import-map builder encounters corrupt cache state.                                                                                                                                                                                                                                                                           |
+| `strict.strictEntryPointCoverage`               | Throws when a shared external cannot be served coherently — a remote on _another_ version imports a secondary entrypoint that no copy of the shared version contains ("entrypoint tearing"). When `false`, the entrypoint is served from the consuming remote's own build with a warning, unless `profile.scopeUncoveredEntrypoints` is on. Copies of the shared version itself always merge, so this never fires within one version. See [Version Resolver — Entrypoint coverage and tearing](version-resolver.md#entrypoint-coverage-and-tearing). |
+
+### <a id="profile"></a> Resolution profile
+
+The profile controls _how_ the resolver picks winners and _whether_ it refreshes cached remotes.
+
+| Option                                      | Default       | Description                                                                                                                                                                                                                                                             |
+| ------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profile.latestSharedExternal`              | `false`       | When `true`, always pick the highest version in the scope. When `false` (default), pick the version that minimizes extra scoped downloads.                                                                                                                              |
+| `profile.skipInvalidExternalVersions`       | `false`       | When `true`, an external whose `version` is missing or not valid semver is skipped (never stored) instead of being coerced to the smallest version of its `requiredVersion` range. Has no effect when `strict.strictExternalVersion` is set — that throws instead.      |
+| `profile.scopeUncoveredEntrypoints`         | `false`       | When `true`, a remote copy on another version whose secondary entrypoints the shared version cannot cover is split off and serves its whole `entries` bunch from its own build, instead of tearing the package across two builds. Sharing continues for the copies the shared version _does_ cover. Only governs tears **between** versions — copies of the shared version always merge. Has no effect when `strict.strictEntryPointCoverage` is set — that throws instead. |
+| `profile.overrideCachedRemotes`             | `'init-only'` | When to refetch a remote that already lives in cache — see below.                                                                                                                                                                                                       |
+| `profile.overrideCachedRemotesIfURLMatches` | `false`       | By default, a cached remote is only overridden when its URL changed. Set this to `true` to force refetch even when the URL is identical.                                                                                                                                |
+| `profile.cacheTag`                          | _none_        | When set, appended as a `?cacheTag=<value>` query parameter to **every** remote's `remoteEntry.json` request, letting you bust HTTP caches across all remotes at once. The host's own `hostRemoteEntry.cacheTag` takes precedence for the host entry when both are set. |
+
+`overrideCachedRemotes` values:
+
+- `'never'` — don't touch cached remotes, ever. Strongest cache, slowest pickup of new versions.
+- `'init-only'` (default) — allow overrides during `initFederation`, skip during dynamic init. Good compromise.
+- `'always'` — always check and possibly refetch. Use when cache freshness matters more than bandwidth.
+
+### Features
+
+Opt-in behaviors that change how shared externals are processed and stored. Both default to `false`.
+
+| Option                           | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `feature.convertFlatSharedInfo`  | `false` | Opts into runtime densification of a remote's shared externals. Core v4.3.0 emits `DenseSharedInfo` (a per-package `entries` map covering primary **and** secondary entrypoints) natively, and those pass through unchanged. For older/flat remote builds that emit one flat `SharedInfo` per entrypoint, enabling this groups secondary entrypoints under their parent package (by npm scope) so they resolve as one shared external. See [Version Resolver — Secondary entrypoints](version-resolver.md#secondary-entrypoints). |
+| `feature.useAutoExternalPooling` | `false` | When `true`, shared externals are grouped into pools by their npm scope (`@framework/core`, `@framework/common` → pool `framework`) so that no remote draws a coupled family from builds that never shipped it together: a remote either takes the whole family from one build, or serves the whole family from its own. Buys coherence at a possible cost in downloads, never a reduction. Unscoped packages are not auto-pooled; a remote can also opt a specific external into a pool with a `pool` tag regardless of this flag. See [Dependency Pooling](pooling.md).                                                                      |
+
+### Two ready-made profiles
+
+```ts
+import { initFederation } from "@softarc/native-federation-orchestrator";
+import {
+  defaultProfile,
+  cachingProfile,
+} from "@softarc/native-federation-orchestrator/options";
+
+// defaultProfile
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, scopeUncoveredEntrypoints: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false }
+
+// cachingProfile
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, scopeUncoveredEntrypoints: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false }
+
+initFederation("http://example.org/manifest.json", {
+  strict: true,
+  profile: cachingProfile,
+});
+```
+
+> **Note:** The caching profile is tempting but comes with a trade-off: newly deployed remote versions won't be picked up until the cache is explicitly cleared. Pair it with `clearStorage: true` on cache-busting events, or stick with `defaultProfile` when remotes change frequently.
+
+## <a id="storage"></a> 5. Storage
+
+The orchestrator keeps its internal caches (remote info, shared externals, scoped externals) inside a **storage entry**. The default is an in-memory map on `globalThis`, but any `Storage`-compatible backend works.
+
+```ts
+type StorageOptions = {
+  storage?: StorageEntryCreator;
+  clearStorage?: boolean;
+  storageNamespace?: string;
+};
+```
+
+| Option             | Default                   | Description                                                                                                                                        |
+| ------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`          | `globalThisStorageEntry`  | How the cache is persisted. Built-ins: `globalThisStorageEntry`, `sessionStorageEntry`, `localStorageEntry`. Custom implementations are supported. |
+| `clearStorage`     | `false`                   | When `true`, `initFederation` wipes the namespace before initializing — handy for one-shot cache busts after a deploy.                             |
+| `storageNamespace` | `'__NATIVE_FEDERATION__'` | Namespace prefix for stored keys (e.g. `__NATIVE_FEDERATION__.remotes`). Change it to run multiple orchestrators on the same origin.               |
+
+### Example
+
+```ts
+import { initFederation } from "@softarc/native-federation-orchestrator";
+import {
+  globalThisStorageEntry,
+  localStorageEntry,
+  sessionStorageEntry,
+} from "@softarc/native-federation-orchestrator/options";
+
+initFederation("http://example.org/manifest.json", {
+  clearStorage: true,
+  storageNamespace: "__custom_namespace__",
+
+  // Option 1 — in-memory (default)
+  storage: globalThisStorageEntry,
+
+  // Option 2 — persisted for the browser session
+  storage: sessionStorageEntry,
+
+  // Option 3 — persisted across browser restarts
+  storage: localStorageEntry,
+});
+```
+
+> **Note:** Most server-rendered hosts want `sessionStorageEntry`: it survives navigation-triggered full reloads (the whole point of caching here) but is automatically cleared when the tab closes, so a stale resolution can never live longer than the user's session.
+
+## Putting it together
+
+```ts
+import { initFederation } from "@softarc/native-federation-orchestrator";
+import {
+  consoleLogger,
+  sessionStorageEntry,
+  useShimImportMap,
+  cachingProfile,
+} from "@softarc/native-federation-orchestrator/options";
+
+const { loadRemoteModule } = await initFederation(manifest, {
+  // Host
+  hostRemoteEntry: { url: "./host-remoteEntry.json", cacheTag: "2025-04-22" },
+
+  // Import map
+  ...useShimImportMap({ shimMode: true }),
+
+  // Logging
+  logLevel: "warn",
+  logger: consoleLogger,
+
+  // Modes
+  strict: { strictRemoteEntry: true, strictExternalCompatibility: true },
+  profile: cachingProfile,
+
+  // Storage
+  storage: sessionStorageEntry,
+  storageNamespace: "__NATIVE_FEDERATION__",
+  clearStorage: false,
+});
+```
+
+## See also
+
+- [The orchestrator docs](https://github.com/native-federation/orchestrator/blob/main/docs/config.md) — Which shows a bit more in-depth how the orchestrator can be configured.
+- [Security & Subresource Integrity](security.md) — CSP setup for the built-in Trusted Types policy and the SRI trust chain (manifest → `remoteEntry.json` → modules).
+- [Version Resolver](version-resolver.md) — how the profile and strictness flags actually shape resolution output.
+- [Architecture — caches](architecture.md#caches) — what lives in the storage namespace.
+- [Getting Started](getting-started.md) — worked examples for the quickstart, registry and custom setups.

@@ -1,21 +1,31 @@
 ---
-import { nav } from '../data/nav';
+import { navFor, type Version } from '../data/nav';
+import VersionSelect from './VersionSelect.astro';
 
 interface Props {
-	/** Current doc slug (entry.id), e.g. 'core' or 'adapters/esbuild'. */
+	version: Version;
+	/** Current doc slug without its version prefix, e.g. 'core' or 'adapters/esbuild'. */
 	activeDoc: string;
+	otherUrl: string;
+	/** Unique per Sidebar instance; the layout renders one for desktop and one for mobile. */
+	instance: string;
 }
 
-const { activeDoc } = Astro.props;
+const { version, activeDoc, otherUrl, instance } = Astro.props;
 ---
 
+<VersionSelect version={version} otherUrl={otherUrl} id={`version-select-${instance}`} />
+
 {
-	nav.map((group) => (
+	navFor(version).map((group) => (
 		<div class="sidebar-section">
 			<div class="sidebar-label">{group.section}</div>
 			<nav class="sidebar-nav">
 				{group.items.map((item) => (
-					<a href={`/docs/${item.id}/`} class={activeDoc === item.id ? 'active' : ''}>
+					<a
+						href={item.href ?? `/docs/${version}/${item.id}/`}
+						class={!item.href && activeDoc === item.id ? 'active' : ''}
+					>
 						{item.label}
 					</a>
 				))}

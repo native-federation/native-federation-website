@@ -1,0 +1,143 @@
+# Getting Started
+
+> Install the Angular adapter and scaffold your first host and remote with ng add.
+
+Install the adapter, run `ng add` on every project that should participate in the federation, and you have a working host + remote pair within minutes.
+
+> **See it running first** — the [Tractor Store demo](https://native-federation.github.io/playground) is a complete Native Federation Angular host with multiple remotes, deployed and live. Browse the source at [native-federation/playground](https://github.com/native-federation/playground) to clone, fork and run it locally.
+
+## 1. Install
+
+```bash
+npm i @angular-architects/native-federation -D
+```
+
+> **Which package?** From **Angular 22** the adapter is back under its original name, `@angular-architects/native-federation` (22.x). If you are still on **Angular 20 or 21**, install `@angular-architects/native-federation-v4` instead — it is the exact same adapter, only the package name differs, so substitute `-v4` in every command and import on these pages. Pin the adapter to the same major as your Angular CLI.
+>
+> | Your Angular | Install |
+> | --- | --- |
+> | 22+ | `@angular-architects/native-federation` |
+> | 20 – 21 | `@angular-architects/native-federation-v4` |
+
+The package brings `@softarc/native-federation` (`^4.4.0`) and `@softarc/native-federation-orchestrator` (`^4.5.2`) as dependencies. The `ng add` step below adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` (as a devDependency) on top — nothing else to install up front.
+
+## 2. Scaffold a Remote (Micro Frontend)
+
+```bash
+ng g @angular-architects/native-federation:init --project mfe1 --port 4201 --type remote
+```
+
+This runs the `init` schematic against `mfe1`. See [Schematics → init](schematics.md#init--ng-add) for the full list of changes; in summary it:
+
+- Adds `es-module-shims` to the polyfills.
+- Generates `projects/mfe1/federation.config.mjs` with one entry exposed (`./Component` → the project's `app.component.ts`).
+- Generates `projects/mfe1/tsconfig.federation.json`.
+- Renames the existing `build`/`serve` targets in `angular.json` to `esbuild` / `serve-original` and points `build`/`serve` at `@angular-architects/native-federation:build`.
+- Splits `main.ts` in two: a federation bootstrap calling the adapter's `initFederation`, and the original Angular bootstrap moved to `bootstrap.ts`.
+
+## 3. Scaffold a Host (Shell)
+
+```bash
+ng g @angular-architects/native-federation:init --project shell --port 4200 --type dynamic-host
+```
+
+The same schematic runs in `dynamic-host` mode for the shell. In addition to the changes above, it creates a `federation.manifest.json` in the project's `public/` (or `src/assets/`) folder listing the remotes it knows about:
+
+```json
+{
+  "mfe1": "http://localhost:4201/remoteEntry.json"
+}
+```
+
+Pick the type that fits the role of the project:
+
+| `--type` | What you get | When to use it |
+| --- | --- | --- |
+| `remote` | `main.ts` calls `initFederation({}, …)` and registers its own `remoteEntry.json` via `hostRemoteEntry`. | Every Micro Frontend. |
+| `host` | Remote map is inlined in `main.ts`. | Single-environment shells where remote URLs never change. |
+| `dynamic-host` | `main.ts` reads from `federation.manifest.json`. | The default for shells — swap the manifest per environment without rebuilding. |
+
+## 4. Wire a Lazy Route in the Host
+
+Loading a remote module is plain Angular lazy-loading with `loadRemoteModule` in place of a dynamic `import()`. The generated `main.ts` initialises federation, then dynamically imports your Angular bootstrap:
+
+```ts
+// projects/shell/src/main.ts (generated)
+import { initFederation } from '@angular-architects/native-federation';
+
+initFederation('federation.manifest.json', {
+  hostRemoteEntry: { url: './remoteEntry.json' },
+})
+  .catch(err => console.error(err))
+  .then(_ => import('./bootstrap'))
+  .catch(err => console.error(err));
+```
+
+The adapter's `initFederation` is a wrapper that hands the orchestrator its defaults — shim import map, console logger, and this project's own `remoteEntry.json` as `hostRemoteEntry`. To thread the resolved loader through Angular's DI instead of the deprecated top-level import, see [Runtime → Wiring the result into Angular](runtime.md#wiring-the-result-into-angular).
+
+With that generated bootstrap, routes use the `loadRemoteModule` re-exported from the adapter package:
+
+```ts
+// projects/shell/src/app/app.routes.ts
+import { Routes } from '@angular/router';
+import { loadRemoteModule } from '@angular-architects/native-federation';
+
+export const routes: Routes = [
+  {
+    path: 'flights',
+    loadComponent: () =>
+      loadRemoteModule('mfe1', './Component').then(m => m.AppComponent),
+  },
+];
+```
+
+> **Note:** That top-level `loadRemoteModule` is convenient but deprecated. For the recommended pattern — taking `loadRemoteModule` off the resolved `initFederation` promise and threading it through Angular's DI — see [Runtime](runtime.md).
+
+## 5. Run It
+
+```bash
+ng serve mfe1 -o   # in one terminal
+ng serve shell -o  # in another
+```
+
+The shell's dev server proxies `http://localhost:4201/remoteEntry.json` at request time and lazy-loads the remote when the route is hit. The Angular adapter's dev server also serves the federation artifacts (shared bundles, exposed modules) directly from `dist/<project>/browser`, so you don't need a separate static server.
+
+## What Got Generated
+
+After running `ng add` against a project, expect the following layout:
+
+```
+projects/mfe1/
+├── federation.config.mjs         ← shared/exposes config (see Angular Config)
+├── tsconfig.federation.json      ← extends tsconfig.json, used only by the federation builder
+└── src/
+    ├── main.ts                   ← initFederation(...) bootstrap (orchestrator by default)
+    └── bootstrap.ts              ← the *original* Angular bootstrap (bootstrapApplication etc.)
+```
+
+And in the workspace root:
+
+```
+angular.json    ← build → @angular-architects/native-federation:build
+                ← serve → @angular-architects/native-federation:build
+                ← esbuild → @angular/build:application (the original build)
+                ← serve-original → @angular/build:dev-server (the original serve)
+package.json    ← + es-module-shims, + @softarc/native-federation-orchestrator (devDep)
+```
+
+## Production Builds
+
+```bash
+ng build mfe1
+ng build shell --configuration production
+```
+
+Each project's output (`dist/<project>/browser/`) contains a `remoteEntry.json` alongside the Angular bundle. Deploy the whole folder as a static site; the host's manifest only needs to point at the matching `remoteEntry.json` URL.
+
+> **Note:** The shape of `remoteEntry.json`, the import map and the artifact cache are all produced by the core. See [Build Artifacts](../core/artifacts.md) for the full layout.
+
+## Next Steps
+
+- [Builder](builder.md) — every option in the `angular.json` targets the schematic created.
+- [Angular Config](configuration.md) — what `withNativeFederation` changes for Angular projects.
+- [Runtime](runtime.md) — `initFederation`, `loadRemoteModule` and the orchestrator.

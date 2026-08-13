@@ -14,7 +14,7 @@ const { activePage = '' } = Astro.props;
 		</a>
 		<nav class="header-nav" aria-label="Main navigation">
 			<a href="/" class={activePage === 'home' ? 'active' : ''}>Home</a>
-			<a href="/docs/getting-started/" class={activePage === 'docs' ? 'active' : ''}>Docs</a>
+			<a href="/docs/v4/getting-started/" class={activePage === 'docs' ? 'active' : ''}>Docs</a>
 			<a href="/team/" class={activePage === 'team' ? 'active' : ''}>Team</a>
 			<a href="/resources/" class={activePage === 'resources' ? 'active' : ''}>Resources</a>
 		</nav>
@@ -46,7 +46,7 @@ const { activePage = '' } = Astro.props;
 
 <nav class="mobile-nav" aria-label="Mobile navigation">
 	<a href="/" class={activePage === 'home' ? 'active' : ''}>Home</a>
-	<a href="/docs/getting-started/" class={activePage === 'docs' ? 'active' : ''}>Docs</a>
+	<a href="/docs/v4/getting-started/" class={activePage === 'docs' ? 'active' : ''}>Docs</a>
 	<a href="/team/" class={activePage === 'team' ? 'active' : ''}>Team</a>
 	<a href="/resources/" class={activePage === 'resources' ? 'active' : ''}>Resources</a>
 	<a href="https://github.com/native-federation" target="_blank" rel="noopener">GitHub</a>

@@ -1,0 +1,35 @@
+---
+import { VERSIONS, type Version } from '../data/nav';
+
+interface Props {
+	version: Version;
+	/** Where the non-current version's option navigates to. */
+	otherUrl: string;
+	/** Distinguishes the desktop sidebar copy from the mobile-nav one. */
+	id: string;
+}
+
+const { version, otherUrl, id } = Astro.props;
+const LABELS: Record<Version, string> = { v4: 'v4 (current)', v3: 'v3 (legacy)' };
+---
+
+<div class="version-select">
+	<label class="version-select__label" for={id}>Version</label>
+	<select class="version-select__control" id={id} data-version-select>
+		{
+			VERSIONS.map((v) => (
+				<option value={v === version ? '' : otherUrl} selected={v === version}>
+					{LABELS[v]}
+				</option>
+			))
+		}
+	</select>
+</div>
+
+<script>
+	document.querySelectorAll<HTMLSelectElement>('[data-version-select]').forEach((select) => {
+		select.addEventListener('change', () => {
+			if (select.value) window.location.href = select.value;
+		});
+	});
+</script>

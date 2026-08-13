@@ -5,6 +5,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Toc from '../components/Toc.astro';
 import type { MarkdownHeading } from 'astro';
+import type { Version } from '../data/nav';
 
 interface Props {
 	title: string;
@@ -12,11 +13,14 @@ interface Props {
 	canonical: string;
 	mdUrl: string;
 	ogImage: string;
+	version: Version;
 	activeDoc: string;
+	otherUrl: string;
 	headings: MarkdownHeading[];
 }
 
-const { title, description, canonical, mdUrl, ogImage, activeDoc, headings } = Astro.props;
+const { title, description, canonical, mdUrl, ogImage, version, activeDoc, otherUrl, headings } =
+	Astro.props;
 const pageTitle = `${title} — Native Federation Docs`;
 ---
 
@@ -43,13 +47,13 @@ const pageTitle = `${title} — Native Federation Docs`;
 	<body>
 		<Header activePage="docs">
 			<div slot="mobile-docs" class="mobile-nav-docs">
-				<Sidebar activeDoc={activeDoc} />
+				<Sidebar version={version} activeDoc={activeDoc} otherUrl={otherUrl} instance="mobile" />
 			</div>
 		</Header>
 
 		<div class="docs-layout">
 			<aside class="docs-sidebar" aria-label="Documentation navigation">
-				<Sidebar activeDoc={activeDoc} />
+				<Sidebar version={version} activeDoc={activeDoc} otherUrl={otherUrl} instance="desktop" />
 			</aside>
 
 			<main class="docs-content">
