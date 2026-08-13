@@ -225,7 +225,7 @@ initFederation(manifest, orchestratorOptions)
   .catch((err) => console.error(err));
 ```
 
-See [Runtime → The orchestrator runtime](runtime.md#the-orchestrator-runtime) for the full DI pattern (bootstrap, app config, injection token).
+See [Runtime → Wiring the result into Angular](runtime.md#wiring-the-result-into-angular) for the full DI pattern (bootstrap, app config, injection token).
 
 ## Angular 20/21 — the `-v4` package
 
@@ -293,5 +293,5 @@ If anything is off — corrupted cache, missing peer deps, weird ESM resolution 
 
 - [Schematics → update22](schematics.md#update22-angular-22) — the automated Angular 22 migration.
 - [Schematics → update-v4](schematics.md#update-v4) — the automated migration for the Angular 20/21 `-v4` package.
-- [Runtime → The orchestrator runtime](runtime.md#the-orchestrator-runtime) — full orchestrator wiring details.
+- [Runtime → Wiring the result into Angular](runtime.md#wiring-the-result-into-angular) — threading the resolved loader through DI.
 - [Angular Config](configuration.md) — what changed in `federation.config.mjs` defaults.

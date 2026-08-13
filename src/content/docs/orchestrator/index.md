@@ -45,14 +45,9 @@ On **v4** the Orchestrator runs server-side too, so remote modules **execute dur
 
 ## Legacy Runtime
 
-The classic runtime — `@softarc/native-federation-runtime` — was Native Federation's original browser runtime: one version of each shared dependency per scope, no semver resolution, no persistent caching. It shipped through v3 and v4 (up to `4.1.2`) and is now **deprecated and end-of-life** on npm, with the Orchestrator named as its replacement. Existing installs keep working — same `remoteEntry.json` contract — but there will be no further fixes or features. The pages below are kept for projects still running on it; to move off, see [Migration to v4](../migration.md) and [v3 vs v4](../v3-vs-v4.md).
+The classic runtime — `@softarc/native-federation-runtime` — was Native Federation's original browser runtime: one version of each shared dependency per scope, no semver resolution, no persistent caching. It shipped through v3 and v4 (up to `4.1.2`) and is now **deprecated and end-of-life** on npm, with the Orchestrator named as its replacement. Existing installs keep working — same `remoteEntry.json` contract — but there will be no further fixes or features.
 
-- [Legacy Runtime overview](../runtime/index.md) — what it does, what it deliberately does not do, and where it fits.
-- [Getting Started](../runtime/getting-started.md) — install the package, add `es-module-shims`, split your bootstrap.
-- [`initFederation`](../runtime/init-federation.md) — manifest vs. inline map, cache busting, error handling.
-- [`loadRemoteModule`](../runtime/load-remote-module.md) — both call signatures, lazy remote registration and fallbacks.
-- [The Import Map](../runtime/import-map.md) — how imports and scopes are constructed and how externals are deduplicated.
-- [API Reference](../runtime/api-reference.md) — the complete public surface of `@softarc/native-federation-runtime`.
+Its API pages have been removed: they documented an `initFederation` / `loadRemoteModule` pair close enough to the Orchestrator's to be mistaken for it, which is the opposite of helpful. [Legacy Runtime](../runtime/index.md) is what remains — a summary of the gaps that motivated the Orchestrator. To move off, see [Migration to v4](../migration.md) and [v3 vs v4](../v3-vs-v4.md).
 
 ## Example repositories
 

@@ -37,7 +37,7 @@ This runs the `init` schematic against `mfe1`. See [Schematics → init](schemat
 - Generates `projects/mfe1/federation.config.mjs` with one entry exposed (`./Component` → the project's `app.component.ts`).
 - Generates `projects/mfe1/tsconfig.federation.json`.
 - Renames the existing `build`/`serve` targets in `angular.json` to `esbuild` / `serve-original` and points `build`/`serve` at `@angular-architects/native-federation:build`.
-- Splits `main.ts` in two: an orchestrator-based federation bootstrap, and the original Angular bootstrap moved to `bootstrap.ts`.
+- Splits `main.ts` in two: a federation bootstrap calling the adapter's `initFederation`, and the original Angular bootstrap moved to `bootstrap.ts`.
 
 ## 3. Scaffold a Host (Shell)
 
@@ -57,34 +57,27 @@ Pick the type that fits the role of the project:
 
 | `--type` | What you get | When to use it |
 | --- | --- | --- |
-| `remote` | `main.ts` calls `initFederation({ '<name>': './remoteEntry.json' })` — exposes its own `remoteEntry.json`. | Every Micro Frontend. |
+| `remote` | `main.ts` calls `initFederation({}, …)` and registers its own `remoteEntry.json` via `hostRemoteEntry`. | Every Micro Frontend. |
 | `host` | Remote map is inlined in `main.ts`. | Single-environment shells where remote URLs never change. |
 | `dynamic-host` | `main.ts` reads from `federation.manifest.json`. | The default for shells — swap the manifest per environment without rebuilding. |
 
 ## 4. Wire a Lazy Route in the Host
 
-Loading a remote module is plain Angular lazy-loading with `loadRemoteModule` in place of a dynamic `import()`. On v4 the schematic wires the orchestrator directly — the generated `main.ts` initialises federation, then dynamically imports your Angular bootstrap:
+Loading a remote module is plain Angular lazy-loading with `loadRemoteModule` in place of a dynamic `import()`. The generated `main.ts` initialises federation, then dynamically imports your Angular bootstrap:
 
 ```ts
 // projects/shell/src/main.ts (generated)
-import { initFederation } from '@softarc/native-federation-orchestrator';
-import {
-  useShimImportMap,
-  consoleLogger,
-  globalThisStorageEntry,
-} from '@softarc/native-federation-orchestrator/options';
+import { initFederation } from '@angular-architects/native-federation';
 
-initFederation('/assets/federation.manifest.json', {
-  ...useShimImportMap({ shimMode: true }),
-  logger: consoleLogger,
-  storage: globalThisStorageEntry,
-  hostRemoteEntry: './remoteEntry.json',
-  logLevel: 'debug',
+initFederation('federation.manifest.json', {
+  hostRemoteEntry: { url: './remoteEntry.json' },
 })
   .catch(err => console.error(err))
   .then(_ => import('./bootstrap'))
   .catch(err => console.error(err));
 ```
+
+The adapter's `initFederation` is a wrapper that hands the orchestrator its defaults — shim import map, console logger, and this project's own `remoteEntry.json` as `hostRemoteEntry`. To thread the resolved loader through Angular's DI instead of the deprecated top-level import, see [Runtime → Wiring the result into Angular](runtime.md#wiring-the-result-into-angular).
 
 With that generated bootstrap, routes use the `loadRemoteModule` re-exported from the adapter package:
 

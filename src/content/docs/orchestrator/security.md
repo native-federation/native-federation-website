@@ -59,7 +59,7 @@ Once the report stream is empty, switch to the enforcing header above.
 
 ### Configuration
 
-The Trusted Types policy is part of the [import-map configuration](configuration.md#2-import-map-implementation) and exposes a single option, `trustedTypesPolicyName`.
+The Trusted Types policy is part of the [import-map configuration](configuration.md#import-map) and exposes a single option, `trustedTypesPolicyName`.
 
 ```ts
 import { initFederation } from "@softarc/native-federation-orchestrator";
@@ -227,7 +227,7 @@ await initRemoteEntry("http://example.org/late-mfe/remoteEntry.json", {
 ## See also
 
 - [The orchestrator security docs](https://github.com/native-federation/orchestrator/blob/main/docs/security.md) — the upstream version of this page.
-- [Configuration — host](configuration.md#1-host-configuration) — `manifestIntegrity` and `hostRemoteEntry.integrity` options.
-- [Configuration — import map](configuration.md#2-import-map-implementation) — the `trustedTypesPolicyName` option.
+- [Configuration — host](configuration.md#host) — `manifestIntegrity` and `hostRemoteEntry.integrity` options.
+- [Configuration — import map](configuration.md#import-map) — the `trustedTypesPolicyName` option.
 - [Architecture — generated import map](architecture.md) — where the `integrity` block is emitted into the DOM.
 - [Getting Started](getting-started.md) — the manifest object form (`{ url, integrity }`) and `initRemoteEntry` with `RemoteRef`.

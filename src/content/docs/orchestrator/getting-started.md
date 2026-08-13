@@ -64,7 +64,7 @@ The simplest integration uses the pre-built `quickstart.mjs` runtime and a decla
 
 **The manifest** (`<script type="application/json" id="mfe-manifest">`) tells the orchestrator where every remote lives. The `id="mfe-manifest"` is required — `quickstart.mjs` specifically looks up that element. Each key is the logical remote name used by `loadRemoteModule`; each value is the URL of a `remoteEntry.json`.
 
-> **Note:** In production, you'll often fetch the manifest from a discovery service (feature-flag backend, micro-frontend registry, tenant-aware feed) rather than hard-coding it. For that, use the [custom implementation](#3-custom-orchestrator--production-builds) below and pass `initFederation` a URL instead of an object.
+> **Note:** In production, you'll often fetch the manifest from a discovery service (feature-flag backend, micro-frontend registry, tenant-aware feed) rather than hard-coding it. For that, use the [custom implementation](#custom-implementation) below and pass `initFederation` a URL instead of an object.
 
 Manifest entries can also be supplied as objects to pin a `remoteEntry.json` against an SRI hash — the orchestrator hashes the response bytes and rejects on mismatch before parsing. Both forms can coexist:
 
@@ -184,7 +184,7 @@ import {
 })();
 ```
 
-`initFederation` accepts either an inline manifest object or a URL string that points to a remote manifest file; both forms return a promise that resolves with the loader API (see [Loading remote modules](#loading-remote-modules)).
+`initFederation` accepts either an inline manifest object or a URL string that points to a remote manifest file; both forms return a promise that resolves with the loader API (see [Loading remote modules](#load-remote-module)).
 
 ### Embed it in the host page
 
@@ -279,7 +279,7 @@ The two forms compile to the same runtime function; pick whichever reads better 
 
 `config` is the `ConfigContract` — the merged result of your options and the library defaults. It exposes the active logger, storage handle and import-map functions, so you can reach the orchestrator's internals from anywhere without re-creating them.
 
-`adapters` is the `DrivingContract` — a hexagonal-architecture concept (see [Hexagonal Architecture: there are always two sides to every story](https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c)) giving direct handles to `remoteInfoRepo`, `sharedExternalsRepo`, `scopedExternalsRepo`, `sharedChunksRepo`, the manifest and remote-entry providers, and the browser/SSE adapters. Use it to introspect the caches described in [Architecture — caches](architecture.md#internal-caches).
+`adapters` is the `DrivingContract` — a hexagonal-architecture concept (see [Hexagonal Architecture: there are always two sides to every story](https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c)) giving direct handles to `remoteInfoRepo`, `sharedExternalsRepo`, `scopedExternalsRepo`, `sharedChunksRepo`, the manifest and remote-entry providers, and the browser/SSE adapters. Use it to introspect the caches described in [Architecture — caches](architecture.md#caches).
 
 `initRemoteEntry(remoteEntryUrl, remote?)` adds a remote after the initial load and resolves with the same `NativeFederationResult` shape (so the chain can continue). The second argument can be either a remote name string or a `RemoteRef` object — the same shape used inside the manifest:
 
@@ -294,7 +294,7 @@ await initRemoteEntry('http://localhost:5000/remoteEntry.json', {
 });
 ```
 
-See [Dynamic init](version-resolver.md#dynamic-init--adding-remotes-after-the-fact) for the rules and constraints.
+See [Dynamic init](version-resolver.md#dynamic-init) for the rules and constraints.
 
 ## Configuration at a glance
 

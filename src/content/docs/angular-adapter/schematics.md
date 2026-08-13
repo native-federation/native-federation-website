@@ -44,14 +44,15 @@ Initializes a project for Native Federation. `ng add` and `ng g …:init` both r
 3. **tsconfig.** Generates `projects/<name>/tsconfig.federation.json` — extends the project's `tsconfig.json`, narrows `types` to `[]`, and only includes `src/**/*.ts` minus specs.
 4. **angular.json.** Switches the existing build to `@angular/build:application` (if it isn't already), renames it to `esbuild`, renames the existing serve to `serve-original`, and slots the `@angular-architects/native-federation:build` builder into `build` + `serve`. See [the angular.json layout](builder.md#the-angularjson-layout).
 5. **main.ts split.** Moves your existing `main.ts` to `bootstrap.ts` and rewrites `main.ts` to call `initFederation(...)` first, then dynamically `import('./bootstrap')`. The first argument depends on `--type`:
-    - `remote` → `{ '<project>': './remoteEntry.json' }`
-    - `host` → an inline remote map derived from the workspace's other projects
-    - `dynamic-host` → the path to a generated `federation.manifest.json`
+   - `remote` → `{}` — it registers itself through `hostRemoteEntry`
+   - `host` → an inline remote map derived from the workspace's other projects
+   - `dynamic-host` → the relative path to the generated `federation.manifest.json`
 
-    On v4 the schematic emits the **orchestrator** bootstrap (`@softarc/native-federation-orchestrator`) by default — `initFederation(<arg>, { ...useShimImportMap({ shimMode: true }), logger: consoleLogger, storage: globalThisStorageEntry, hostRemoteEntry: './remoteEntry.json', logLevel: 'debug' })`. See [Runtime](runtime.md).
-6. **SSR.** If the project has SSR enabled (`build.options.ssr.entry` is set), the schematic sets `ssr: true` on the federation `build` target, adds `app.use(cors())` to the generated `server.ts`, switches `RenderMode.Prerender` → `RenderMode.Server` in `app.routes.server.ts`, and forces `security.allowedHosts: ['localhost']` on the `esbuild` target. It does **not** split `main.server.ts`, emit an `fstart.mjs`, or add `@softarc/native-federation-node` — on v4 the server-side loader is registered at launch by the `node --import @angular-architects/native-federation/node-preload …` preload, which wires the orchestrator's [`/node` entry](../orchestrator/node.md). The orchestrator is added as a runtime (not dev) dependency for SSR projects. You still set the prod start command to use the preload yourself. See [SSR & Hydration](ssr.md).
+   `initFederation` is imported from `@angular-architects/native-federation`, whose wrapper supplies the shim import map, logger and storage — so the generated call stays down to `initFederation(<arg>, { hostRemoteEntry: { url: './remoteEntry.json' } })`. See [Runtime](runtime.md).
+
+6. **SSR.** If the project has SSR enabled (`build.options.ssr.entry` is set), the schematic sets `ssr: true` on the federation `build` target, adds `app.use(cors())` to the generated `server.ts`, switches `RenderMode.Prerender` → `RenderMode.Server` in `app.routes.server.ts`, and forces `security.allowedHosts: ['localhost']` on the `esbuild` target. It does **not** split `main.server.ts`, emit an `fstart.mjs`, or add `@softarc/native-federation-node` — on v4 the server-side loader is registered at launch by the `node --import @angular-architects/native-federation/node-preload …` preload, which wires the orchestrator's [`/node` entry](../orchestrator/node.md). You still set the prod start command to use the preload yourself. See [SSR & Hydration](ssr.md).
 7. **federation.manifest.json.** For dynamic hosts, generates a manifest file. It lives in `public/federation.manifest.json` if the project has a `public/` folder, else `src/assets/federation.manifest.json`.
-8. **Dependencies.** Adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` — the orchestrator as a devDependency for browser-only projects, or a runtime dependency (plus `cors`) for SSR projects. Triggers `npm install` at the end.
+8. **Dependencies.** Adds `es-module-shims` (dependency) and `@softarc/native-federation-orchestrator` (devDependency, pinned to the range the adapter was built against — an existing entry is overwritten). SSR projects additionally get `cors` as a dependency. Triggers `npm install` at the end.
 
 ### What it does NOT do
 

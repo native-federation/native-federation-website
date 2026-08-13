@@ -134,7 +134,7 @@ Serving those two specifiers from two _different_ versions is a **tear**. It is 
 | Setting | What happens to an entrypoint the shared version cannot cover |
 | --- | --- |
 | [`strict.strictEntryPointCoverage`](configuration.md#strictness) | **Throws.** The resolver refuses to share a package it cannot serve coherently. |
-| [`profile.scopeUncoveredEntrypoints`](configuration.md#resolution-profile) | **Scopes.** The uncovered copy is split off and serves its whole `entries` bunch from its own build. The copies that _are_ covered keep sharing. |
+| [`profile.scopeUncoveredEntrypoints`](configuration.md#profile) | **Scopes.** The uncovered copy is split off and serves its whole `entries` bunch from its own build. The copies that _are_ covered keep sharing. |
 | neither (default) | **Self-fills.** The specifier is served from the declaring remote's own build and a warning is logged. Nothing is lost; the package tears. |
 
 Both settings only govern tears **between** versions — copies of the shared version itself always merge, whatever you set. Scoping is per remote copy, not per version: given a shared surface `{ table, sort }`, a deduped `{ table }` and a deduped `{ table, paginator }`, only the third is split off.
@@ -241,7 +241,7 @@ For every external in every fetched `remoteEntry.json`:
 An external's `version` is optional and may be missing or non-semver. Before it is stored, an invalid version is handled in precedence order — the result is always valid semver:
 
 1. **Throw** — if `strict.strictExternalVersion` is on, an invalid or missing version raises `NFError`.
-2. **Skip** — else if [`profile.skipInvalidExternalVersions`](configuration.md#resolution-profile) is on, the external is dropped and never stored.
+2. **Skip** — else if [`profile.skipInvalidExternalVersions`](configuration.md#profile) is on, the external is dropped and never stored.
 3. **Coerce** (default) — otherwise the version is coerced to the **smallest** version matching the external's `requiredVersion` range.
 
 ```ts
@@ -555,5 +555,5 @@ Pre-release versions are only considered compatible with matching pre-release ra
 - [The orchestrator docs](https://github.com/native-federation/orchestrator/blob/main/docs/version-resolver.md) — The orchestrator docs regarding the version resolver.
 - [Dependency Pooling](pooling.md) — the opt-in layer that keeps a coupled package family coherent across remotes.
 - [Architecture](architecture.md) — the caches the resolver reads and writes.
-- [Configuration — modes](configuration.md#4-modes--strictness--resolution-profile) — every knob that tunes resolution behavior.
+- [Configuration — modes](configuration.md#modes) — every knob that tunes resolution behavior.
 - [Core — sharing dependencies](../core/sharing.md) — the build-side config that produces the inputs to this resolver.

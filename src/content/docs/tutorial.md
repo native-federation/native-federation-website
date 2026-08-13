@@ -149,33 +149,26 @@ export default withNativeFederation({
 
 ## 7. Host Bootstrap
 
-The generated `projects/shell/src/main.ts` initializes federation with the **Orchestrator** — v4's recommended runtime — before loading Angular:
+The generated `projects/shell/src/main.ts` initializes federation before loading Angular:
 
 ```ts
-import { initFederation } from '@softarc/native-federation-orchestrator';
-import {
-  useShimImportMap,
-  consoleLogger,
-  globalThisStorageEntry,
-} from '@softarc/native-federation-orchestrator/options';
+import { initFederation } from '@angular-architects/native-federation';
 
-initFederation('/assets/federation.manifest.json', {
-  ...useShimImportMap({ shimMode: true }),
-  logger: consoleLogger,
-  storage: globalThisStorageEntry,
-  hostRemoteEntry: './remoteEntry.json',
-  logLevel: 'debug',
+initFederation('federation.manifest.json', {
+  hostRemoteEntry: { url: './remoteEntry.json' },
 })
   .catch((err) => console.error(err))
   .then((_) => import('./bootstrap'))
   .catch((err) => console.error(err));
 ```
 
-> **Note:** The Orchestrator is the runtime in v4. It adds semver-aware version resolution and caches `remoteEntry.json` files across reloads. The Classic Runtime it replaces is deprecated — see [v3 vs v4](v3-vs-v4.md#runtime-orchestrator-vs-classic).
+Your original `main.ts` moved to `bootstrap.ts` untouched. The dynamic `import('./bootstrap')` is what keeps Angular out of the first chunk, so no shared dependency is evaluated before the import map exists.
+
+> **Note:** The adapter's `initFederation` is a wrapper around the **Orchestrator** — v4's runtime — which it configures with a shim import map, a console logger and your own `remoteEntry.json` as `hostRemoteEntry`. It adds semver-aware version resolution and caches `remoteEntry.json` files across reloads. The Classic Runtime it replaces is deprecated — see [v3 vs v4](v3-vs-v4.md#runtime-orchestrator-vs-classic). Its options are configured through `initFederation`'s second argument — see [Runtime → Options](angular-adapter/runtime.md#options).
 
 ## 8. Federation Manifest
 
-The manifest at `projects/shell/src/assets/federation.manifest.json` maps remote names to their entry points:
+The manifest at `projects/shell/public/federation.manifest.json` maps remote names to their entry points:
 
 ```json
 {
@@ -187,16 +180,23 @@ The manifest at `projects/shell/src/assets/federation.manifest.json` maps remote
 
 ## 9. Remote Bootstrap
 
-The remote's `projects/mfe1/src/main.ts` initializes federation through the Angular adapter:
+The remote's `projects/mfe1/src/main.ts` initializes federation the same way, with an empty remote map:
 
 ```ts
 import { initFederation } from '@angular-architects/native-federation';
 
-initFederation()
+initFederation(
+  {},
+  {
+    hostRemoteEntry: { url: './remoteEntry.json' },
+  },
+)
   .catch((err) => console.error(err))
   .then((_) => import('./bootstrap'))
   .catch((err) => console.error(err));
 ```
+
+> **Note:** `hostRemoteEntry` is how the remote registers its **own** shared dependencies with the runtime, so the shell can reconcile versions across both apps.
 
 ## 10. Load the Remote
 

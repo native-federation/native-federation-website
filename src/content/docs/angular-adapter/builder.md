@@ -136,7 +136,7 @@ _Since 22.0.3._ By default the adapter runs [es-module-shims](https://github.com
 The build and runtime sides must agree. If you disable shim mode in the builder, disable it on the runtime too — pass `shimMode: false` to the orchestrator's `useShimImportMap` (or `initFederation`) in your `main.ts`:
 
 ```ts
-initFederation('/assets/federation.manifest.json', {
+initFederation('federation.manifest.json', {
   ...useShimImportMap({ shimMode: false }),
   // ...
 });

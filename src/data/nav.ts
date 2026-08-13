@@ -80,6 +80,7 @@ export const nav: NavSection[] = [
 			{ label: 'Schematics', id: 'angular-adapter/schematics' },
 			{ label: 'Angular Config', id: 'angular-adapter/configuration' },
 			{ label: 'Runtime', id: 'angular-adapter/runtime' },
+			{ label: 'Runtime (v3)', id: 'angular-adapter/runtime-v3' },
 			{ label: 'SSR & Hydration', id: 'angular-adapter/ssr' },
 			{ label: 'I18N', id: 'angular-adapter/i18n' },
 			{ label: 'Localization', id: 'angular-adapter/localization' },
