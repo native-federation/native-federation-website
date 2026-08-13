@@ -1,16 +1,30 @@
 ---
 import { getCollection, render } from 'astro:content';
 import DocPage from '../../layouts/DocPage.astro';
+import { DEFAULT_VERSION, VERSION_ROOT, isVersion } from '../../data/nav';
 
 export async function getStaticPaths() {
 	const docs = await getCollection('docs');
-	return docs.map((entry) => ({
-		params: { slug: entry.id },
-		props: { entry },
-	}));
+	const ids = new Set(docs.map((entry) => entry.id));
+
+	return docs.map((entry) => {
+		// Every doc lives under a version directory, so entry.id is `<version>/<bareId>`.
+		const slash = entry.id.indexOf('/');
+		const version = entry.id.slice(0, slash);
+		const bareId = entry.id.slice(slash + 1);
+		const other = version === 'v4' ? 'v3' : 'v4';
+		// Land on the same page in the other tree when it exists there; the version root is
+		// the fallback for pages that are exclusive to one version.
+		const counterpart = ids.has(`${other}/${bareId}`) ? `${other}/${bareId}` : `${other}/${VERSION_ROOT}`;
+
+		return {
+			params: { slug: entry.id },
+			props: { entry, version, bareId, otherUrl: `/docs/${counterpart}/` },
+		};
+	});
 }
 
-const { entry } = Astro.props;
+const { entry, version, bareId, otherUrl } = Astro.props;
 const { Content, headings, remarkPluginFrontmatter } = await render(entry);
 
 const SITE = 'https://native-federation.com';
@@ -24,10 +38,10 @@ const title = entry.data.title ?? h1;
 // already set), surfaced here via remarkPluginFrontmatter; fall back to the title.
 const description = remarkPluginFrontmatter?.description ?? entry.data.description ?? title;
 
-// Clean URL /docs/<id>/ — the glob loader already strips `/index`, matching the old
+// Clean URL /docs/<version>/<id>/ — the glob loader already strips `/index`, matching the old
 // build's cleanPath. `directory` build format emits <path>/index.html.
 const canonical = `${SITE}/docs/${entry.id}/`;
-// alternate text/markdown link -> original source path (e.g. adapters/esbuild/index.md).
+// alternate text/markdown link -> original source path (e.g. v4/adapters/esbuild/index.md).
 const relMd = entry.filePath.replace(/^src\/content\/docs\//, '');
 const mdUrl = `${SITE}/docs/${relMd}`;
 ---
@@ -38,7 +52,9 @@ const mdUrl = `${SITE}/docs/${relMd}`;
 	canonical={canonical}
 	mdUrl={mdUrl}
 	ogImage={OG_IMAGE}
-	activeDoc={entry.id}
+	version={isVersion(version) ? version : DEFAULT_VERSION}
+	activeDoc={bareId}
+	otherUrl={otherUrl}
 	headings={headings}
 >
 	<Content />

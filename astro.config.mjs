@@ -6,13 +6,16 @@ import rawMdPassthrough from './src/integrations/raw-md.mjs';
 import remarkDocLead from './src/plugins/remark-doc-lead.mjs';
 import remarkCallouts from './src/plugins/remark-callouts.mjs';
 import remarkMdLinks from './src/plugins/remark-md-links.mjs';
-import rehypeVersionBadge from './src/plugins/rehype-version-badge.mjs';
 import rehypeTableWrap from './src/plugins/rehype-table-wrap.mjs';
+import { docRedirects } from './src/data/doc-redirects.mjs';
 
 // https://astro.build/config
 export default defineConfig({
 	site: 'https://native-federation.com',
 	outDir: 'dist',
+	// Pre-split /docs/<page> URLs -> their versioned home. Static output emits a
+	// meta-refresh stub per entry; the sitemap filter below keeps those stubs out.
+	redirects: docRedirects(),
 	// astro-mermaid FIRST so it transforms ```mermaid fences (into client-rendered diagram
 	// containers) before Prism highlighting sees them — mermaid source is never wrapped as
 	// `language-mermaid`. mermaid.js is lazy-loaded only on pages that contain a diagram.
@@ -36,7 +39,10 @@ export default defineConfig({
 				},
 			},
 		}),
-		sitemap(),
+		sitemap({
+			// Only the versioned docs URLs are canonical; the unversioned ones are redirect stubs.
+			filter: (page) => !/\/docs\//.test(page) || /\/docs\/v[34]\//.test(page),
+		}),
 		rawMdPassthrough(),
 	],
 	markdown: {
@@ -49,6 +55,6 @@ export default defineConfig({
 		smartypants: false,
 		// Order matters: doc-lead unwraps the first blockquote before callouts run.
 		remarkPlugins: [remarkDocLead, remarkCallouts, remarkMdLinks],
-		rehypePlugins: [rehypeVersionBadge, rehypeTableWrap],
+		rehypePlugins: [rehypeTableWrap],
 	},
 });

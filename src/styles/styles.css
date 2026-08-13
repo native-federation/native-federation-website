@@ -574,6 +574,11 @@ p, li {
   margin-bottom: 24px;
 }
 
+/* Collapsed sections are just headers, so they sit close together. */
+.sidebar-section:not([open]) {
+  margin-bottom: 2px;
+}
+
 .sidebar-version {
   display: flex;
   align-items: center;
@@ -602,6 +607,42 @@ p, li {
   font-weight: 500;
 }
 
+.version-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 0 12px;
+}
+
+.version-select__label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.version-select__control {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.version-select__control:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
 .sidebar-label {
   font-family: var(--font-display);
   font-size: 0.75rem;
@@ -611,6 +652,63 @@ p, li {
   color: var(--color-text-muted);
   padding: 0 12px;
   margin-bottom: 6px;
+}
+
+/* Foldable sections: <summary> carries the label, so it also owns the toggle affordance. */
+summary.sidebar-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  list-style: none;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+summary.sidebar-label::-webkit-details-marker {
+  display: none;
+}
+
+summary.sidebar-label:hover {
+  color: var(--color-text-secondary);
+  background: var(--color-border-light);
+}
+
+summary.sidebar-label:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.sidebar-label__chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+
+.sidebar-section:not([open]) .sidebar-label__chevron {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-label__chevron {
+    transition: none;
+  }
+}
+
+/* In the mobile menu the summary is the only way to open a section, so give it a real tap target. */
+@media (max-width: 768px) {
+  summary.sidebar-label {
+    padding: 12px 16px;
+  }
+
+  .sidebar-label__chevron {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .sidebar-nav {
@@ -1486,76 +1584,3 @@ a.playground-banner,
   margin-top: 4px;
 }
 
-/* --- Version support indicators --- */
-.version-support {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 28px;
-  padding: 5px 5px 5px 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  font-family: var(--font-display);
-  box-shadow: var(--shadow-xs);
-}
-
-.version-support__label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-right: 4px;
-  white-space: nowrap;
-}
-
-.version-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px 3px 8px;
-  border-radius: 100px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: default;
-  user-select: none;
-  color: var(--color-text-muted);
-  letter-spacing: 0.02em;
-}
-
-.version-check input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--color-border);
-  border-radius: 3px;
-  cursor: default;
-  flex-shrink: 0;
-  position: relative;
-  margin: 0;
-}
-
-.version-check input[type="checkbox"]:checked {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-}
-
-.version-check input[type="checkbox"]:checked::after {
-  content: '';
-  position: absolute;
-  left: 2px;
-  top: -1px;
-  width: 5px;
-  height: 9px;
-  border: 2px solid #fff;
-  border-top: none;
-  border-left: none;
-  transform: rotate(45deg);
-}
-
-.version-check--active {
-  color: var(--color-primary-darker);
-  background: var(--color-primary-subtle);
-}

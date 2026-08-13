@@ -1,25 +1,56 @@
 ---
-import { nav } from '../data/nav';
+import { navFor, type Version } from '../data/nav';
+import VersionSelect from './VersionSelect.astro';
 
 interface Props {
-	/** Current doc slug (entry.id), e.g. 'core' or 'adapters/esbuild'. */
+	version: Version;
+	/** Current doc slug without its version prefix, e.g. 'core' or 'adapters/esbuild'. */
 	activeDoc: string;
+	otherUrl: string;
+	/** Unique per Sidebar instance; the layout renders one for desktop and one for mobile. */
+	instance: string;
 }
 
-const { activeDoc } = Astro.props;
+const { version, activeDoc, otherUrl, instance } = Astro.props;
+
+// Every doc page is listed in its version's nav, so exactly one section matches — which also
+// keeps the `name` accordion valid, since only the first open member of a group survives parsing.
+const holdsActive = (items: { id: string; href?: string }[]) =>
+	items.some((item) => !item.href && item.id === activeDoc);
 ---
 
+<VersionSelect version={version} otherUrl={otherUrl} id={`version-select-${instance}`} />
+
 {
-	nav.map((group) => (
-		<div class="sidebar-section">
-			<div class="sidebar-label">{group.section}</div>
+	navFor(version).map((group) => (
+		<details
+			class="sidebar-section"
+			name={`sidebar-section-${instance}`}
+			open={holdsActive(group.items)}
+		>
+			<summary class="sidebar-label">
+				<span>{group.section}</span>
+				<svg class="sidebar-label__chevron" viewBox="0 0 16 16" aria-hidden="true">
+					<path
+						d="M4 6l4 4 4-4"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.75"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+				</svg>
+			</summary>
 			<nav class="sidebar-nav">
 				{group.items.map((item) => (
-					<a href={`/docs/${item.id}/`} class={activeDoc === item.id ? 'active' : ''}>
+					<a
+						href={item.href ?? `/docs/${version}/${item.id}/`}
+						class={!item.href && activeDoc === item.id ? 'active' : ''}
+					>
 						{item.label}
 					</a>
 				))}
 			</nav>
-		</div>
+		</details>
 	))
 }

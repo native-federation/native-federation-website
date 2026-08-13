@@ -1,7 +1,19 @@
+import { navV3 } from './nav.v3';
+import { navV4 } from './nav.v4';
+
+export const VERSIONS = ['v4', 'v3'] as const;
+export type Version = (typeof VERSIONS)[number];
+
+export const DEFAULT_VERSION: Version = 'v4';
+/** Present in every version tree, so it is always a safe landing page. */
+export const VERSION_ROOT = 'getting-started';
+
 export interface NavItem {
 	label: string;
-	/** Doubles as the clean URL relative to /docs/ (rendered as `/docs/${id}/`). */
+	/** Version-relative clean URL (rendered as `/docs/${version}/${id}/`). */
 	id: string;
+	/** Absolute href for cross-version links; when set, `id` is not used to build the URL. */
+	href?: string;
 }
 
 export interface NavSection {
@@ -9,99 +21,9 @@ export interface NavSection {
 	items: NavItem[];
 }
 
-// The docs sidebar tree, moved verbatim from renderDocsSidebar() in components.js.
-export const nav: NavSection[] = [
-	{
-		section: 'Getting Started',
-		items: [
-			{ label: 'Overview', id: 'getting-started' },
-			{ label: 'Architecture Overview', id: 'architecture' },
-			{ label: 'The Mental Model', id: 'mental-model' },
-			{ label: 'Terminology', id: 'terminology' },
-			{ label: 'Tutorial', id: 'tutorial' },
-			{ label: 'Coming from Module Federation?', id: 'example' },
-			{ label: 'v3 vs v4', id: 'v3-vs-v4' },
-			{ label: 'Migration to v4', id: 'migration' },
-		],
-	},
-	{
-		section: 'Runtime / Orchestrator',
-		items: [
-			{ label: 'Overview', id: 'orchestrator' },
-			{ label: 'Getting Started', id: 'orchestrator/getting-started' },
-			{ label: 'Architecture', id: 'orchestrator/architecture' },
-			{ label: 'Configuration', id: 'orchestrator/configuration' },
-			{ label: 'Version Resolver', id: 'orchestrator/version-resolver' },
-			{ label: 'Dependency Pooling', id: 'orchestrator/pooling' },
-			{ label: 'Event Registry', id: 'orchestrator/event-registry' },
-			{ label: 'Node.js / SSR', id: 'orchestrator/node' },
-			{ label: 'Module Federation', id: 'orchestrator/module-federation' },
-			{ label: 'Security & SRI', id: 'orchestrator/security' },
-			{ label: 'Legacy Runtime', id: 'runtime' },
-		],
-	},
-	{
-		section: 'Core',
-		items: [
-			{ label: 'Overview', id: 'core' },
-			{ label: 'Getting Started', id: 'core/getting-started' },
-			{ label: 'federation.config.mjs', id: 'core/configuration' },
-			{ label: 'Sharing Dependencies', id: 'core/sharing' },
-			{ label: 'Build Process', id: 'core/build-process' },
-			{ label: 'Caching', id: 'core/caching' },
-			{ label: 'Build Adapters', id: 'core/build-adapters' },
-			{ label: 'Build Artifacts', id: 'core/artifacts' },
-			{ label: 'API Reference', id: 'core/api-reference' },
-		],
-	},
-	{
-		section: 'Adapters',
-		items: [
-			{ label: 'Overview', id: 'adapters' },
-			{ label: 'Build Your Own', id: 'adapters/build-your-own' },
-		],
-	},
-	{
-		section: 'esbuild Adapter',
-		items: [
-			{ label: 'Overview', id: 'adapters/esbuild' },
-			{ label: 'Getting Started', id: 'adapters/esbuild/getting-started' },
-			{ label: 'Builder', id: 'adapters/esbuild/builder' },
-			{ label: 'Adapter Configuration', id: 'adapters/esbuild/configuration' },
-			{ label: 'React & CJS Interop', id: 'adapters/esbuild/react-interop' },
-		],
-	},
-	{
-		section: 'Angular Adapter',
-		items: [
-			{ label: 'Overview', id: 'angular-adapter' },
-			{ label: 'Getting Started', id: 'angular-adapter/getting-started' },
-			{ label: 'Builder', id: 'angular-adapter/builder' },
-			{ label: 'Schematics', id: 'angular-adapter/schematics' },
-			{ label: 'Angular Config', id: 'angular-adapter/configuration' },
-			{ label: 'Runtime', id: 'angular-adapter/runtime' },
-			{ label: 'Runtime (v3)', id: 'angular-adapter/runtime-v3' },
-			{ label: 'SSR & Hydration', id: 'angular-adapter/ssr' },
-			{ label: 'I18N', id: 'angular-adapter/i18n' },
-			{ label: 'Localization', id: 'angular-adapter/localization' },
-			{ label: 'Custom Builder', id: 'angular-adapter/custom-builder' },
-			{ label: 'Migration to v4', id: 'angular-adapter/migration-v4' },
-		],
-	},
-	{
-		section: 'Guides',
-		items: [
-			{ label: 'SSR & Hydration', id: 'ssr-hydration' },
-			{ label: 'Native & Module Federation', id: 'native-and-module-federation' },
-			{ label: 'Component Libs', id: 'component-libs' },
-		],
-	},
-	{
-		section: 'Reference',
-		items: [
-			{ label: 'FAQ', id: 'faq' },
-			{ label: 'Blog Series', id: 'documentation' },
-			{ label: 'Architecture Workshop', id: 'workshop' },
-		],
-	},
-];
+const trees: Record<Version, NavSection[]> = { v3: navV3, v4: navV4 };
+
+export const navFor = (version: Version): NavSection[] => trees[version];
+
+export const isVersion = (value: string): value is Version =>
+	(VERSIONS as readonly string[]).includes(value);
