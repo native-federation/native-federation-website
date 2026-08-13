@@ -12,14 +12,30 @@ interface Props {
 }
 
 const { version, activeDoc, otherUrl, instance } = Astro.props;
+
+// Every doc page is listed in its version's nav, so exactly one section matches.
+const holdsActive = (items: { id: string; href?: string }[]) =>
+	items.some((item) => !item.href && item.id === activeDoc);
 ---
 
 <VersionSelect version={version} otherUrl={otherUrl} id={`version-select-${instance}`} />
 
 {
 	navFor(version).map((group) => (
-		<div class="sidebar-section">
-			<div class="sidebar-label">{group.section}</div>
+		<details class="sidebar-section" open={holdsActive(group.items)}>
+			<summary class="sidebar-label">
+				<span>{group.section}</span>
+				<svg class="sidebar-label__chevron" viewBox="0 0 16 16" aria-hidden="true">
+					<path
+						d="M4 6l4 4 4-4"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.75"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+				</svg>
+			</summary>
 			<nav class="sidebar-nav">
 				{group.items.map((item) => (
 					<a
@@ -30,6 +46,6 @@ const { version, activeDoc, otherUrl, instance } = Astro.props;
 					</a>
 				))}
 			</nav>
-		</div>
+		</details>
 	))
 }

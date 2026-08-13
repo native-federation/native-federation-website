@@ -10,7 +10,7 @@ interface Props {
 }
 
 const { version, otherUrl, id } = Astro.props;
-const LABELS: Record<Version, string> = { v4: 'v4 (current)', v3: 'v3 (legacy)' };
+const LABELS: Record<Version, string> = { v4: 'v4 (current)', v3: 'v3' };
 ---
 
 <div class="version-select">
