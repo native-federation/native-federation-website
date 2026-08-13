@@ -13,7 +13,8 @@ interface Props {
 
 const { version, activeDoc, otherUrl, instance } = Astro.props;
 
-// Every doc page is listed in its version's nav, so exactly one section matches.
+// Every doc page is listed in its version's nav, so exactly one section matches — which also
+// keeps the `name` accordion valid, since only the first open member of a group survives parsing.
 const holdsActive = (items: { id: string; href?: string }[]) =>
 	items.some((item) => !item.href && item.id === activeDoc);
 ---
@@ -22,7 +23,11 @@ const holdsActive = (items: { id: string; href?: string }[]) =>
 
 {
 	navFor(version).map((group) => (
-		<details class="sidebar-section" open={holdsActive(group.items)}>
+		<details
+			class="sidebar-section"
+			name={`sidebar-section-${instance}`}
+			open={holdsActive(group.items)}
+		>
 			<summary class="sidebar-label">
 				<span>{group.section}</span>
 				<svg class="sidebar-label__chevron" viewBox="0 0 16 16" aria-hidden="true">
