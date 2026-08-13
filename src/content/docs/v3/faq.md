@@ -14,7 +14,7 @@ Native Federation needs to prepare all shared packages as EcmaScript modules. Th
 
 If preparation fails, it's typically because:
 
-- **Node-only package:** You're trying to share a package intended for Node.js that can't be converted to ESM. If you use `shareAll` and the package is in your `dependencies`, move it to `devDependencies` or add it to the `skip` section of your `federation.config.(m)js`.
+- **Node-only package:** You're trying to share a package intended for Node.js that can't be converted to ESM. If you use `shareAll` and the package is in your `dependencies`, move it to `devDependencies` or add it to the `skip` section of your `federation.config.js`.
 - **Incompatible code:** The package contains code that esbuild can't convert to ESM. This shouldn't happen with packages built using the Angular CLI or Nx (ng-packagr). If it does, please report the specific package.
 
 ## How do I deal with CommonJS packages?
@@ -28,7 +28,7 @@ For older CommonJS packages, Native Federation automatically converts them to ES
 Usually, entry points are auto-detected. If a package doesn't follow standard conventions, you can provide the entry point manually:
 
 ```js
-export default withNativeFederation({
+module.exports = withNativeFederation({
   shared: {
     ...shareAll({
       singleton: true,

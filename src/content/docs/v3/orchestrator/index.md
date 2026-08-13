@@ -1,52 +1,75 @@
 # Orchestrator
 
-> A runtime micro-frontend orchestrator that loads Native Federation remotes into any web page, with advanced dependency resolution and cross-reload caching.
+> The v4 host runtime, used as an opt-in on v3 — semver-aware version resolution, cross-reload caching and a drop-in bundle for HTML-only hosts.
 
-> **Note:** **Fully compatible with v3 and v4.**
-> The orchestrator package ships with Native Federation v4, but v3 and v4 share the same runtime contract (`remoteEntry.json`), so it loads v3 and v4 remotes side by side.
+`@softarc/native-federation-orchestrator` is the browser runtime that ships with Native Federation **v4**. On the v3 line the default runtime is the [classic runtime](../runtime/index.md) — but the orchestrator reads the same `remoteEntry.json` contract, so a v3 host can opt into it without rebuilding its remotes.
 
-The Orchestrator — `@softarc/native-federation-orchestrator` — is the next-generation browser runtime for Native Federation. It replaces the [classic Runtime](../runtime/index.md) (`@softarc/native-federation-runtime`) as the way to load remotes on the host, whether the host is a SPA, a plain HTML page, or a server-rendered application (PHP, Rails, Java, …).
+This page covers what that buys you and what it costs. The full reference lives in the v4 docs; every link below points there.
 
-## What makes it different
+## When it is worth opting in
 
-Compared to the classic runtime, the orchestrator adds five things:
+The v3 runtime deduplicates a shared dependency only when two remotes declare a byte-identical `version`. Everything else gets its own copy under its own scope. Opt into the orchestrator when that is the problem you have:
 
-- **Semver-aware version resolution.** When remotes disagree on a shared dependency version, the orchestrator picks the most compatible version per share-scope and falls back to scoped downloads only when it has to. See [Version Resolver](version-resolver.md).
-- **Cross-reload caching.** Resolved `remoteEntry.json` metadata and shared externals can be persisted in `sessionStorage` or `localStorage`, so server-rendered hosts that refresh on every navigation don't re-download what the browser already has.
-- **A zero-setup quickstart bundle.** For HTML-only hosts, a single `<script>` tag reads a manifest out of the DOM and wires everything up — no npm install, no build step.
-- **Built-in Trusted Types & SRI.** The two DOM sinks (the injected `<script type="importmap">` and the dynamic `import()`) flow through a vetted Trusted Types policy, and every artifact the orchestrator touches — the manifest, every `remoteEntry.json`, every JavaScript module — can be pinned against an SRI hash. See [Security](security.md).
-- **Server-side orchestration.** The same pipeline runs in Node through `@softarc/native-federation-orchestrator/node`, so SSR / edge-render hosts use the same version resolver, SRI verification and dynamic-init flow as the browser. See [Node.js / SSR](/docs/v4/orchestrator/node/).
+- **Remotes disagree on versions.** The orchestrator compares the declared semver ranges and elects one version per package instead of shipping several. See [Version Resolver](/docs/v4/orchestrator/version-resolver/).
+- **Repeat visits re-fetch every manifest.** The v3 runtime holds its registry in memory only, so a full page load starts from zero. The orchestrator can persist resolved metadata in `sessionStorage` or `localStorage` — this matters most for server-rendered hosts that reload on every navigation. See [Configuration → Storage](/docs/v4/orchestrator/configuration/#storage).
+- **The host is not a SPA.** A single `<script>` tag plus a manifest in the DOM wires up a plain HTML page — no npm install, no bundler. See [Getting Started](/docs/v4/orchestrator/getting-started/).
+- **You need a CSP-friendly runtime with SRI.** Both DOM sinks go through a vetted Trusted Types policy, and artifacts can be pinned against hashes. See [Security & SRI](/docs/v4/orchestrator/security/).
 
-The orchestrator stays fully compatible with the Native Federation ecosystem — any remote built with `@softarc/native-federation` (v3 or v4) that emits a standard `remoteEntry.json` can be loaded by it.
+If none of those apply, the v3 runtime is the simpler choice and is what the Angular adapter wires up for you.
 
-## SSR
+## What v3 remotes cannot use
 
-On **v4** the Orchestrator runs server-side too, so remote modules **execute during SSR itself** — not just client-side after the page arrives. The [`/node` entry](/docs/v4/orchestrator/node/) installs a `module.register()` loader hook and bridges the host's shared singletons (`hostInstances`) so a remote's `@angular/core` resolves to the host's single instance. For Angular, the adapter's `node-preload` wires this for you — see [Angular Adapter → SSR & Hydration](/docs/v4/angular-adapter/ssr/). For the general picture see [SSR & Hydration](../ssr-hydration.md).
+A v3 build emits a subset of what v4 emits. The optional fields v4 added — `$version`, `chunks`, `integrity`, and the per-dependency `shareScope` and `pool` tags — are simply absent from a v3 `remoteEntry.json`. The orchestrator accepts that input, but the features driven by those fields have nothing to act on:
 
-> On v3 the Orchestrator was browser-only; a server-rendered host worked but loaded its remotes client-side after the page arrived. True SSR execution is a v4 capability via the `/node` entry.
+| Feature | On v3-built remotes |
+| --- | --- |
+| Semver-range resolution | Works — driven by `packageName`, `version`, `requiredVersion`, `singleton` and `strictVersion`, all of which v3 emits. |
+| Persistent caching | Works — it caches the fetched `remoteEntry.json` regardless of which major produced it. |
+| [Share scopes](/docs/v4/orchestrator/version-resolver/#share-scopes) | Not available — the scope is declared per shared dependency at build time, so every v3 dependency lands in the global scope. |
+| [Dependency pooling](/docs/v4/orchestrator/pooling/) | Limited — build-declared pool tags are absent. |
+| Module-level [SRI](/docs/v4/orchestrator/security/#subresource-integrity) | Not available from the build — a v3 `remoteEntry.json` carries no `integrity` map. You can still pin the manifest and each `remoteEntry.json` by hand. |
+| [Node.js / SSR execution](/docs/v4/orchestrator/node/) | Browser-only on the v3 line. A server-rendered host works, but its remotes load client-side after the page arrives. |
 
-> **Note:** New to Native Federation? Start with the [Architecture Overview](../architecture.md) and [Mental Model](../mental-model.md). For a focused comparison between the Orchestrator and the deprecated Classic Runtime — semver resolution, caching, what changes when you move across — see [v3 vs v4](/docs/v4/v3-vs-v4/).
+## Adopting it on a v3 host
 
-## In this section
+The orchestrator replaces the runtime import in your bootstrap; the build side does not change.
 
-- [Getting Started](getting-started.md) — the quickstart bundle, the event registry, and writing your own orchestrator script.
-- [Architecture](architecture.md) — the manifest, `remoteEntry.json`, the internal caches, and how the final import map is built.
-- [Configuration](configuration.md) — the full `initFederation` options reference: host entry, import-map implementation, logging, modes and storage.
-- [Version Resolver](version-resolver.md) — how shared dependencies are resolved across scopes, the `shareScope` mechanism, the strict scope, and dynamic init.
-- [Dependency Pooling](pooling.md) — the opt-in feature that keeps a coupled package family (`@angular/*`, `react`/`react-dom`, your own design system) from being assembled out of builds that never shipped together.
-- [Event Registry](event-registry.md) — the `window.__NF_REGISTRY__` event bus: race-free init, cross-MFE resources, and event streams.
-- [Node.js / SSR](/docs/v4/orchestrator/node/) — `initNodeFederation`, the `module.register()` loader hook, and migration from `@softarc/native-federation-node`.
-- [Module Federation](module-federation.md) — `createGetShared`, the bridge that hands Native Federation's resolved singletons to webpack Module Federation's `shared` config.
-- [Security & Subresource Integrity](security.md) — CSP setup for the built-in Trusted Types policy and the SRI trust chain (manifest → `remoteEntry.json` → modules).
+```
+npm i @softarc/native-federation-orchestrator
+```
 
-## Legacy Runtime
+```ts
+// src/main.ts — was: import { initFederation } from '@softarc/native-federation-runtime';
+import { initFederation } from '@softarc/native-federation-orchestrator';
 
-The classic runtime — `@softarc/native-federation-runtime` — was Native Federation's original browser runtime: one version of each shared dependency per scope, no semver resolution, no persistent caching. It shipped through v3 and v4 (up to `4.1.2`) and is now **deprecated and end-of-life** on npm, with the Orchestrator named as its replacement. Existing installs keep working — same `remoteEntry.json` contract — but there will be no further fixes or features.
+initFederation('/assets/federation.manifest.json')
+  .then(({ loadRemoteModule }) => import('./bootstrap').then(m => m.bootstrap(loadRemoteModule)))
+  .catch(err => console.error(err));
+```
 
-Its API pages have been removed: they documented an `initFederation` / `loadRemoteModule` pair close enough to the Orchestrator's to be mistaken for it, which is the opposite of helpful. [Legacy Runtime](../runtime/index.md) is what remains — a summary of the gaps that motivated the Orchestrator. To move off, see [Migration to v4](/docs/v4/migration/) and [v3 vs v4](/docs/v4/v3-vs-v4/).
+The shapes differ in one way that matters: the orchestrator's `initFederation` resolves to an object carrying `loadRemoteModule`, rather than exposing a module-level function that reads global state. Thread that loader through your app instead of importing it. The full option set — logger, storage, modes, import-map implementation — is in [Configuration](/docs/v4/orchestrator/configuration/).
+
+On Angular, keep using the v3 adapter for the build and swap only the runtime call in `main.ts`. The adapter's own runtime re-exports are the classic runtime's, so import the orchestrator directly rather than from `@angular-architects/native-federation`.
+
+## Full reference
+
+The orchestrator's documentation lives in the v4 tree:
+
+| Page | What it covers |
+| --- | --- |
+| [Getting Started](/docs/v4/orchestrator/getting-started/) | The quickstart bundle, the event registry, writing your own init script. |
+| [Architecture](/docs/v4/orchestrator/architecture/) | The manifest, the internal caches, how the import map is built. |
+| [Configuration](/docs/v4/orchestrator/configuration/) | Every `initFederation` option. |
+| [Version Resolver](/docs/v4/orchestrator/version-resolver/) | Resolution across scopes, the strict scope, dynamic init. |
+| [Dependency Pooling](/docs/v4/orchestrator/pooling/) | Keeping a coupled package family assembled from one build. |
+| [Event Registry](/docs/v4/orchestrator/event-registry/) | `window.__NF_REGISTRY__` — race-free init, cross-MFE resources. |
+| [Module Federation](/docs/v4/orchestrator/module-federation/) | `createGetShared`, the bridge to webpack MF's `shared` config. |
+| [Security & SRI](/docs/v4/orchestrator/security/) | CSP setup for the Trusted Types policy and the SRI trust chain. |
 
 ## Example repositories
 
-- [Vanilla JS/HTML host](https://github.com/Aukevanoost/native-federation-examples/tree/orchestrator) — the orchestrator inside a plain HTML page.
 - [Angular host (v3)](https://github.com/Aukevanoost/native-federation-examples-ng) — the orchestrator inside an Angular monorepo using Native Federation v3.
-- [Angular host (v4)](https://github.com/Aukevanoost/native-federation-examples-ng/tree/v4) — same, using Native Federation v4.
+- [Vanilla JS/HTML host](https://github.com/Aukevanoost/native-federation-examples/tree/orchestrator) — the orchestrator inside a plain HTML page.
+- [Angular host (v4)](https://github.com/Aukevanoost/native-federation-examples-ng/tree/v4) — the same Angular setup on v4.
+
+Moving the whole stack rather than just the runtime? See [Migration to v4](/docs/v4/migration/).

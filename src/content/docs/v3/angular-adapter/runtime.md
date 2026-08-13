@@ -1,6 +1,6 @@
-# Runtime (v3)
+# Runtime
 
-> The v3 runtime side of the Angular adapter — a straight re-export of the classic runtime: initFederation, loadRemoteModule, lazy routes and lazy remote registration.
+> The runtime side of the v3 Angular adapter — a straight re-export of the classic runtime: initFederation, loadRemoteModule, lazy routes and lazy remote registration.
 
 On v3, `@angular-architects/native-federation` adds nothing of its own to the runtime. Its entry point is one line:
 
@@ -8,9 +8,9 @@ On v3, `@angular-architects/native-federation` adds nothing of its own to the ru
 export * from "@softarc/native-federation-runtime";
 ```
 
-So every runtime symbol you import from the adapter — `initFederation`, `loadRemoteModule`, `fetchAndRegisterRemote`, the `ImportMap` types — _is_ the classic runtime's, unchanged. This page documents that surface as Angular hosts use it.
+So every runtime symbol you import from the adapter — `initFederation`, `loadRemoteModule`, `fetchAndRegisterRemote`, the `ImportMap` types — _is_ the classic runtime's, unchanged. This page documents that surface as Angular hosts use it; the package's own pages are under [Runtime](../runtime/index.md).
 
-> **Warning:** `@softarc/native-federation-runtime` has reached **end-of-life** and is no longer maintained. On v4 the adapter bridges to the [orchestrator](../orchestrator/index.md) instead, and its API is deliberately different — see [Runtime (v4)](/docs/v4/angular-adapter/runtime/) and [Migration to v4](/docs/v4/angular-adapter/migration-v4/). This page exists for hosts still on the v3 line.
+> **Note:** On v4 the adapter bridges to the [orchestrator](../orchestrator/index.md) instead, and its API is deliberately different — see [Runtime (v4)](/docs/v4/angular-adapter/runtime/) and [Migration to v4](/docs/v4/angular-adapter/migration-v4/). A v3 host can also opt into the orchestrator on its own; see [Orchestrator](../orchestrator/index.md).
 
 **On this page**
 
@@ -61,6 +61,7 @@ function initFederation(
 
 interface InitFederationOptions {
   cacheTag?: string;
+  deployUrl?: string;
 }
 ```
 
@@ -74,7 +75,7 @@ The remotes-map key is the name you will pass to `loadRemoteModule`. It does **n
 
 ### Cache busting with `cacheTag`
 
-`cacheTag` is the only option the classic runtime accepts. Set it and the runtime appends `?t=<cacheTag>` (or `&t=…` when the URL already has a query string) to _every_ metadata request — the manifest, the host's `remoteEntry.json`, and each remote's:
+Set `cacheTag` and the runtime appends a `t=<cacheTag>` query parameter to _every_ metadata request — the manifest, the host's `remoteEntry.json`, and each remote's:
 
 ```ts
 initFederation("/assets/federation.manifest.json", { cacheTag: BUILD_HASH });
@@ -82,16 +83,20 @@ initFederation("/assets/federation.manifest.json", { cacheTag: BUILD_HASH });
 
 Use a deployment-stable value — a build hash, a git SHA, a CI run ID. It only affects metadata fetches; module bundles are loaded through the import map and carry their own hashed filenames.
 
-There is no persistent cache, no logger injection and no storage layer. Those arrived with the [orchestrator](../orchestrator/configuration.md).
+### Serving the host's bundles elsewhere: `deployUrl`
+
+By default the host's own `remoteEntry.json` is fetched from `./remoteEntry.json`, relative to the page. Set `deployUrl` when the shell's build output lives somewhere else — a CDN or a sub-path — and it becomes both the fetch location and the prefix for the host's shared-dependency URLs. See [`initFederation` → deployUrl](../runtime/init-federation.md#deploy-url).
+
+There is no persistent cache, no logger injection and no storage layer on this runtime. Those arrived with the [orchestrator](../orchestrator/index.md).
 
 ### Remote load errors
 
-If a single remote fails (network error, 404, invalid JSON), `initFederation` does **not** reject. It logs to `console.error` and continues with the remotes that did load, on the rationale that one flaky remote shouldn't take the host down. For strict behaviour, call `fetchAndRegisterRemotes` yourself:
+If a single remote fails (network error, 404, invalid JSON), `initFederation` does **not** reject. It logs to `console.error` and continues with the remotes that did load, on the rationale that one flaky remote shouldn't take the host down. For strict behaviour, call `processRemoteInfos` yourself:
 
 ```ts
-import { fetchAndRegisterRemotes } from "@angular-architects/native-federation";
+import { processRemoteInfos } from "@angular-architects/native-federation";
 
-await fetchAndRegisterRemotes(
+await processRemoteInfos(
   { mfe1: "http://localhost:4201/remoteEntry.json" },
   { throwIfRemoteNotFound: true },
 );
@@ -148,7 +153,7 @@ export const APP_ROUTES: Routes = [
 
 ### Fallbacks
 
-`loadRemoteModule` can fail three ways: unknown remote, unknown exposed module, or a failed dynamic import. All three reject by default. Pass a `fallback` and it resolves with that instead, logging the error to `console.error`:
+`loadRemoteModule` can fail three ways: unknown remote, unknown exposed module, or a failed dynamic import. All three reject by default. Pass a `fallback` and the first two resolve with it instead, logging the error to `console.error` — a failing `import()` still rejects, so wrap the call if that case must degrade too:
 
 ```ts
 loadRemoteModule({
@@ -175,7 +180,7 @@ const mod = await loadRemoteModule({
 
 This is the v3 answer to plugin-style hosts where the remote list is only known after user interaction. Registration happens once per base URL; later calls reuse the entry. Omit `remoteName` and the runtime derives it from the registry lookup by base URL, falling back to the `name` in the fetched `remoteEntry.json`; if neither resolves it throws `unexpected arguments: Please pass remoteName or remoteEntry`.
 
-On v4 this single call is replaced by the more explicit [`initRemoteEntry`](runtime.md#dynamic-remotes), which also handles semver re-resolution for the late remote's shared dependencies. The v3 form still works on v4, deprecated.
+On v4 this single call is replaced by the more explicit [`initRemoteEntry`](/docs/v4/orchestrator/version-resolver/#dynamic-init), which also handles semver re-resolution for the late remote's shared dependencies.
 
 ## The Federation Manifest
 
@@ -197,14 +202,14 @@ Swap it per environment by deploying a different `federation.manifest.json` alon
 | Adapter runtime export | `export * from '@softarc/native-federation-runtime'` | Own `initFederation` bridging to the orchestrator |
 | `initFederation` resolves to | `ImportMap` | `NativeFederationResult` — the loader API |
 | `loadRemoteModule` | Module-level import, always available | Taken off the resolved result and threaded through DI; the top-level import is deprecated |
-| Options | `cacheTag` only | Full [`NFOptions`](../orchestrator/configuration.md) — logger, storage, modes, SSE, profile |
-| Version handling | One URL per scope, no range comparison | [Semver-range resolution](../orchestrator/version-resolver.md) and share scopes |
-| Caching between loads | None | Pluggable [storage](../orchestrator/configuration.md#storage) |
-| Adding a remote late | `loadRemoteModule({ remoteEntry })` | [`initRemoteEntry`](runtime.md#dynamic-remotes) |
+| Options | `cacheTag`, `deployUrl` | Full [`NFOptions`](/docs/v4/orchestrator/configuration/) — logger, storage, modes, SSE, profile |
+| Version handling | One URL per `packageName@version`, no range comparison | [Semver-range resolution](/docs/v4/orchestrator/version-resolver/) and share scopes |
+| Caching between loads | None | Pluggable [storage](/docs/v4/orchestrator/configuration/#storage) |
+| Adding a remote late | `loadRemoteModule({ remoteEntry })` | [`initRemoteEntry`](/docs/v4/orchestrator/version-resolver/#dynamic-init) |
 
 ## Related
 
-- [Runtime (v4)](/docs/v4/angular-adapter/runtime/) — the current runtime page.
+- [Runtime](../runtime/index.md) — the runtime package itself, in full.
+- [Runtime (v4)](/docs/v4/angular-adapter/runtime/) — the v4 adapter's very different runtime surface.
 - [Migration to v4](/docs/v4/angular-adapter/migration-v4/) — the upgrade path, including the bootstrap rewrite.
-- [Legacy Runtime](../runtime/index.md) — the classic runtime package itself, and why it was superseded.
 - [v3 vs v4](/docs/v4/v3-vs-v4/) — every breaking change between the lines, in one place.

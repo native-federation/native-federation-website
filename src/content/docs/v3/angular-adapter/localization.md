@@ -8,8 +8,8 @@ Angular ships per-locale data (numbers, dates, plural rules) under `@angular/com
 
 Since adapter v20.0.6, locale data loading is automatic when `features.ignoreUnusedDeps` is on:
 
-```ts
-export default withNativeFederation({
+```js
+module.exports = withNativeFederation({
   // ...
   features: {
     ignoreUnusedDeps: true,
@@ -17,22 +17,22 @@ export default withNativeFederation({
 });
 ```
 
-The core scans your entry points and only ships the locale files you actually import — no manual list, no surprises. New v4 projects get this enabled by default.
+The core scans your entry points and only ships the locale files you actually import — no manual list, no surprises. The `init` schematic writes this flag into every generated `federation.config.js`.
 
-How does it work? `withNativeFederation` in the Angular adapter strips every `@angular/common/locales/*` entry from the _shared_ map when `ignoreUnusedDeps` is off. With the flag on, locale entries are kept and the unused-deps shaking does the right thing on a per-entry basis.
+How does it work? `withNativeFederation` strips every `@angular/common/locales*` entry from the _shared_ map when `ignoreUnusedDeps` is off — that is the flag's default, so a config written by hand without it loses them. With the flag on, locale entries are kept and the unused-deps shaking does the right thing on a per-entry basis.
 
 ## Fallback: `shareAngularLocales`
 
 Before v20.0.6, or any time you can't enable `ignoreUnusedDeps`, declare the locales explicitly:
 
-```ts
-import {
+```js
+const {
   withNativeFederation,
   shareAll,
   shareAngularLocales,
-} from '@angular-architects/native-federation/config';
+} = require('@angular-architects/native-federation/config');
 
-export default withNativeFederation({
+module.exports = withNativeFederation({
   name: 'mfe1',
   shared: {
     ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
@@ -58,7 +58,7 @@ shareAngularLocales(keys: string[], opts?: {
 
 ## Automatic Shell Reloading
 
-The federation dev server pushes Server-Sent Events when a remote finishes (re)building, so the shell can refresh without a manual page reload. See the [Builder → Dev Server](/docs/v4/angular-adapter/builder/#dev-server--hot-reload) section for the wiring, and the article below for the full pattern:
+The federation dev server pushes Server-Sent Events when a remote finishes (re)building, so the shell can refresh without a manual page reload. See [Builder → Dev server & hot reload](builder.md#build-notifications) for the wiring, and the article below for the full pattern:
 
 ### Fixing DX Friction: Automatic Shell Reloading
 
@@ -69,5 +69,5 @@ How to subscribe to the federation build-notification stream and trigger a host 
 ## Related
 
 - [I18N](i18n.md) — Angular's `i18n` + translation pipeline integration.
-- [Angular Config → shareAngularLocales](/docs/v4/angular-adapter/configuration/#shareangularlocales--locale-handling).
-- [Core configuration → features](/docs/v4/core/configuration/#feature-flags) — the canonical reference for `ignoreUnusedDeps`.
+- [Angular Config → shareAngularLocales](configuration.md#shareangularlocales) — the helper's place in the config surface.
+- [Core → federation.config.js](../core/configuration.md#feature-flags) — the canonical reference for `ignoreUnusedDeps`.

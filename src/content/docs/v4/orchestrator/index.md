@@ -43,7 +43,7 @@ On **v4** the Orchestrator runs server-side too, so remote modules **execute dur
 
 The classic runtime — `@softarc/native-federation-runtime` — was Native Federation's original browser runtime: one version of each shared dependency per scope, no semver resolution, no persistent caching. It shipped through v3 and v4 (up to `4.1.2`) and is now **deprecated and end-of-life** on npm, with the Orchestrator named as its replacement. Existing installs keep working — same `remoteEntry.json` contract — but there will be no further fixes or features.
 
-Its API pages have been removed: they documented an `initFederation` / `loadRemoteModule` pair close enough to the Orchestrator's to be mistaken for it, which is the opposite of helpful. [Legacy Runtime](../runtime/index.md) is what remains — a summary of the gaps that motivated the Orchestrator. To move off, see [Migration to v4](../migration.md) and [v3 vs v4](../v3-vs-v4.md).
+Its API pages live in the [v3 docs](/docs/v3/runtime/) rather than here: they document an `initFederation` / `loadRemoteModule` pair close enough to the Orchestrator's to be mistaken for it. [Legacy Runtime](../runtime/index.md) is what remains in this tree — a summary of the gaps that motivated the Orchestrator. To move off, see [Migration to v4](../migration.md) and [v3 vs v4](../v3-vs-v4.md).
 
 ## Example repositories
 

@@ -5,26 +5,38 @@ const SITE = 'https://native-federation.com';
 
 const INTRO = `> Native Federation is a browser-native implementation of Module Federation for building Micro Frontends using web standards (ESM + Import Maps). It provides a shared API across build tools (esbuild, Angular CLI, Vite) and a runtime that wires remotes into a host via a generated import map.
 
-This file indexes the Native Federation documentation for LLMs and AI coding tools. Each link points to a standalone markdown version of the corresponding docs page, mirroring the site's folder structure.
+This file indexes the Native Federation documentation for LLMs and AI coding tools. Each link points to a standalone markdown version of the corresponding docs page, mirroring the site's folder structure.`;
 
-The ecosystem is split into four layers:
+const LAYERS_V4 = `The ecosystem is split into four layers:
 
-- **Core** (\`@softarc/native-federation\`) — the tooling-agnostic builder that consumes a \`federation.config.js\` and produces a \`remoteEntry.json\` plus an import map.
+- **Core** (\`@softarc/native-federation\`) — the tooling-agnostic builder that consumes a \`federation.config.mjs\` and produces a \`remoteEntry.json\` plus an import map.
 - **Orchestrator** (\`@softarc/native-federation-orchestrator\`) — the host-side runtime: version negotiation across many remotes, caching, and SRI verification.
 - **Adapters** — wire the core into a specific build tool (esbuild, Vite, Angular CLI).
 - **Runtime** (\`@softarc/native-federation-runtime\`) — the classic host runtime the Orchestrator replaces; end-of-life.`;
+
+const LAYERS_V3 = `The v3 ecosystem is split into three layers:
+
+- **Core** (\`@softarc/native-federation@3.x\`) — the tooling-agnostic builder that consumes a \`federation.config.js\` and produces a \`remoteEntry.json\` plus an import map.
+- **Adapters** — wire the core into a specific build tool (Angular CLI, esbuild, Vite).
+- **Runtime** (\`@softarc/native-federation-runtime@3.x\`) — the host-side browser library: it merges every remote's entry into one import map and resolves \`loadRemoteModule()\` against it.
+
+The v4 **Orchestrator** (\`@softarc/native-federation-orchestrator\`) reads the same \`remoteEntry.json\` contract and can be opted into on v3; its reference lives in the v4 tree.`;
 
 const HEADERS: Record<Version, string> = {
 	v4: `# Native Federation (v4)
 
 ${INTRO}
 
+${LAYERS_V4}
+
 Documentation for the previous major is indexed separately at ${SITE}/docs/v3/llms.txt.`,
 	v3: `# Native Federation (v3 — legacy)
 
 ${INTRO}
 
-This index covers the **v3** documentation only, which is frozen. Pages that exist for v4 alone are absent here. The current documentation is indexed at ${SITE}/llms.txt.`,
+${LAYERS_V3}
+
+This index covers the **v3** documentation only. Pages that exist for v4 alone are absent here. The current documentation is indexed at ${SITE}/llms.txt.`,
 };
 
 // Keyed by version-relative page id. Pages without an entry are listed without a suffix,
@@ -64,12 +76,23 @@ const DESCRIPTIONS: Record<string, string> = {
 
 	adapters: 'which adapters exist and when to use each',
 	'adapters/build-your-own': 'implement `NFBuildAdapter` for a new bundler',
+	'adapters/esbuild': 'the framework-agnostic reference build adapter',
+	'adapters/esbuild/getting-started': 'a complete build script for a host and a remote',
+	'adapters/esbuild/builder': 'the adapter-provided builder',
+	'adapters/esbuild/configuration': 'every field on the adapter config',
 	'adapters/esbuild/react-interop': 'working with CommonJS and React ecosystems',
 
+	'angular-adapter': 'the builder, schematics and helpers that integrate with the Angular CLI',
+	'angular-adapter/getting-started': 'scaffold a host and a remote with `ng add`',
 	'angular-adapter/builder': 'the Angular CLI builder',
 	'angular-adapter/schematics': '`ng add` and generators',
+	'angular-adapter/configuration': 'the config entry point and the generated federation config',
 	'angular-adapter/runtime': 'Angular-specific runtime helpers',
+	'angular-adapter/ssr': 'server-side rendering with federated remotes',
 	'angular-adapter/i18n': 'Angular internationalization integration',
+	'angular-adapter/localization': '`@angular/common/locales` data and `shareAngularLocales`',
+	'angular-adapter/custom-builder': 'wrapping the builder factory in your own Architect builder',
+	'angular-adapter/migration-v4': 'the Angular-specific upgrade steps',
 
 	'ssr-hydration': 'general SSR patterns',
 	'native-and-module-federation': 'interop and differences',
@@ -77,6 +100,22 @@ const DESCRIPTIONS: Record<string, string> = {
 	faq: 'common questions and pitfalls',
 	documentation: 'the blog series behind these docs',
 	workshop: 'the architecture workshop material',
+};
+
+// Ids whose page means something different per version. Consulted before DESCRIPTIONS.
+const VERSION_DESCRIPTIONS: Partial<Record<Version, Record<string, string>>> = {
+	v3: {
+		runtime: '`@softarc/native-federation-runtime` — v3\'s default host runtime',
+		'runtime/getting-started': 'install, es-module-shims, the bootstrap split, first remote',
+		'runtime/init-federation': 'manifest URLs, `deployUrl`, `cacheTag`, error behaviour',
+		'runtime/load-remote-module': 'both call forms, lazy registration, fallbacks',
+		'runtime/import-map': 'root imports, per-remote scopes, the externals registry',
+		'runtime/api-reference': 'every export and the global registry',
+		orchestrator: 'the v4 runtime as an opt-in on v3 — what it adds and what v3 builds cannot use',
+		'core/configuration': 'every option on `withNativeFederation`',
+		'core/build-adapters': 'the `BuildAdapter` contract',
+		'core/build-process': 'what `buildForFederation` does, rebuilds, and the bundle cache',
+	},
 };
 
 /**
@@ -98,7 +137,7 @@ export async function buildLlmsTxt(version: Version): Promise<string> {
 			.filter((item) => !item.href && sourceOf.has(item.id))
 			.map((item) => {
 				const url = `${SITE}/docs/${sourceOf.get(item.id)}`;
-				const description = DESCRIPTIONS[item.id];
+				const description = VERSION_DESCRIPTIONS[version]?.[item.id] ?? DESCRIPTIONS[item.id];
 				return `- [${item.label}](${url})${description ? `: ${description}` : ''}`;
 			});
 		return `## ${group.section}\n\n${lines.join('\n')}`;

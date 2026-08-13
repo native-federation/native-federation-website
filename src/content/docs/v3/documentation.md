@@ -17,4 +17,4 @@ The comprehensive article series on Angular Architects covers everything you nee
 - [Working Example](example.md)
 - [Frequently Asked Questions](faq.md)
 - [The Mental Model](mental-model.md)
-- [GitHub Repository](https://github.com/native-federation)
+- [GitHub Repository](https://github.com/angular-architects/module-federation-plugin) — the monorepo the v3 packages are built from

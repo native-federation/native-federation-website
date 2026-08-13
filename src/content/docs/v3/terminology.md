@@ -2,7 +2,7 @@
 
 > Glossary of Native Federation terms — manifest, remoteEntry.json, remote, host, external, exposed module, shared dependency, build adapter and more.
 
-A shared vocabulary for working with Native Federation. The same terms show up across the Core builder, the runtime, the orchestrator, and every adapter — this page is the canonical definition of each one.
+A shared vocabulary for working with Native Federation. The same terms show up across the Core builder, the runtime and every adapter — this page is the canonical definition of each one.
 
 ## Actors
 
@@ -20,15 +20,15 @@ A remote, viewed through the lens of the micro-frontend architecture. The terms 
 
 ### Runtime
 
-The browser library that boots federation on the host — initializes federation (`initFederation`), fetches remote manifests, resolves shared dependencies and exposes `loadRemoteModule`. On v4 that is the Orchestrator; the classic `@softarc/native-federation-runtime` is deprecated and end-of-life. See [Legacy Runtime](runtime/index.md).
+The browser library that boots federation on the host — `@softarc/native-federation-runtime`. It initializes federation (`initFederation`), fetches remote entries, builds the import map and exposes `loadRemoteModule`. See [Runtime](runtime/index.md).
 
 ### Orchestrator
 
-The browser runtime for v4 — `@softarc/native-federation-orchestrator` — which replaces v3's classic Runtime as the way to load remotes on the host. It speaks the same `remoteEntry.json` contract but adds semver-range resolution for shared dependencies and persistent caching of `remoteEntry.json` in `localStorage` or `sessionStorage`. Works in SPAs, plain HTML pages and server-rendered hosts, and on v4 runs during SSR itself through its `/node` entry. See [Orchestrator](orchestrator/index.md).
+`@softarc/native-federation-orchestrator`, the browser runtime that ships with v4. It speaks the same `remoteEntry.json` contract, so a v3 host can opt into it for semver-range resolution and persistent caching of remote entries in `localStorage` or `sessionStorage`. See [Orchestrator](orchestrator/index.md).
 
 ### Build Adapter
 
-A thin shim that plugs a specific bundler (esbuild, Angular CLI, Vite, Rspack, …) into the Core builder. Build adapters implement the `NFBuildAdapter` contract (`setup` / `build` / `dispose`) and let the Core stay bundler-agnostic. See [Build Adapters](/docs/v4/core/build-adapters/) and [Build Your Own Adapter](/docs/v4/adapters/build-your-own/).
+A thin shim that plugs a specific bundler (esbuild, Angular CLI, Vite, …) into the Core builder. A build adapter is a single async function matching the `BuildAdapter` type — it takes entry points and returns the files it emitted — which is what lets the Core stay bundler-agnostic. See [Build Adapters](core/build-adapters.md).
 
 ## Artifacts
 
@@ -41,12 +41,11 @@ interface FederationInfo {
   name: string;
   exposes: ExposesInfo[];
   shared: SharedInfo[];
-  chunks?: Record<string, string[]>;
   buildNotificationsEndpoint?: string;
 }
 ```
 
-For the exact layout of each field see [Build Artifacts](/docs/v4/core/artifacts/).
+For the exact layout of each field see [Build Artifacts](core/artifacts.md).
 
 ### Manifest
 
@@ -65,11 +64,7 @@ Manifests decouple configuration from code: to point a host at different remotes
 
 ### Import Map
 
-A [W3C-standard browser feature](https://html.spec.whatwg.org/multipage/webappapis.html#import-maps) for redirecting bare module specifiers to URLs. Native Federation produces an `importmap.json` alongside `remoteEntry.json` in every build. At runtime, the orchestrator merges the import maps of host and remotes, resolves version conflicts, and injects the result into the page so imports like `@angular/core` resolve to the single chosen file.
-
-### Chunk (`@nf-internal/*`)
-
-A shared bit of code the bundler split off from one or more shared externals. Chunks avoid duplicating code that multiple externals have in common. In `remoteEntry.json` they appear under synthetic package names like `@nf-internal/chunk-IXOA6WTM`. With `features.denseChunking` enabled, they move to a dedicated `chunks` object and each shared entry gets a `bundle` property linking it to its chunk group.
+A [W3C-standard browser feature](https://html.spec.whatwg.org/multipage/webappapis.html#import-maps) for redirecting bare module specifiers to URLs. Native Federation writes an `importmap.json` alongside `remoteEntry.json` in every build. At runtime the runtime library builds its own map from the fetched remote entries — host dependencies at the root, each remote's under a scope keyed by its base URL — and injects the result into the page so imports like `@angular/core` resolve to one file. See [The Import Map](runtime/import-map.md).
 
 ## Sharing concepts
 
@@ -107,29 +102,25 @@ A `tsconfig.json` path mapping that Native Federation treats as a shared library
 
 ### Singleton
 
-A shared-dependency flag that says "only one instance of this package may ever be loaded at runtime". Required for libraries with internal state — Angular, React, `zone.js`, state stores. When two remotes disagree on the version of a singleton, the orchestrator picks one winner; without `singleton: true`, each remote is free to run its own copy.
+A shared-dependency flag that says "only one instance of this package may ever be loaded at runtime". Required for libraries with internal state — Angular, React, `zone.js`, state stores. It is recorded in `remoteEntry.json` for the runtime to act on: the v3 runtime honours it by reusing the first registered copy of a `packageName@version`; the orchestrator uses it to elect a winner across differing versions.
 
 ### strictVersion
 
-A flag that turns a version mismatch from a warning into a runtime error. With `strictVersion: false` the orchestrator falls back to a compatible version; with `strictVersion: true` it throws. Use it when you'd rather fail fast than discover a subtle incompatibility in production.
+A flag that turns a version mismatch from a warning into an error. It is recorded in `remoteEntry.json`; acting on it is the runtime's job, and only the orchestrator compares ranges closely enough to enforce it.
 
 ### requiredVersion
 
-The semver range a consumer expects of a shared dependency — written into `remoteEntry.json` so the orchestrator can pick a version that satisfies every remote. Set it to `'auto'` to have the helper read the actual version from the closest `package.json` (the recommended default).
-
-### Share Scope
-
-A named bucket of shared dependencies. Two remotes share a package only if they use the same share scope (and the same package name). Most apps never set one; it's useful when a single page hosts multiple independently versioned federation graphs that must not cross-contaminate.
+The semver range a consumer expects of a shared dependency — written into `remoteEntry.json`. Set it to `'auto'` to have the helper read the actual version from the closest `package.json` (the recommended default). The v3 runtime does not read it; it deduplicates on the exact `version` string instead.
 
 ### Version Mismatch
 
-What happens when two remotes declare different versions of the same shared dependency. The orchestrator resolves the conflict using semver and the flags above: it may fall back to a compatible version, pick the higher version (for singletons), or throw (`strictVersion`).
+What happens when two remotes declare different versions of the same shared dependency. The v3 runtime does not reconcile them: each remote keeps its own copy under its own scope, and only byte-identical versions are reused. Reconciling ranges is what the [orchestrator](orchestrator/index.md) adds.
 
 ## Configuration
 
 ### `federation.config.js`
 
-The single configuration file every host and every remote owns. Describes `name`, `exposes`, `shared`, `skip`, feature flags, and more. Loaded by the Core at build time via `withNativeFederation`. See [`federation.config.js`](/docs/v4/core/configuration/) for the complete reference.
+The single configuration file every host and every remote owns. Describes `name`, `exposes`, `shared`, `skip`, feature flags, and more. Loaded by the Core at build time via `withNativeFederation`. See [`federation.config.js`](core/configuration.md) for the complete reference.
 
 ### `withNativeFederation`
 
@@ -137,27 +128,27 @@ The helper you wrap your config in. Applies defaults, prepares the skip list, re
 
 ### Skip list
 
-An array of strings, regular expressions, or predicates that opts specific packages out of sharing. The list you provide is merged with `DEFAULT_SKIP_LIST` — which already excludes Native Federation's own packages, `es-module-shims`, `tslib/` and everything under `@types/`.
+An array of strings, regular expressions, or predicates that opts specific packages out of sharing. Your `skip` list is applied to the normalized config; separately, `share` and `shareAll` filter against `DEFAULT_SKIP_LIST` — which already excludes Native Federation's own packages, `es-module-shims`, `zone.js`, `tslib/`, `@angular/localize` and everything under `@types/`.
 
 > **Note:** **Skip != exclude.** A skipped package is still bundled into the remote — otherwise the remote couldn't run standalone. Skip only prevents the package from being extracted into a *shared* bundle.
 
 ### Feature Flag
 
-A behavior toggle under `features` on the federation config — currently `ignoreUnusedDeps` (opt-out, default `true`), `mappingVersion` (opt-out, default `true`) and `denseChunking` (opt-in, default `false`). See [Feature Flags](/docs/v4/core/configuration/#feature-flags).
+A behavior toggle under `features` on the federation config — `ignoreUnusedDeps` and `mappingVersion`, both opt-in and defaulting to `false`. See [Feature Flags](core/configuration.md#feature-flags).
 
 ## Build & runtime
 
 ### `federationBuilder`
 
-The high-level build-time API. Exposes `init`, `build`, `close` plus accessors for `externals`, `config` and `federationInfo`. Wraps the lower-level `buildForFederation`, `rebuildForFederation`, and cache primitives. See [Build Process](/docs/v4/core/build-process/).
+The high-level build-time API. Exposes `init` and `build`, plus accessors for `externals`, `config` and `federationInfo`. Wraps the lower-level `loadFederationConfig`, `getExternals` and `buildForFederation`. See [Build Process](core/build-process.md).
 
 ### Federation Cache
 
-The content-addressed cache for bundled shared externals. Lives under `node_modules/.cache/native-federation/<projectName>` and keys entries by a SHA-256 checksum of the package names and versions in each bundle. On a cache hit, the build adapter is never invoked. See [Caching](/docs/v4/core/caching/).
+The content-addressed cache for bundled shared externals. Lives under `node_modules/.cache/native-federation/<projectName>` and keys entries by a SHA-256 checksum of the package names and versions in each bundle. On a cache hit, the build adapter is never invoked. See [Caching](core/build-process.md#caching).
 
 ### Build mode
 
-Per-shared-entry setting that controls how the Core groups packages for the adapter: `'default'` (all default externals in one pass), `'separate'` (one pass per entry), `'package'` (one pass per package, including its secondaries — required for per-package `chunks`).
+Per-shared-entry setting that controls how the Core groups packages for the adapter: `'default'` folds the entry into the single shared bundle for its platform, `'separate'` gives it a bundle of its own.
 
 ### `loadRemoteModule`
 

@@ -14,7 +14,7 @@ That single shift is what enables Micro Frontends *and* plugin-style extensions.
 
 If the host must resolve a remote's `import '@angular/core'` at runtime — with no help from the bundler — the browser needs a standard way to be told "when you see this specifier, fetch from this URL." That's exactly what an [Import Map](https://html.spec.whatwg.org/multipage/webappapis.html#import-maps) does.
 
-So the build step collects, per project, two artifacts: an `importmap.json` (this project's view of where its externals live) and a `remoteEntry.json` (what this project publishes and expects). At startup the runtime reads each listed remote's `remoteEntry.json`, merges the maps, resolves version conflicts, and injects a single import map into the document. From that point on the browser itself resolves every subsequent `import` — no bundler, no custom module loader.
+So the build step collects, per project, two artifacts: an `importmap.json` (this project's view of where its externals live) and a `remoteEntry.json` (what this project publishes and expects). At startup the runtime reads each listed remote's `remoteEntry.json`, merges them into one map — the host's dependencies at the root, each remote's under a scope of its own — and injects that map into the document. From that point on the browser itself resolves every subsequent `import` — no bundler, no custom module loader.
 
 That's also why Native Federation is not tied to a specific bundler: Import Maps are a browser feature, not a webpack feature.
 
@@ -29,16 +29,18 @@ If the host needs Angular 20.1.4 and a remote says it wants Angular 20.1.2, some
 
 Version negotiation is the part most people discover the hard way, so it's worth internalizing up front: "shared" doesn't mean "the same version everywhere." It means "the federation runtime picks one copy that everyone agrees to use."
 
+How far that negotiation goes depends on the runtime. The v3 runtime reuses a copy only when two projects declare the *same* `version` string; anything else, and each remote keeps its own. The [orchestrator](orchestrator/index.md) compares the declared ranges and elects a winner — which is the main reason to opt into it.
+
 ## How the Pieces Line Up at Runtime
 
 1. Each project builds and publishes its `remoteEntry.json` + shared bundles to a URL.
-2. The host's manifest lists those URLs. The [orchestrator](orchestrator/index.md) on the host fetches each one at startup.
-3. It merges the shared-dependency declarations, resolves version conflicts using the flags above, and injects the combined import map.
+2. The host's manifest lists those URLs. The [runtime](runtime/index.md) on the host fetches each one at startup.
+3. It merges the shared-dependency declarations, reusing an already-registered copy where the versions match, and injects the combined import map.
 4. When the user hits a route backed by a remote, `loadRemoteModule` triggers a plain dynamic `import()` — resolved through the injected map.
 
 That's the whole runtime story. The [Architecture Overview](architecture.md) maps these steps to the layers that implement them.
 
 ## Further Reading
 
-- [Terminology](terminology.md) — precise definitions of host, remote, shared, singleton, `remoteEntry.json`, manifest, share scope, and more.
+- [Terminology](terminology.md) — precise definitions of host, remote, shared, singleton, `remoteEntry.json`, manifest, and more.
 - [Native & Module Federation](native-and-module-federation.md) — how the two implementations relate.

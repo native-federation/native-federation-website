@@ -1,38 +1,39 @@
 # Custom Builder
 
-> Inject custom esbuild plugins into the Native Federation Angular builder via runBuilder.
+> Wrapping the v3 Angular builder's runBuilder factory to preprocess its options — and what it cannot do.
 
-Sometimes you need an esbuild plugin in the federation build itself — code transformation, bundling tweaks, third-party tooling. Since v4 the Angular adapter exposes its builder factory as `runBuilder` from `@angular-architects/native-federation/internal`, so you can wrap it in your own Architect builder and pass extra plugins through.
+The adapter's builder factory is exported as `runBuilder`, so you can wrap it in your own Architect builder and adjust the options before delegating. That is useful for computing an option per environment, deriving an output path, or applying a workspace-wide default without repeating it in `angular.json`.
+
+> **Warning:** The v3 builder assembles its esbuild plugin list internally — the shared-mappings plugin plus the externals plugin — and never reads a `plugins` option. Wrapping `runBuilder` cannot inject esbuild plugins on this line. Plugin injection is a v4 capability; see [Custom Builder (v4)](/docs/v4/angular-adapter/custom-builder/).
 
 ## The Pattern
 
-1. Write a tiny builder file that calls `runBuilder` with an extended options object.
-2. Point the relevant `angular.json` targets at your wrapper instead of the default `@angular-architects/native-federation:build`.
+1. Write a builder file that calls `runBuilder` with a modified options object.
+2. Point the relevant `angular.json` targets at your wrapper instead of `@angular-architects/native-federation:build`.
 
 ### 1. The wrapper
 
+The v3 package has no `exports` map and its `main` is `src/index.js`, so the builder module is reachable by its path inside the package:
+
 ```js
 // custom-builder.js
-import { runBuilder } from '@angular-architects/native-federation/internal';
-import { createBuilder } from '@angular-devkit/architect';
-import { myEsbuildPlugin } from './my-esbuild-plugin.js';
+const { runBuilder } = require('@angular-architects/native-federation/src/builders/build/builder');
+const { createBuilder } = require('@angular-devkit/architect');
 
 async function* customBuilder(options, context) {
   const nfOptions = {
     ...options,
-    plugins: [
-      myEsbuildPlugin(),
-      // ...more plugins
-    ],
+    outputPath: options.outputPath ?? `dist/${context.target.project}`,
+    rebuildDelay: process.env.CI ? 0 : options.rebuildDelay,
   };
 
   yield* runBuilder(nfOptions, context);
 }
 
-export default createBuilder(customBuilder);
+module.exports = createBuilder(customBuilder);
 ```
 
-The `plugins` array is appended to the adapter's own externals plugin, so the order is: externals plugin first, then yours. Plugins receive the standard esbuild `PluginBuild` interface and run for both the federation build (shared bundles, exposed modules) and the Angular build path.
+`runBuilder` is an async generator yielding `BuilderOutput` values, so `yield*` forwards them unchanged — the dev-server and watch behaviour keep working.
 
 ### 2. Wire it in `angular.json`
 
@@ -43,15 +44,19 @@ The `plugins` array is appended to the adapter's own externals plugin, so the or
       "architect": {
         "build": {
           "builder": "./custom-builder",
-          "options": {
-            "projectName": "mfe1",
-            "tsConfig": "projects/mfe1/tsconfig.federation.json"
-            // ... everything you'd normally pass to the federation builder
-          }
+          "options": {},
+          "configurations": {
+            "production": { "target": "mfe1:esbuild:production" },
+            "development": { "target": "mfe1:esbuild:development", "dev": true }
+          },
+          "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "./custom-builder",
-          "options": { /* same idea */ }
+          "options": {
+            "target": "mfe1:serve-original:development",
+            "dev": true
+          }
         }
       }
     }
@@ -59,15 +64,15 @@ The `plugins` array is appended to the adapter's own externals plugin, so the or
 }
 ```
 
-You're swapping the _builder_, not the options schema — every option from [Builder → Options](/docs/v4/angular-adapter/builder/#builder-options) still applies.
+You are swapping the _builder_, not the options schema — every option from [Builder → Options](builder.md#builder-options) still applies, and your wrapper receives them as its first argument.
 
 ## Notes
 
-- `runBuilder` is exposed from `@angular-architects/native-federation/internal`. As the name suggests, it's not part of the public API guarantee — minor bumps may rename or refine the signature. Pin the adapter version when you ship a custom builder.
-- Plugins added this way only run inside the build the adapter drives. They do _not_ see Angular CLI's pipeline outside the federation flow.
-- If you only need a config tweak rather than a plugin (e.g. forcing externals, changing output paths), prefer the existing [builder options](/docs/v4/angular-adapter/builder/#builder-options) or a `federation.config.mjs` change.
+- `runBuilder` lives at an internal path. It is not part of the public API guarantee — a minor bump may move or rename it. Pin the adapter version when you ship a custom builder.
+- Your wrapper runs in the Architect process, so it can read the environment and the workspace, but it cannot reach into the federation build itself.
+- If you need to change what gets bundled rather than how the builder is invoked, that belongs in `federation.config.js` — see [Angular Config](configuration.md).
 
 ## Related
 
-- [Builder](/docs/v4/angular-adapter/builder/) — the options the wrapper inherits.
-- [Core: Build Adapters](/docs/v4/core/build-adapters/) — the contract under the hood (`NFBuildAdapter`) if you'd rather plug a different bundler in entirely.
+- [Builder](builder.md) — the options the wrapper inherits.
+- [Core → Build Adapters](../core/build-adapters.md) — the `BuildAdapter` contract, if you would rather drive the core build yourself with a different bundler.

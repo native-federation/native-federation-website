@@ -13,7 +13,7 @@ deprecated: true
 >
 > The [Orchestrator](../orchestrator/index.md) is the replacement, and it is where all runtime documentation now lives. It speaks the same `remoteEntry.json` contract, so migrating a host is mostly a matter of swapping the import and threading the resolved loader through your app — see [Migration to v4](../migration.md).
 >
-> The former deep-dive pages for this package (`initFederation`, `loadRemoteModule`, the import map, and the API reference) have been removed to avoid confusion with the Orchestrator's very similar — but not identical — API. For v3 hosts still on this package, the [`v3` branch of the README](https://www.npmjs.com/package/@softarc/native-federation-runtime) remains the reference.
+> The deep-dive pages for this package — `initFederation`, `loadRemoteModule`, the import map and the API reference — live in the [v3 docs](/docs/v3/runtime/), where it is the default runtime. They are kept out of the v4 tree because its API is close enough to the Orchestrator's to be mistaken for it.
 
 ## Why the Orchestrator Replaced It
 
@@ -31,6 +31,7 @@ The classic runtime was deliberately thin. Each of these gaps is a reason it was
 
 - [Orchestrator → Getting Started](../orchestrator/getting-started.md) — install, embed, and load your first remote module.
 - [Orchestrator → Configuration](../orchestrator/configuration.md) — host config, import-map implementation, logging, modes, storage.
-- [Angular Adapter → Runtime (v3)](/docs/v3/angular-adapter/runtime/) — this package as Angular hosts consumed it; the v3 adapter was a plain `export * from` of it.
+- [Runtime (v3)](/docs/v3/runtime/) — this package documented in full, where it is still the default.
+- [Angular Adapter → Runtime (v3)](/docs/v3/angular-adapter/runtime/) — the same surface as Angular hosts consumed it; the v3 adapter was a plain `export * from` of it.
 - [Angular Adapter → Runtime (v4)](../angular-adapter/runtime.md) — the current Angular bootstrap split, `initFederation`, and dynamic remotes.
 - [Migration to v4](../migration.md) — moving a host across.

@@ -1,36 +1,40 @@
----
-deprecated: true
----
+# Runtime
 
-# Legacy Runtime
+> @softarc/native-federation-runtime — the browser-side library that reads remoteEntry.json files, merges them into one import map, and resolves loadRemoteModule() calls against it.
 
-> The classic @softarc/native-federation-runtime — end-of-life, replaced by the Orchestrator.
+`@softarc/native-federation-runtime` is the host-side half of Native Federation v3. The [core builder](../core/index.md) writes a `remoteEntry.json` per application; the runtime reads them in the browser, merges them into a single ES module import map, injects it into the DOM, and resolves `loadRemoteModule()` calls against it.
 
-`@softarc/native-federation-runtime` was the original browser-side library: it read `remoteEntry.json` files, merged them into one ES module import map, injected it into the DOM, and resolved `loadRemoteModule()` calls against it. One version of each shared dependency, wired up on startup.
+It is deliberately small. Two functions cover the common case:
 
-> **Warning:** **Deprecated — end-of-life.**
-> This was the default runtime in Native Federation **v3**. A v4 line was published up to `4.1.2`, but the package is now marked deprecated on npm: _"This package has reached end-of-life and is no longer maintained. Please switch over to the `@softarc/native-federation-orchestrator` library."_
->
-> The [Orchestrator](../orchestrator/index.md) is the replacement, and it is where all runtime documentation now lives. It speaks the same `remoteEntry.json` contract, so migrating a host is mostly a matter of swapping the import and threading the resolved loader through your app — see [Migration to v4](/docs/v4/migration/).
->
-> The former deep-dive pages for this package (`initFederation`, `loadRemoteModule`, the import map, and the API reference) have been removed to avoid confusion with the Orchestrator's very similar — but not identical — API. For v3 hosts still on this package, the [`v3` branch of the README](https://www.npmjs.com/package/@softarc/native-federation-runtime) remains the reference.
+```ts
+import { initFederation, loadRemoteModule } from '@softarc/native-federation-runtime';
 
-## Why the Orchestrator Replaced It
+// once, before the app bootstraps
+await initFederation({ mfe1: 'http://localhost:3001/remoteEntry.json' });
 
-The classic runtime was deliberately thin. Each of these gaps is a reason it was superseded:
+// wherever a remote is needed
+const { AppComponent } = await loadRemoteModule('mfe1', './Component');
+```
 
-| Gap | How the Orchestrator handles it |
-| --- | --- |
-| **No semver-range resolution.** Each shared dependency got one URL per scope; two remotes wanting different `rxjs` versions simply each kept their own. | Compares declared ranges and elects one version per scope — see [Version Resolver](../orchestrator/version-resolver.md). |
-| **No share scopes.** A single implicit scope per remote base URL. | Global, named, and strict [share scopes](../orchestrator/version-resolver.md#share-scopes). |
-| **No persistent caching.** Every page load re-fetched every `remoteEntry.json`. | Pluggable [storage](../orchestrator/configuration.md#storage) — `sessionStorage` / `localStorage` survive navigation and reloads. |
-| **No pluggable storage or logger.** Errors went to `console.error`; state lived on `globalThis.__NATIVE_FEDERATION__`. | Configurable [logger](../orchestrator/configuration.md#logging) and storage handles. |
-| **No dynamic init.** Remotes had to be known up front, apart from a `remoteEntry`-based one-off load. | [`initRemoteEntry`](../orchestrator/version-resolver.md#dynamic-init) adds remotes after startup, additively. |
+Angular projects get the same surface from `@angular-architects/native-federation`, whose main entry is a single `export * from '@softarc/native-federation-runtime'` — see [Angular Adapter → Runtime](../angular-adapter/runtime.md).
 
-## Where to Go Instead
+## What it does at startup
 
-- [Orchestrator → Getting Started](../orchestrator/getting-started.md) — install, embed, and load your first remote module.
-- [Orchestrator → Configuration](../orchestrator/configuration.md) — host config, import-map implementation, logging, modes, storage.
-- [Angular Adapter → Runtime (v3)](../angular-adapter/runtime.md) — this package as Angular hosts consumed it; the v3 adapter was a plain `export * from` of it.
-- [Angular Adapter → Runtime (v4)](../angular-adapter/runtime.md) — the current Angular bootstrap split, `initFederation`, and dynamic remotes.
-- [Migration to v4](/docs/v4/migration/) — moving a host across.
+1. Fetches the host's own `remoteEntry.json` and turns its `shared[]` into root-level import-map entries.
+2. Fetches every configured remote's `remoteEntry.json` in parallel, adding each remote's exposed modules to the root imports and its shared deps to a scope keyed by the remote's base URL.
+3. Deduplicates shared dependencies through an in-memory externals registry keyed by `packageName@version` — an exact match, not a semver range.
+4. Injects the merged map as `<script type="importmap-shim">`, behind a Trusted Types policy when the page enforces one.
+
+State lives on `globalThis.__NATIVE_FEDERATION__` — the externals registry plus two maps of registered remotes. Because it hangs off the global object, a second copy of the runtime on the same page shares the same registries rather than starting over.
+
+## Pages
+
+- [Getting Started](getting-started.md) — install, `es-module-shims`, the bootstrap split, first remote.
+- [`initFederation`](init-federation.md) — inline remotes vs manifest, `deployUrl`, `cacheTag`, error behaviour, hot reload.
+- [`loadRemoteModule`](load-remote-module.md) — both call forms, lazy registration, fallbacks.
+- [The Import Map](import-map.md) — root imports, scopes, the externals registry, Trusted Types.
+- [API Reference](api-reference.md) — every export, the global cache, the Module Federation bridge.
+
+## Do you want the orchestrator instead?
+
+`@softarc/native-federation-orchestrator` is the v4 runtime, and it speaks the same `remoteEntry.json` contract — so it can load v3-built remotes. It is an opt-in on the v3 line: worth it if you need semver-range resolution across remotes that disagree on a version, share scopes, or persistent caching of `remoteEntry.json` between page loads. See [Orchestrator](../orchestrator/index.md) for what it adds and how to adopt it, and [Migration to v4](/docs/v4/migration/) if you are moving the whole stack.

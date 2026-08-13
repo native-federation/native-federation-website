@@ -10,6 +10,17 @@ import path from 'node:path';
  */
 const CONTENT_BASE = path.join('src', 'content', 'docs');
 
+const ORCHESTRATOR_V3_REMOVED = [
+	'architecture',
+	'configuration',
+	'event-registry',
+	'getting-started',
+	'module-federation',
+	'pooling',
+	'security',
+	'version-resolver',
+];
+
 function docIds(version) {
 	const root = path.join(CONTENT_BASE, version);
 	const ids = [];
@@ -35,5 +46,10 @@ export function docRedirects() {
 	// runtime-v3.md was absorbed as the v3 tree's angular-adapter/runtime, so it has no
 	// versioned counterpart to derive this from.
 	redirects['/docs/angular-adapter/runtime-v3'] = '/docs/v3/angular-adapter/runtime/';
+	// The v3 orchestrator section collapsed to a single opt-in page; its former deep pages
+	// were verbatim copies of the v4 ones, so send them there.
+	for (const page of ORCHESTRATOR_V3_REMOVED) {
+		redirects[`/docs/v3/orchestrator/${page}`] = `/docs/v4/orchestrator/${page}/`;
+	}
 	return redirects;
 }
