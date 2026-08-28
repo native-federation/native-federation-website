@@ -97,6 +97,7 @@ const DESCRIPTIONS: Record<string, string> = {
 	'ssr-hydration': 'general SSR patterns',
 	'native-and-module-federation': 'interop and differences',
 	'component-libs': 'sharing component libraries',
+	devtools: 'the read-only Chrome DevTools panel for v4 Orchestrator apps — what it shows, install, what it cannot tell you',
 	faq: 'common questions and pitfalls',
 	documentation: 'the blog series behind these docs',
 	workshop: 'the architecture workshop material',

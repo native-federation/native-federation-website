@@ -85,6 +85,10 @@ export const navV4: NavSection[] = [
 		],
 	},
 	{
+		section: 'DevTools',
+		items: [{ label: 'Chrome Extension', id: 'devtools' }],
+	},
+	{
 		section: 'Reference',
 		items: [
 			{ label: 'FAQ', id: 'faq' },

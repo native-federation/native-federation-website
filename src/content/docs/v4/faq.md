@@ -17,6 +17,10 @@ If preparation fails, it's typically because:
 - **Node-only package:** You're trying to share a package intended for Node.js that can't be converted to ESM. If you use `shareAll` and the package is in your `dependencies`, move it to `devDependencies` or add it to the `skip` section of your `federation.config.(m)js`.
 - **Incompatible code:** The package contains code that esbuild can't convert to ESM. This shouldn't happen with packages built using the Angular CLI or Nx (ng-packagr). If it does, please report the specific package.
 
+## How do I see which version of a shared package was actually picked — and why?
+
+Install the [Native Federation DevTools](devtools.md) Chrome extension and open its panel on the running application. The Packages tab lists every shared package with the version that won, the participant that provides it, and every other participant's declared range and whether its own copy was selected; the Remotes tab shows the same from one remote's point of view. The panel is read-only and needs no permissions.
+
 ## How do I deal with CommonJS packages?
 
 The official Angular Package Format has used ESM for years, and all packages created with the Angular CLI follow this standard. Native Federation is built on ESM.

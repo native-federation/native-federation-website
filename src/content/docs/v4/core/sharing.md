@@ -286,6 +286,8 @@ Pair this with `includeSecondaries: { resolveGlob: true }` and `ignoreUnusedDeps
 
 Imagine two remotes, each sharing `@angular/core`: `mfe1` on `21.0.2` and `mfe2` on `21.0.1`. The orchestrator picks `21.0.2` as the winning version. But if `mfe1` never imports `@angular/core/rxjs-interop`, that secondary is pruned from its `remoteEntry.json`. The orchestrator then falls back to `mfe2`'s copy of `rxjs-interop` — at version `21.0.1`. Now Angular is split across two versions, which is exactly the class of bug shared dependencies are supposed to prevent.
 
+> [!TIP] **See this live in the DevTools.** The [Native Federation DevTools](../devtools.md) Packages tab lists the entries under `@angular/core` with the version each one resolved to, so a `/rxjs-interop` entry at `21.0.1` next to a `21.0.2` main entry stands out immediately — and the Graph tab draws the borrowed copy as a dotted edge.
+
 Use `keepAll: true` on such packages to force _all_ secondaries to be shared regardless of what the entry points touch:
 
 ```js
