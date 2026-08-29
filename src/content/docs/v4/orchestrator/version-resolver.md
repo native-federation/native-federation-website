@@ -499,6 +499,8 @@ await initFederation(manifest, {
 
 ## Troubleshooting
 
+> [!TIP] **See the outcome before decoding error messages.** The [Native Federation DevTools](../devtools.md) Packages tab shows, per package, which version was shared, who provides it, and every participant's declared range and `strictVersion` flag next to whether its own copy was selected. The **Conflicts** filter narrows the list to packages that resolved to more than one version.
+
 ### Version conflicts
 
 ```
