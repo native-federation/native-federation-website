@@ -862,6 +862,16 @@ summary.sidebar-label:focus-visible {
   color: var(--color-primary);
 }
 
+/* Raw-HTML .btn links in Markdown docs: undo the docs link color/underline. */
+.docs-content .btn-primary {
+  color: #fff;
+  text-decoration: none;
+}
+
+.docs-content .btn-primary:hover {
+  color: #fff;
+}
+
 .docs-content img {
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
