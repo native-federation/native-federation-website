@@ -6,6 +6,8 @@ _Which version of `@angular/core` won? Who provided it? Why did that remote end 
 
 The negotiation happens once, at startup — then it disappears into the import map. Native Federation DevTools reads it back out of the running page and explains it.
 
+<a class="btn btn-primary" href="https://chromewebstore.google.com/detail/native-federation-devtool/knbodlnbljndbcbalndkflbhbegdghej">Install from the Chrome Web Store</a>
+
 ![The Graph tab: remotes on the left, the dependency copies they resolve to in the middle, and the chunk files those copies load on the right](/images/devtools/hero-graph.webp)
 
 > [!NOTE] **Requires the v4 Orchestrator.** The panel reads the registry that `@softarc/native-federation-orchestrator` keeps in the page. Applications on the classic v3 runtime (`@softarc/native-federation-runtime`) are not supported.
@@ -14,13 +16,14 @@ The negotiation happens once, at startup — then it disappears into the import 
 
 The extension is a public pre-release, developed as part of the Native Federation project — feedback and bug reports are welcome in the [GitHub repository](https://github.com/native-federation/devtools/issues).
 
-**Chrome Web Store** — coming soon. The extension will be published under the official Native Federation presence.
+Install it from the **[Chrome Web Store](https://chromewebstore.google.com/detail/native-federation-devtool/knbodlnbljndbcbalndkflbhbegdghej)** — published under the official Native Federation presence.
 
-Until then, install the latest release by hand:
+Alternatively, install the latest release by hand:
 
 1. Download `native-federation-devtools-<version>.zip` from the [GitHub releases page](https://github.com/native-federation/devtools/releases) and unzip it.
 2. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and select the unzipped directory.
-3. Open Chrome DevTools on an application that runs the v4 Orchestrator. The panel appears as a new **Native Federation** tab.
+
+Either way, open Chrome DevTools on an application that runs the v4 Orchestrator. The panel appears as a new **Native Federation** tab.
 
 ## Three questions it answers
 
