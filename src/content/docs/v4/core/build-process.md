@@ -55,11 +55,25 @@ await federationBuilder.close();
 | `entryPoints` | `string[]` | no | Additional entry points considered when `ignoreUnusedDeps` is enabled. Defaults to the values of `exposes`. |
 | `dev` | `boolean` | no | Development mode — influences bundling and enables the build-notifications endpoint. |
 | `watch` | `boolean` | no | Hint to the adapter that it should set up watch mode. |
+| `watchLinkedDeps` | `boolean` | no | Since v4.5. Poll-watch shared dependencies resolved through `npm link` so rebuilding the linked library live-reloads this app. Off by default — [see below](#watching-npm-linked-shared-dependencies). |
 | `verbose` | `boolean` | no | Verbose logging. |
 | `cacheExternalArtifacts` | `boolean` | no | Cache built shared externals across builds (default `true`). |
 | `buildNotifications` | `BuildNotificationOptions` | no | Configures the dev-only notification endpoint that tells the runtime to reload on rebuild. |
 
 > **SRI hashes** are configured under `features.integrityHashes` in `federation.config.js` — see [Feature Flags](configuration.md#feature-flags).
+
+### Watching npm-linked shared dependencies
+
+A shared dependency resolved from the registry is bundled once and cached by checksum, so watching `node_modules` can never change an outcome — which is why `watchLinkedDeps` is off by default. A library you are editing through `npm link` is the exception. With the option on, the core hands that library's directory to the watcher for **polling**, because tools that rewrite their `dist` atomically (ng-packagr, for one) replace the inode and defeat `fs.watch`; a rebuild of the library then reloads this app.
+
+With the option off, a linked library still re-bundles on the next build, it just does not live-reload. Since that is hard to tell apart from a broken setup, a watching build names the packages it is skipping:
+
+```
+Detected npm-linked shared packages: @my-org/ui. Set 'watchLinkedDeps' to true to
+rebuild when they change.
+```
+
+The [content signal](caching.md#symlinked-npm-link-packages) that keeps the cache honest runs either way: `watchLinkedDeps` decides whether an edit is noticed *live*, the signal decides whether the *next* build is correct.
 
 ## Incremental Builds
 

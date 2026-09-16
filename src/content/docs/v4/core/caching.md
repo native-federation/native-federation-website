@@ -74,6 +74,10 @@ A dependency resolved through a symlink — a library you're actively editing vi
 
 For those packages the core additionally folds in a content signal derived from the package directory, so editing the linked library and rebuilding picks up your changes. Packages resolved normally out of `node_modules` are unaffected.
 
+Since v4.5 the signal is narrowed to **linked checkouts** — a symlink whose target sits outside `node_modules`. pnpm's default linker symlinks every dependency it installs, so the link alone identifies nothing; where the target lives is what tells a dev checkout from a store entry. Secondary entry points resolve to the same package directory, so that directory is walked once per build and the result reused across them.
+
+The signal is independent of the [`watchLinkedDeps`](build-process.md#watching-npm-linked-shared-dependencies) option: that one decides whether an edit is noticed while a watching build is running, the signal decides whether the next build is correct. Walking a checkout costs roughly 250 ms on one with ~17k vendored files, and is free on a pure source checkout.
+
 ## The cache meta file
 
 Each bundle produces one meta file, e.g. `browser-shared.meta.json`. It's the record the core consults on the next build:

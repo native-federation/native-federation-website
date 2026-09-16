@@ -193,6 +193,14 @@ Plain strings and annotated pairs mix freely. When several entries match the sam
 
 The honoured properties are `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool` and `includeSecondaries`. Anything you omit keeps its default: `singleton: true`, `strictVersion` following the [`mappingVersion`](#feature-flags) flag, and the version read from the mapped library's nearest `package.json`. Setting `version` explicitly also drives `requiredVersion` unless you set that too.
 
+Since v4.6, `requiredVersion` also accepts the [object form](sharing.md#choosing-the-emitted-range) a shared package takes, so a mapping can follow its library's version and still choose the range it emits:
+
+```js
+sharedMappings: [[['@my-org/ui/*'], { requiredVersion: { range: '^' } }]],
+```
+
+A mapping defaults to `~<version>`, and that default holds for an object that names no `range` — the one place mappings differ from a shared package, where a detected version is emitted the way `package.json` spells it.
+
 > **Note:** `build`, `platform`, `chunks` and `packageInfo` are **not** honoured for mapped paths — every mapping is built into the same bundle, so there is nothing for them to select. Setting one logs a warning and is ignored.
 
 ### `mappingsFromWorkspace`
@@ -227,10 +235,24 @@ sharedMappings: mappingsFromWorkspace({
 }).get(),
 ```
 
-- **`keepAll`** keeps the mapping even when nothing imports it. It is read exactly as it is for a shared package, so a bare `includeSecondaries: true` opts out too.
+- **`keepAll`** keeps the mapping even when nothing imports it, and on a mapping a bare `includeSecondaries: true` means the same thing — a mapping has no secondary entry points, so the flag can only mean "exempt from reachability". A shared package reads it more narrowly: `true` is the default there, and since v4.5 [`{ keepAll: true }`](sharing.md#-keepall-true---opt-out-of-unused-dep-removal) exempts that package's secondaries while the package itself still has to be reached.
 - **`resolveGlob`** is additionally required for **wildcard** mappings. A wildcard is a pattern rather than an entry point; normally only the reachability scan turns it into concrete files. `resolveGlob` expands it against the filesystem instead. Without it a wildcard mapping is dropped with a warning.
 
 An expanded wildcard is named by the same rule the reachability scan uses, so `libs/ui/*` matching `libs/ui/button/index.ts` is shared as `@my-org/ui/button`.
+
+Since v4.5 the build warns when pruning leaves no mapping at all. The build still succeeds, and the missing libraries only surface at runtime, far from the cause:
+
+```
+No shared mapping is reachable from the entry points, so remoteEntry.json will ship
+without this workspace's libraries. Disable 'ignoreUnusedDeps' to publish them anyway.
+```
+
+A second warning covers the partial case — imports that match a mapping only once case is ignored. That means one directory spelled two ways, usually a mis-cased `paths` value that TypeScript resolves anyway on a case-insensitive filesystem:
+
+```
+3 import(s) match a shared mapping only when case is ignored, so those libraries were
+pruned from remoteEntry.json -- e.g. '/repo/Libs/ui/src/index.ts'.
+```
 
 > **Note:** A host that provides the libraries its remotes depend on couples the two — the remote can no longer run standalone. Letting each application share the entry points it imports and leaving the orchestrator to deduplicate at runtime is usually the better default.
 
@@ -321,7 +343,7 @@ All feature flags live under `features` on the config. `ignoreUnusedDeps`, `mapp
 | `ignoreUnusedDeps` | `true` | Drops shared externals that aren't actually imported by the entry points. Also the pass that materializes wildcard mapped paths — with it off, a wildcard mapping needs [`includeSecondaries: { resolveGlob: true }`](#keeping-mappings-that-nothing-imports) or it is dropped with a warning. |
 | `denseChunking` | `false` | Groups chunks by bundle name in `remoteEntry.json` so each shared package references its chunk bundle by name rather than listing chunks individually. Produces a smaller, more cache-friendly `remoteEntry.json`. |
 | `denseExternals` | `false` | Since v4.3. Groups all entrypoints of a shared external (primary import, secondaries and shared mappings) under a single object with an `entries` map in `remoteEntry.json`, instead of one flat entry per entrypoint. Opt-in and backward compatible. See [Dense Externals](sharing.md#dense-externals). |
-| `mappingVersion` | `true` | Emits a real semver for every shared mapped path (monorepo-internal library) — picked up from the nearest `package.json` walking up from the entry file to the workspace root. Also sets `requiredVersion: '~<version>'` and `strictVersion: true` on the resulting shared entry, so version mismatches across remotes are detected at runtime. Set to `false` to fall back to the unversioned `version: ''` shape. |
+| `mappingVersion` | `true` | Emits a real semver for every shared mapped path (monorepo-internal library) — picked up from the nearest `package.json` walking up from the entry file to the workspace root. Also sets `requiredVersion: '~<version>'` and `strictVersion: true` on the resulting shared entry, so version mismatches across remotes are detected at runtime. The `~` is a default a per-mapping [`requiredVersion`](#per-mapping-configuration) can replace. Set to `false` to fall back to the unversioned `version: ''` shape. |
 | `integrityHashes` | `false` | Emit SRI hashes for every shared external, exposed module and chunk under a top-level `integrity` map in `remoteEntry.json`. The orchestrator copies these onto the import map so the browser (or `es-module-shims`) can verify each module before executing it. See [Subresource Integrity](../orchestrator/security.md#subresource-integrity). |
 | `synthesizeCjsExports` | `true` | Since v4.4. For a shared external that is CommonJS, `require()`s it at build time, enumerates its runtime named exports and bundles a synthetic ESM entry that re-exports them. See [CommonJS externals](sharing.md#commonjs-externals). |
 
