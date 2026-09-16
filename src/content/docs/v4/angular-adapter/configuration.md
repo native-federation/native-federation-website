@@ -33,6 +33,8 @@ import {
 
 Everything except `mappingsFromWorkspace` is an Angular-aware wrapper; `mappingsFromWorkspace` is a plain re-export of the core builder (see [below](#shared-mappings)). Anything else (helpers, types, advanced overrides) lives in the core — import it from `@softarc/native-federation/config` or `@softarc/native-federation/domain`.
 
+_Since 22.1.3_ the `FederationConfig` type is exported from this entry point too, next to the `withNativeFederation` that takes it.
+
 ## What `withNativeFederation` Adds
 
 The Angular wrapper does three things and then delegates to the core:
