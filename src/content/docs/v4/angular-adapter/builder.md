@@ -16,6 +16,7 @@ The `@angular-architects/native-federation:build` target is a thin wrapper aroun
 - [Subresource Integrity](#subresource-integrity)
 - [Dev server & hot reload](#dev-server--hot-reload)
 - [Developing npm-linked shared libraries](#developing-npm-linked-shared-libraries)
+- [watchLinkedDeps](#watchlinkeddeps)
 - [Nx and @angular/build preloading](#nx-and-angularbuild-preloading)
 - [Locale-aware output paths](#locale-aware-output-paths)
 
@@ -100,6 +101,7 @@ Every property below comes from `src/builders/build/schema.json`:
 | `entryPoints` | `string[]` | `[<tsConfig dir>/src/main.ts]` | Entry points used to detect which dependencies are actually used. Combined with `features.ignoreUnusedDeps` in `federation.config.mjs` this drives shaking of unused shared externals. Seeded by the `init` / `update-v4` schematics; defaults to `[<sourceRoot>/main.ts]`. |
 | `dev` | `boolean` | `false` | Enables development mode for the federation build: source maps, unminified output, watch-mode SSE notifications, and (for SSR) the dev host-instance bridge that registers the federation loader inside Vite's SSR graph. Set automatically by the `development` configuration. |
 | `watch` | `boolean` | `false` | Re-runs the federation build on file changes. Set automatically when serving; useful for `ng build --watch`. |
+| `watchLinkedDeps` | `boolean` | `false` | Watch npm-linked shared libraries so rebuilding one reloads this app. Off by default because it polls the linked checkout for as long as the dev server runs. _Added in 22.1.2._ See [Developing npm-linked shared libraries](#developing-npm-linked-shared-libraries). |
 | `devServer` | `boolean` | _inferred from target name_ | Force the builder into dev-server mode. By default the builder serves whenever the target name contains `"serve"`; override here if your naming is unusual. |
 | `port` | `number` | `0` | Port for the dev server. `0` inherits the underlying `serve-original` target's port (which the schematic seeds with the `--port` argument). |
 | `rebuildDelay` | `number` (ms) | `2000` | Debounce window before re-running the federation build after Angular reports a change. Bursts of file saves get coalesced; in-flight rebuilds are cancelled in favour of the latest. The schematic seeds `500` for `serve` for snappy DX. |
@@ -118,6 +120,16 @@ The `tsConfig` option doesn't only select which files are compiled — it is pas
 The reason is that Angular's compiler plugin only hooks `onLoad`, leaving esbuild to resolve specifiers itself. Without an explicit tsconfig, esbuild only honours `baseUrl`/`paths` from an auto-discovered file named exactly `tsconfig.json` — which misses `tsconfig.app.json` / `tsconfig.lib.json` layouts and breaks workspace imports with `Could not resolve`. Angular's own application builder passes the same normalized path.
 
 Practically: the tsconfig you point `tsConfig` at must declare the workspace `baseUrl` and `paths`, or `extends` a config that does. The `tsconfig.federation.json` the schematic generates already extends the workspace root config, so generated projects need no change.
+
+### Shared Mappings and Synthesized Imports
+
+_Fixed in 22.1.3._ esbuild's `external` list matches a specifier as written, so it only caught imports spelled `@myorg/ui`. Angular emits a deep relative path for any reference it has to **synthesize** — a template dependency reached through an imported `NgModule`, for one — and those paths were bundled into the app next to the federated copy of the same library. Two module instances of one library is what `NG0201` reports at runtime; `providedIn: 'root'` services and pipes duplicate the same way. The duplication looked intermittent because only synthesized references were affected: a standalone component named in `imports: []` and an injected service both emit bare specifiers, and were always external.
+
+The adapter now runs a resolver over relative import statements during the app build. Where the imported file sits inside a shared mapping and that mapping's entry point re-exports it under the same names, the import is rewritten onto the mapped specifier and left external. The rule itself lives in the core (`createMappingImportResolver`, see [API Reference](../core/api-reference.md#softarcnative-federationinternal)); where the entry point is readable and omits the file, the build warns and names the symbols to add to the barrel.
+
+### `File … not found in TypeScript compilation`
+
+_Fixed in 22.1.2._ Windows reports a directory under whatever drive-letter case the caller used, so the workspace root an Nx invocation inherits from the shell could differ by case alone from the one esbuild and `process.cwd()` produce. The Angular compiler plugin's emitted-file cache is keyed off the first and looked up through the second, so every exposed module reported the error above and pointed at `files` / `include` in a tsconfig that was fine — which is why a remote built from one terminal and failed from another on the same machine. The builder now re-spells the workspace root the way `fs.realpath` reports it, once per invocation, and anchors exposed entry points on that root.
 
 ## Native Import Maps
 
@@ -160,8 +172,9 @@ Because Native Federation shares such a library as an _external_, it is excluded
 Requirements:
 
 - The library is listed in the `shared` section of your `federation.config.mjs` (via `shareAll`, an explicit `shared` entry, or `sharedMappings`).
-- Its package directory under `node_modules` is a **symlink** — linked with `npm link` or the equivalent, not installed from a registry.
+- Its package directory under `node_modules` is a **symlink whose target lies outside `node_modules`** — what `npm link` produces. _Since 22.1.2_, see [What counts as linked](#what-counts-as-linked).
 - The library is rebuilt on change so the symlink target actually updates (`ng build --watch` for an Angular library).
+- For the changes an ng-packagr rebuild leaves uncovered, [`watchLinkedDeps: true`](#watchlinkeddeps) on the target you are running.
 
 ```bash
 # 1. In the shared library's repo — build to dist/ and keep watching
@@ -177,9 +190,42 @@ npm link @my-scope/my-lib
 ng serve
 ```
 
-Editing a source file in the library now rebuilds its `dist/`, and the builder re-bundles the affected shared external and logs `Done!`. To also refresh the browser automatically, enable [SSE-based reloading](#dev-server--hot-reload) with `initFederation(manifest, { sse: true })`; otherwise refresh manually.
+Editing a source file in the library now rebuilds its `dist/`, and the builder re-bundles the affected shared external and logs `Done!` — see [`watchLinkedDeps`](#watchlinkeddeps) for which edits a running dev server picks up on its own. To also refresh the browser automatically, enable [SSE-based reloading](#dev-server--hot-reload) with `initFederation(manifest, { sse: true })`; otherwise refresh manually.
 
-Under the hood the builder resolves the real path of each symlinked shared package and adds it to the federation file watcher. Linked packages live under `node_modules`, so they are watched by **polling**, and a short debounce coalesces ng-packagr's atomic multi-file writes into one rebuild. Only the affected shared externals are re-bundled; registry-installed dependencies keep the version-only cache fast path (see [core caching](../core/caching.md#symlinked-npm-link-packages)).
+### `watchLinkedDeps`
+
+_Since 22.1.2 (requires `@softarc/native-federation` ≥ `4.5.0`)._ Watching a linked checkout means polling it for as long as the dev server runs, so it is opt-in. Enable it on the target you serve:
+
+```json
+"serve": {
+  "builder": "@angular-architects/native-federation:build",
+  "options": {
+    "target": "host:serve-original:development",
+    "watchLinkedDeps": true
+  }
+}
+```
+
+The option exists on both the `:build` and the `:remote` builder and defaults to `false`.
+
+Leaving it off still covers most edits. A library's type declarations are a TypeScript input, and the adapter resolves them to their real path outside `node_modules`, so an ng-packagr rebuild — which rewrites `dist/*.d.ts` alongside the JavaScript — is noticed and re-bundled either way. The option adds the changes that touch no such input: a JavaScript-only edit, or a rebuild whose emitted types come out byte-identical. A cold `ng build` re-bundles a changed linked library either way, since each linked package's content is checksummed on every build; a running `ng serve` is the weaker case, where such a change can stay stale until you restart the server.
+
+So the default is never a silent surprise, a watching build that finds a linked shared package while the option is off says so once at startup:
+
+```
+INFO  Detected npm-linked shared packages: @my-scope/my-lib. Set 'watchLinkedDeps' to
+      true to rebuild when they change.
+```
+
+### What counts as linked
+
+_Since 22.1.2._ A symlink on its own qualifies a package only where it points outside `node_modules`. Package managers that symlink by default — pnpm's default `isolated` linker, Yarn's `nodeLinker: pnpm` — make **every** dependency a symlink, which used to put the whole dependency graph on the watch list. A package is treated as a live checkout when its real path resolves outside every `node_modules` tree, which is what `npm link` produces and what a package manager's internal symlink does not.
+
+> [!WARNING] **Reach for `watchLinkedDeps`, not `preserveSymlinks`.** Angular draws the same line but wires it to `preserveSymlinks`: it ignores `**/node_modules/**` when watching the project root and skips that ignore when the flag is on, precisely so `npm link` keeps working. It has to overload one flag because its resolver decides which path esbuild sees. The adapter resolves each shared package's real path itself, so `watchLinkedDeps` governs watching and nothing else. `preserveSymlinks` changes module resolution — it is the classic route to loading two copies of a singleton like `@angular/core`, and under pnpm it makes every dependency resolve through `.pnpm`. Here it would also *shrink* the watch set, since the adapter skips any path with a `node_modules` segment and `preserveSymlinks` is exactly what makes a linked library's files report as `node_modules/@my-scope/my-lib/…` instead of their real location.
+
+### How it works
+
+With `watchLinkedDeps` on, the builder adds each linked checkout's real directory to the federation file watcher. Those directories are watched by **polling**, because ng-packagr rewrites its `dist` atomically and the replaced inode defeats `fs.watch`; a short debounce coalesces that multi-file write into one rebuild. Only the affected shared externals are re-bundled; registry-installed dependencies keep the version-only cache fast path (see [core caching](../core/caching.md#symlinked-npm-link-packages)).
 
 ## Nx and `@angular/build` Preloading
 

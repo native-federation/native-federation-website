@@ -32,6 +32,7 @@ Initializes a project for Native Federation. `ng add` and `ng g …:init` both r
 | `--project` | `string` | Project name from `angular.json`. Falls back to the workspace's `defaultProject`, then to the first project. |
 | `--port` | `number` | Dev server port. Defaults to `4200`. Also used as the SSR port for hosts. |
 | `--type` | `'host' \| 'dynamic-host' \| 'remote'` | Defaults to `remote`. Determines the shape of the generated `main.ts`. |
+| `--webcomponent` | `boolean` | Defaults to `false`. Bootstraps the project as a custom element instead of a regular Angular application. `--type remote` only. _Since 22.1.3_ — see [below](#--webcomponent). |
 
 ### What it changes
 
@@ -46,9 +47,36 @@ Initializes a project for Native Federation. `ng add` and `ng g …:init` both r
 
    `initFederation` is imported from `@angular-architects/native-federation`, whose wrapper supplies the shim import map, logger and storage — so the generated call stays down to `initFederation(<arg>, { hostRemoteEntry: { url: './remoteEntry.json' } })`. See [Runtime](runtime.md).
 
+   _Since 22.1.3_ the split follows what `main.ts` actually contains, so your edits survive a second run — see [Re-running init](#re-running-init).
+
 6. **SSR.** If the project has SSR enabled (`build.options.ssr.entry` is set), the schematic sets `ssr: true` on the federation `build` target, adds `app.use(cors())` to the generated `server.ts`, switches `RenderMode.Prerender` → `RenderMode.Server` in `app.routes.server.ts`, and forces `security.allowedHosts: ['localhost']` on the `esbuild` target. It does **not** split `main.server.ts`, emit an `fstart.mjs`, or add `@softarc/native-federation-node` — on v4 the server-side loader is registered at launch by the `node --import @angular-architects/native-federation/node-preload …` preload, which wires the orchestrator's [`/node` entry](../orchestrator/node.md). You still set the prod start command to use the preload yourself. See [SSR & Hydration](ssr.md).
 7. **federation.manifest.json.** For dynamic hosts, generates a manifest file. It lives in `public/federation.manifest.json` if the project has a `public/` folder, else `src/assets/federation.manifest.json`.
-8. **Dependencies.** Adds `es-module-shims` (dependency) and `@softarc/native-federation-orchestrator` (devDependency, pinned to the range the adapter was built against — an existing entry is overwritten). SSR projects additionally get `cors` as a dependency. Triggers `npm install` at the end.
+8. **Dependencies.** Adds `es-module-shims` (dependency) and `@softarc/native-federation-orchestrator` (devDependency, pinned to the range the adapter was built against — an existing entry is overwritten). SSR projects additionally get `cors` as a dependency. With [`--webcomponent`](#--webcomponent), `@angular/elements` follows the bootstrap that was actually written. Triggers `npm install` at the end.
+
+### Re-running `init`
+
+_Since 22.1.3._ `init` decides what to write from what `main.ts` contains, rather than from whether `bootstrap.ts` happens to exist, so a second run is safe:
+
+- **`main.ts` already calls `initFederation`** — it is left exactly as it is, so anything you changed about the call (a `shimMode: false`, an adjusted `hostRemoteEntry`, remotes added by hand) survives. Only a missing `bootstrap.ts` is regenerated, from a fresh `bootstrapApplication` scaffold built on the project's root component. A `host` bakes its remote map into `main.ts`, so a re-run there reports that the map was left as it was.
+- **`main.ts` holds your bootstrap and `bootstrap.ts` is free** — the first-run path: the contents move across and `main.ts` becomes the federation stub.
+- **`main.ts` holds your bootstrap and `bootstrap.ts` is taken** — there is no second place to move it to, so the schematic throws, naming both files, before anything is written.
+
+The root component is probed as `app/app.ts` (Angular 20+, class `App`) or `app/app.component.ts` (`AppComponent`). Its path is what `federation.config.mjs` exposes as `./Component`, and its class name is what a regenerated `bootstrap.ts` bootstraps.
+
+### `--webcomponent`
+
+_Since 22.1.3._ A remote that its host consumes as a custom element rather than as a lazy Angular route needs a different bootstrap. Pass the flag and `init` generates it:
+
+```bash
+ng g @angular-architects/native-federation:init \
+  --project mfe1 --port 4201 --type remote --webcomponent
+```
+
+The generated `bootstrap.ts` calls `createApplication` instead of `bootstrapApplication` and registers the root component with `createCustomElement` under the tag `mfe-<project>` — a custom-element name has to contain a hyphen, which a one-word project name does not. The tag is part of the remote's contract with its host, so the generated line keeps its `// your componentname` marker and is meant to be edited.
+
+`@angular/elements` is added at whatever range the workspace already has for `@angular/core`: it ships in lockstep with the framework, so a floating range would resolve a mismatched major. A workspace with no `@angular/core` to match against is an error rather than a guess.
+
+The flag applies to `--type remote` only — the generated bootstrap registers an element and never bootstraps a shell, so a `host` or `dynamic-host` is rejected up front. It **replaces** `main.ts` instead of moving it, which the feature cannot avoid, and warns when it does, so a remote that called `registerLocaleData` or initialised Sentry ahead of `bootstrapApplication` can carry that over by hand. An existing `bootstrap.ts` is kept — there the flag warns that it was a no-op.
 
 ### What it does NOT do
 

@@ -51,10 +51,12 @@ The adapter's `initFederation` wraps the orchestrator with sensible defaults (sh
 
 ```ts
 initFederation(
-  remotesOrManifestUrl?: Record<string, string> | string,
+  remotesOrManifestUrl?: FederationManifest | string,
   options?: NgNFOptions,
 ): Promise<NativeFederationResult>
 ```
+
+> **Note:** _Since 22.1.3_ that parameter is the **orchestrator's** `FederationManifest` — `Record<string, string | { url, integrity? }>` — re-exported from `@angular-architects/native-federation` so you can name it in your own code. Earlier versions resolved the name to the core's build-time manifest type, which carries an extra `main` field that `initFederation` reads nothing from, and which pulled the build entry's type graph into every consumer compilation.
 
 - **Host (dynamic).** Pass the manifest URL: `initFederation('federation.manifest.json')`.
 - **Host (static).** Pass the remote map inline: `initFederation({ mfe1: 'http://localhost:4201/remoteEntry.json' })`.
