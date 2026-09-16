@@ -128,7 +128,7 @@ syncNfFileWatcher(watcher, bundlerCache, linkedSharedDirs(config, options));
 
 Since v4.4 two helpers tell you what belongs in the watch set beyond your own compiled inputs:
 
-- **`linkedSharedDirs(config, options)`** — the directories of shared packages resolved through a symlink (`npm link`). Pass them as the third argument to `syncNfFileWatcher`; it registers them for **polling**, because tools that rewrite their `dist` atomically (ng-packagr, for one) replace the inode and defeat `fs.watch`.
+- **`linkedSharedDirs(config, options)`** — the directories of shared packages resolved through a symlink (`npm link`) into a checkout outside `node_modules`. Pass them as the third argument to `syncNfFileWatcher`; it registers them for **polling**, because tools that rewrite their `dist` atomically (ng-packagr, for one) replace the inode and defeat `fs.watch`. Since v4.5 this is opt-in: it returns `[]` unless [`watchLinkedDeps`](../core/build-process.md#watching-npm-linked-shared-dependencies) is set on the federation options, and a watching build without it logs which linked packages it is skipping.
 - **`sharedMappingDirs(config)`** — the source directory of every `sharedMappings` entry point, derived from config alone. Coarser than a build's compiled inputs, but it covers what those can't: files *added* to a library since the last build. It doesn't follow imports out of the library, so an adapter that can enumerate its build inputs should watch both. How coarse it gets is up to the config — an entry point that isn't a library barrel widens the watch to whatever folder it sits in, and with `sharedMappings` unset every tsconfig path counts. Watch these natively, not polled: they're source trees, not the `dist` output `linkedSharedDirs` exists for.
 
 Registering the same directory twice is free — one directory means one handle no matter how many tracked files live under it, and a recursive watch supersedes the narrower ones it covers, so each save is still delivered once.
@@ -146,6 +146,7 @@ The watcher API:
 | Option | Default | Effect |
 | --- | --- | --- |
 | `onChange` | – | Called with each changed path. |
+| `watch` | `fs.watch` | Since v4.5. Your own watch implementation, matching `WatchPort['watch']`. The built-in is dependency-free but sweeps the tree every `pollIntervalMs`; an event-driven replacement may ignore the `poll` hint, but then has to survive inode replacement itself — a polled directory supersedes the native watches beneath it, so a missed rename-replace is never re-covered. |
 | `debounceMs` | `0` | Coalesce bursts of events before reporting them. |
 | `pollIntervalMs` | `300` | Interval for paths registered with `{ poll: true }`. |
 | `dedupeReplays` | `true` | Drop events for files whose content hasn't actually changed. macOS re-delivers "changed" for recently edited files every ~30s; with a few thousand watched sources that replay alone keeps a rebuild loop awake forever. |

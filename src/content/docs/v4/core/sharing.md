@@ -144,7 +144,7 @@ shared: share({
 | -------------------- | ---------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `singleton`          | `boolean`                                      | `false`        | Only one instance of this package is ever loaded at runtime. Required for libraries with internal state (Angular, React, zone.js, …).                                                                                                                                                                       |
 | `strictVersion`      | `boolean`                                      | `false`        | Throw at runtime instead of falling back when a version mismatch is detected.                                                                                                                                                                                                                               |
-| `requiredVersion`    | `string \| 'auto'`                             | `'auto'`       | The required semver range. `'auto'` reads the actual version from the closest `package.json`.                                                                                                                                                                                                               |
+| `requiredVersion`    | `string \| 'auto' \| { version?, range? }`      | `'auto'`       | The required semver range. `'auto'` reads the actual version from the closest `package.json`; the object form also [picks the range that is emitted](#choosing-the-emitted-range).                                                                                                                          |
 | `version`            | `string`                                       | inferred       | The version that is being shared. Usually inferred from `package.json`.                                                                                                                                                                                                                                     |
 | `includeSecondaries` | `boolean \| { skip?, resolveGlob?, keepAll? }` | `true`         | Also share the package's secondary entry points. See below.                                                                                                                                                                                                                                                 |
 | `platform`           | `'browser' \| 'node'`                          | config default | Target platform for this shared bundle.                                                                                                                                                                                                                                                                     |
@@ -156,6 +156,28 @@ shared: share({
 ### `requiredVersion: 'auto'`
 
 With `'auto'`, the helper looks up the version in the closest `package.json`. This helps resolve unmet peer dependencies and is the recommended default.
+
+### Choosing the emitted range
+
+A detected version is emitted exactly as your `package.json` spells it — `^1.2.3` stays `^1.2.3`. Since v4.5, passing an object instead lets you pick the format:
+
+```js
+shared: share({
+  "@my-org/lib": { singleton: true, requiredVersion: { range: "^" } },
+});
+```
+
+| `range`   | `1.2.3` becomes |
+| --------- | --------------- |
+| `'exact'` | `1.2.3`         |
+| `'^'`     | `^1.2.3`        |
+| `'~'`     | `~1.2.3`        |
+| `'minor'` | `^1.2.3`        |
+| `'patch'` | `~1.2.3`        |
+
+Any prefix already on the detected version is replaced, and a prerelease tag is kept (`2.0.0-next.1` becomes `^2.0.0-next.1`). A multi-comparator range such as `>=1.0.0 <2.0.0` has no single prefix to rewrite, so it is passed through untouched.
+
+Set `version` alongside `range` to format a version of your own instead of the detected one. `version: 'auto'` means "look the version up", so inside `share()` it takes precedence over a `version` set next to it and falls back to the `package.json` lookup — which fails if the package is not declared there.
 
 ## Secondary Entry Points
 
@@ -232,6 +254,10 @@ shared: share({
 });
 ```
 
+Since v4.5, `keepAll` is read per **package family** rather than per entry point: every entry point of `@angular/core` is published as long as _something_ still reaches `@angular/core`, while a family nothing imports at all is pruned anyway. That is what keeps the flag meaningful when it is applied to every package at once — it exempts the secondaries from reachability, not the package itself. For a package without secondaries the family is the package, so the flag is a no-op there. To publish everything unconditionally, turn [`ignoreUnusedDeps`](configuration.md#feature-flags) off instead.
+
+> **Note:** A [shared mapping](configuration.md#keeping-mappings-that-nothing-imports) reads the same flag more strongly — there it exempts the mapping from reachability entirely, and a bare `includeSecondaries: true` means the same thing.
+
 See [Downsides of treeshaking shared packages](#downsides-of-treeshaking-shared-packages) below for the scenario this protects against.
 
 ## Skipping Dependencies
@@ -288,7 +314,7 @@ Imagine two remotes, each sharing `@angular/core`: `mfe1` on `21.0.2` and `mfe2`
 
 > [!TIP] **See this live in the DevTools.** The [Native Federation DevTools](../devtools.md) Packages tab lists the entries under `@angular/core` with the version each one resolved to, so a `/rxjs-interop` entry at `21.0.1` next to a `21.0.2` main entry stands out immediately — and the Graph tab draws the borrowed copy as a dotted edge.
 
-Use `keepAll: true` on such packages to force _all_ secondaries to be shared regardless of what the entry points touch:
+Use `keepAll: true` on such packages to publish _all_ their secondaries, regardless of which ones the entry points touch:
 
 ```js
 shared: share({
@@ -300,6 +326,8 @@ shared: share({
   },
 });
 ```
+
+The package itself still has to be reached from an entry point — `keepAll` covers the spread across a package's entry points, and [`ignoreUnusedDeps: false`](configuration.md#feature-flags) covers a package nothing imports at all.
 
 As a rule of thumb, opt into `keepAll` for tightly-coupled framework packages (Angular, React ecosystems, your own design system) and leave it off for utility libraries where secondaries are genuinely independent.
 
@@ -409,5 +437,13 @@ sharedMappings: [
   [['@my-org/ui/*'], { singleton: false }],
 ],
 ```
+
+Since v4.6, `requiredVersion` takes the same [object form](#choosing-the-emitted-range) as a shared package, so a mapping can follow its library's version and still choose the range:
+
+```js
+sharedMappings: [[['@my-org/ui/*'], { requiredVersion: { range: '^' } }]],
+```
+
+A mapped path defaults to `~<version>` — an in-workspace library moves in lockstep with nothing, so `~` is the safest bet — and that default also holds for an object that names no `range`. It is the one place mappings differ from a shared package.
 
 `build`, `platform`, `chunks` and `packageInfo` are ignored for mappings — they all land in one bundle. See [sharedMappings](configuration.md#sharedmappings) for the builder (`mappingsFromWorkspace`), the `keepAll` / `resolveGlob` interaction with `ignoreUnusedDeps`, and the barrel-import rule.
