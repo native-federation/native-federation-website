@@ -107,6 +107,7 @@ Every property below comes from `src/builders/build/schema.json`:
 | `rebuildDelay` | `number` (ms) | `2000` | Debounce window before re-running the federation build after Angular reports a change. Bursts of file saves get coalesced; in-flight rebuilds are cancelled in favour of the latest. The schematic seeds `500` for `serve` for snappy DX. |
 | `cacheExternalArtifacts` (alias `cache`) | `boolean` | `true` | Reuse the bundled external artifacts from `node_modules/.cache/native-federation/<project>` across builds. See [core caching](../core/caching.md) for the checksum logic. |
 | `baseHref` | `string` | — | Overrides the underlying Angular target's `baseHref`. Also used by the dev server to strip the prefix from federation artifact requests. |
+| `define` | `Record<string, string>` | — | Global identifiers replaced at build time, merged over the Angular target's own `define`. Applies to the app bundle, under both `build` and `serve`, and to the exposed modules and shared mappings, so a remote's identifiers are replaced before a host loads it. String values need their own quotes, e.g. `nx run app:build --define.BUILD_ID="\"'123'\""`. Angular's own flags (`ngDevMode`, `ngJitMode`) still win. _Added in 22.2.0._ |
 | `outputPath` | `string` | `dist/<project>` | Output base directory. The federation artifacts land in `<outputPath>/browser/<sourceLocale?>`. |
 | `ssr` | `boolean` | `false` | Marks this build as SSR-capable. When true, externals are passed through Angular's `externalDependencies` instead of an esbuild plugin (the SSR build path doesn't run that plugin). The CLI's `server.mjs` is emitted as-is; the federation loader is registered at launch via the `node --import @angular-architects/native-federation/node-preload …` preload (prod) or the dev host-instance bridge (`ng serve`). See [SSR & Hydration](ssr.md). |
 | `esmsInitOptions` | `object` | `{ shimMode: true }` | Options injected into the `<script type="esms-options">` tag added to `index.html`. Forwarded to [es-module-shims](https://github.com/guybedford/es-module-shims). Set `{ shimMode: false }` to opt out of shim mode and use the browser's [native import maps](#native-import-maps) instead. |
@@ -119,7 +120,20 @@ The `tsConfig` option doesn't only select which files are compiled — it is pas
 
 The reason is that Angular's compiler plugin only hooks `onLoad`, leaving esbuild to resolve specifiers itself. Without an explicit tsconfig, esbuild only honours `baseUrl`/`paths` from an auto-discovered file named exactly `tsconfig.json` — which misses `tsconfig.app.json` / `tsconfig.lib.json` layouts and breaks workspace imports with `Could not resolve`. Angular's own application builder passes the same normalized path.
 
-Practically: the tsconfig you point `tsConfig` at must declare the workspace `baseUrl` and `paths`, or `extends` a config that does. The `tsconfig.federation.json` the schematic generates already extends the workspace root config, so generated projects need no change.
+Practically: the tsconfig you point `tsConfig` at must declare the workspace `baseUrl` and `paths`, or `extends` a config that does. The `tsconfig.federation.json` the schematic generates already extends the app tsconfig, and through it the workspace root config, so generated projects need no change.
+
+### One tsconfig per build context
+
+_Since 22.2.0._ The core builds shared mappings apart from the exposed modules ([Mapping bundles](../core/configuration.md#mapping-bundles)), so the federation build runs one Angular compilation per mapping bundle plus one for `mapping-or-exposed`. When the target declares its own `tsConfig`, each of those compiles against a generated tsconfig under the federation cache (`node_modules/.cache/native-federation/<project>/tsconfig/`). It `extends` your `tsConfig` and lists only that context's own entry points in `files`, so no context compiles another's code, and an edited mapping is picked up in watch mode. Your `tsconfig.federation.json` is never rewritten. Without a `tsConfig` on the target, the Angular target's own tsconfig is used as it is.
+
+The federation tsconfig therefore needs no `files` of its own. One that still lists them gets a one-time warning:
+
+```
+"projects/mfe1/tsconfig.federation.json" lists "files", which the federation build ignores:
+every build context compiles its own exposes and shared mappings. Remove "files" to silence this.
+```
+
+`ng update` removes the key for you through the [`update22-2`](schematics.md#update22-2) migration.
 
 ### Shared Mappings and Synthesized Imports
 
@@ -272,12 +286,12 @@ Configure your production `federation.manifest.json` to point at the locale-spec
 
 ## How the Adapter Wraps esbuild
 
-For builds that emit _federation_ artifacts (shared externals, exposed modules, mapped paths) the adapter creates two distinct esbuild contexts:
+For builds that emit _federation_ artifacts (shared externals, exposed modules, mapped paths) the adapter creates two kinds of esbuild context:
 
-- **Mappings & exposed modules** are bundled with Angular's full toolchain (the AOT compiler plugin, stylesheet handling, …) so an exposed component compiles exactly like it would in your app.
+- **Mappings & exposed modules** are bundled with Angular's full toolchain (the AOT compiler plugin, stylesheet handling, the target's `define`, …) so an exposed component compiles exactly like it would in your app. There is one such context per mapping bundle plus one for `mapping-or-exposed`, each with its [own tsconfig](#one-tsconfig-per-build-context).
 - **Shared externals from `node_modules`** are bundled with a plainer esbuild context — they're already-compiled JS and don't need the Angular plugins.
 
-Both contexts share the same `SourceFileCache` Angular uses for incremental rebuilds, so a TypeScript file invalidated in the federation build is also picked up by the next Angular rebuild.
+All contexts share the same `SourceFileCache` Angular uses for incremental rebuilds, so a TypeScript file invalidated in the federation build is also picked up by the next Angular rebuild. Outside watch mode every mapping and exposed context is disposed before the app build starts, which resets Angular's shared TypeScript compilation state; esbuild itself keeps running for the app build.
 
 ## Related
 

@@ -38,7 +38,7 @@ Update the packages:
     // your dependencies
   },
   "devDependencies": {
-    "@angular-architects/native-federation": "~22.1.0",
+    "@angular-architects/native-federation": "~22.2.0",
     "@softarc/native-federation-orchestrator": "^4.6.0"
   }
 }
@@ -133,17 +133,15 @@ export default withNativeFederation({
     requiredVersion: "auto",
   })
     .skip(["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"])
-    .patch(["@angular/core"], { includeSecondaries: { keepAll: true } })
-    .get(),
+    .patch(["@angular/core"], { includeSecondaries: { keepAll: true } }),
 
   sharedMappings: mappingsFromWorkspace({ singleton: true, strictVersion: true })
     .filter(["@my-org/ui/*", "@my-org/auth-lib"])
-    .patch(["@my-org/ui/*"], { singleton: false })
-    .get(),
+    .patch(["@my-org/ui/*"], { singleton: false }),
 });
 ```
 
-Nothing is lost by not using them: each `.get()` returns exactly the object or array you could have written by hand, so the old forms keep working and the two styles can be mixed per project. See [Angular Config → fromPackageJson](configuration.md#building-the-shared-config-from-packagejson) and [Angular Config → shared mappings](configuration.md#shared-mappings).
+`shared` and `sharedMappings` take the builders directly; a trailing `.get()` is optional. Nothing is lost by not using them: each builder resolves to exactly the object or array you could have written by hand, so the old forms keep working and the two styles can be mixed per project. See [Angular Config → fromPackageJson](configuration.md#building-the-shared-config-from-packagejson) and [Angular Config → shared mappings](configuration.md#shared-mappings).
 
 ## 3. `angular.json`
 

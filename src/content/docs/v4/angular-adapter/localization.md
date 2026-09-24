@@ -6,7 +6,7 @@ Angular ships per-locale data (numbers, dates, plural rules) under `@angular/com
 
 ## Recommended: `ignoreUnusedDeps`
 
-Since adapter v20.0.6, locale data loading is automatic when `features.ignoreUnusedDeps` is on:
+Locale data loading is automatic when `features.ignoreUnusedDeps` is on:
 
 ```ts
 export default withNativeFederation({
@@ -41,7 +41,7 @@ export default withNativeFederation({
 });
 ```
 
-`shareAngularLocales` generates one shared entry per locale, pre-wiring its package info to `node_modules/@angular/common/locales/<locale>.js`. The helper was introduced in v19.0.14.
+`shareAngularLocales` generates one shared entry per locale, pre-wiring its package info to `node_modules/@angular/common/locales/<locale>.js`.
 
 ### Options
 
