@@ -128,7 +128,7 @@ The migration to **Angular 22**. From Angular 22 the v4 adapter is published und
 If you already pulled the package yourself (e.g. `npm install @angular-architects/native-federation@22`), run the migration on its own in **migrate-only** mode:
 
 ```bash
-ng update @angular-architects/native-federation --migrate-only update22
+ng update @angular-architects/native-federation --migrate-only --name update22
 ```
 
 The schematic is enough on its own — you do **not** need to set `"type": "module"` in `package.json`. The ESM config lives in `federation.config.mjs`, which Node treats as ESM regardless of the package-wide setting. See [Migration to v4 → Updating to Angular 22](migration-v4.md#updating-to-angular-22) for the full walkthrough.

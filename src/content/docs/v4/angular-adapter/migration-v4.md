@@ -39,13 +39,12 @@ Update the packages:
   },
   "devDependencies": {
     "@angular-architects/native-federation": "~22.1.0",
-    "@softarc/native-federation": "~4.4.0",
     "@softarc/native-federation-orchestrator": "^4.6.0"
   }
 }
 ```
 
-`@softarc/native-federation-runtime` — the classic runtime — is deprecated and unused on v4: the adapter runs on the orchestrator, so drop the dependency.
+`@softarc/native-federation-runtime` — the classic runtime — is deprecated and unused on v4: the adapter runs on the orchestrator, so drop the dependency. `@softarc/native-federation` (core) comes in through the adapter, so you can remove it from your `package.json` too.
 
 > **Note:** You do **not** need to add `"type": "module"` to `package.json`. The federation config is renamed to `federation.config.mjs` (step 2), which Node loads as ESM regardless of the package-wide setting. Renaming the config — which the migration does for you — is enough.
 
@@ -276,7 +275,7 @@ This pulls the Angular 22 release and runs the bundled **`update22`** migration,
 If you already pulled the package with npm (e.g. `npm install @angular-architects/native-federation@22`), run the migration on its own instead:
 
 ```bash
-ng update @angular-architects/native-federation --migrate-only update22
+ng update @angular-architects/native-federation --migrate-only --name update22
 ```
 
 > **Note:** The `update22` schematic is all you need — and so is the `federation.config.js` → `.mjs` rename if you prefer to do it by hand. Either one is sufficient; you do **not** need to set `"type": "module"` in `package.json`. The `.mjs` extension already makes the config ESM.
