@@ -6,7 +6,7 @@ Shared dependencies are the mechanism that lets hosts and remotes load the same 
 
 ## `fromPackageJson` (recommended)
 
-Since v4.3, `fromPackageJson` is the recommended way to share your dependencies. It shares **all** dependencies found in your `package.json` and returns a small fluent builder so you can fine-tune the result. The base options you pass are applied to every shared dependency; you then chain `.skip(...)`, `.override(...)` and `.patch(...)` as needed and finish with `.get()`:
+Since v4.3, `fromPackageJson` is the recommended way to share your dependencies. It shares **all** dependencies found in your `package.json` and returns a small fluent builder so you can fine-tune the result. The base options you pass are applied to every shared dependency; you then chain `.filter(...)`, `.skip(...)`, `.override(...)` and `.patch(...)` as needed and finish with `.get()`:
 
 ```js
 import {
@@ -27,8 +27,9 @@ export default withNativeFederation({
 
 > **Note:** If you omit the `shared` property entirely, Native Federation applies exactly this `fromPackageJson` configuration for you (with `singleton`, `strictVersion` and `requiredVersion: 'auto'`). So the snippet above is also a good description of the default behavior.
 
-The builder offers three chainable methods, each of which returns the builder so you can combine them:
+The builder offers four chainable methods, each of which returns the builder so you can combine them:
 
+- **`.filter(patterns)`** — since v4.7. Share only the `package.json` dependencies matching these patterns (e.g. `['@angular/*', 'rxjs']`). Repeated calls add to the selection; omit it to share every dependency. Packages added through `.override(...)` are unaffected, and patching a package the filter excluded is ignored with a warning.
 - **`.skip(externals)`** — exclude packages from sharing (added on top of the [default skip list](configuration.md#the-default-skip-list)).
 - **`.override(externals)`** — replace the configuration for specific packages entirely. Use this when a package needs a completely different set of options.
 - **`.patch(externals, cfg)`** — merge a partial configuration onto specific shared externals, keeping the base options for everything you don't touch.
@@ -67,6 +68,8 @@ export default withNativeFederation({
     .get(),
 });
 ```
+
+Since v4.7 the trailing `.get()` is optional: `shared` also accepts the builder itself, and `withNativeFederation` calls `.get()` for you.
 
 By default the closest `package.json` (relative to your `federation.config.mjs`) is used. You can point at a different one by passing its path as the second argument: `fromPackageJson(baseCfg, projectPath)`.
 
@@ -254,7 +257,7 @@ shared: share({
 });
 ```
 
-Since v4.5, `keepAll` is read per **package family** rather than per entry point: every entry point of `@angular/core` is published as long as _something_ still reaches `@angular/core`, while a family nothing imports at all is pruned anyway. That is what keeps the flag meaningful when it is applied to every package at once — it exempts the secondaries from reachability, not the package itself. For a package without secondaries the family is the package, so the flag is a no-op there. To publish everything unconditionally, turn [`ignoreUnusedDeps`](configuration.md#feature-flags) off instead.
+Since v4.5, `keepAll` is read per **package family** rather than per entry point: every entry point of `@angular/core` is published as long as _something_ still reaches `@angular/core`, while a family nothing imports at all is pruned anyway. That is what keeps the flag meaningful when it is applied to every package at once — it exempts the secondaries from reachability, not the package itself. For a package without secondaries the family is the package, so the flag is a no-op there. To publish everything unconditionally, turn [`ignoreUnusedDeps`](configuration.md#feature-flags) off instead — wildcard `sharedMappings` then still need [`resolveGlob: true`](configuration.md#keeping-mappings-that-nothing-imports).
 
 > **Note:** A [shared mapping](configuration.md#keeping-mappings-that-nothing-imports) reads the same flag more strongly — there it exempts the mapping from reachability entirely, and a bare `includeSecondaries: true` means the same thing.
 
@@ -395,7 +398,7 @@ features: {
 }
 ```
 
-When enabled, instead of one flat entry per entrypoint, each package becomes one object whose `entries` map keys the full import name to its output file (e.g. `{ "@angular/common": "…", "@angular/common/http": "…" }`). Entrypoints whose sharing metadata (`singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`) diverges are split into separate groups. `importmap.json` is unaffected.
+When enabled, instead of one flat entry per entrypoint, each package becomes one object whose `entries` map keys the full import name to its output file (e.g. `{ "@angular/common": "…", "@angular/common/http": "…" }`). Entrypoints are grouped only when all their metadata matches — everything except the output file and the `dev` hint, so `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool` and `bundle` included (since v4.7; earlier versions compared the first five and kept the first entry's `bundle` for the whole group). `importmap.json` is unaffected.
 
 > **Note:** Since v4.4 the array is uniformly dense — bundler chunks (`@nf-internal/chunk-…`) are emitted in the same `entries` shape rather than staying flat, so a consumer only has to handle one entry shape. A chunk is never grouped with anything: it gets its own single-key `entries` map.
 
@@ -446,4 +449,4 @@ sharedMappings: [[['@my-org/ui/*'], { requiredVersion: { range: '^' } }]],
 
 A mapped path defaults to `~<version>` — an in-workspace library moves in lockstep with nothing, so `~` is the safest bet — and that default also holds for an object that names no `range`. It is the one place mappings differ from a shared package.
 
-`build`, `platform`, `chunks` and `packageInfo` are ignored for mappings — they all land in one bundle. See [sharedMappings](configuration.md#sharedmappings) for the builder (`mappingsFromWorkspace`), the `keepAll` / `resolveGlob` interaction with `ignoreUnusedDeps`, and the barrel-import rule.
+Since v4.7 a mapping also honours `build`: by default every mapping lands in one bundle, and `build: 'separate'` or `build: 'package'` gives it a bundle of its own (see [Mapping bundles](configuration.md#mapping-bundles)). `platform`, `chunks` and `packageInfo` are still ignored for mappings. See [sharedMappings](configuration.md#sharedmappings) for the builder (`mappingsFromWorkspace`), the `keepAll` / `resolveGlob` interaction with `ignoreUnusedDeps`, and the barrel-import rule.

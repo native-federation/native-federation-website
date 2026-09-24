@@ -116,7 +116,7 @@ export default withNativeFederation({
 });
 ```
 
-`fromPackageJson` returns a fluent builder (`.skip()`, `.override()`, `.patch()`, `.get()`); `shareAll` is the older object-spread equivalent. Both are covered in full on [Sharing Dependencies](sharing.md).
+`fromPackageJson` returns a fluent builder (`.filter()`, `.skip()`, `.override()`, `.patch()`, `.get()`); `shareAll` is the older object-spread equivalent. Since v4.7 `shared` also accepts the builder itself, so the trailing `.get()` is optional. Both are covered in full on [Sharing Dependencies](sharing.md).
 
 Every per-package option (`singleton`, `strictVersion`, `requiredVersion`, `includeSecondaries`, `build`, `chunks`, `platform`, `shareScope`, `pool`) is documented on [Sharing Dependencies](sharing.md).
 
@@ -191,7 +191,7 @@ sharedMappings: [
 
 Plain strings and annotated pairs mix freely. When several entries match the same mapped path **the first one wins**, so put specific entries before general ones.
 
-The honoured properties are `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool` and `includeSecondaries`. Anything you omit keeps its default: `singleton: true`, `strictVersion` following the [`mappingVersion`](#feature-flags) flag, and the version read from the mapped library's nearest `package.json`. Setting `version` explicitly also drives `requiredVersion` unless you set that too.
+The honoured properties are `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool`, `includeSecondaries` and, since v4.7, [`build`](#mapping-bundles). Anything you omit keeps its default: `singleton: true`, `strictVersion` following the [`mappingVersion`](#feature-flags) flag, and the version read from the mapped library's nearest `package.json`. Setting `version` explicitly also drives `requiredVersion` unless you set that too.
 
 Since v4.6, `requiredVersion` also accepts the [object form](sharing.md#choosing-the-emitted-range) a shared package takes, so a mapping can follow its library's version and still choose the range it emits:
 
@@ -201,7 +201,25 @@ sharedMappings: [[['@my-org/ui/*'], { requiredVersion: { range: '^' } }]],
 
 A mapping defaults to `~<version>`, and that default holds for an object that names no `range` — the one place mappings differ from a shared package, where a detected version is emitted the way `package.json` spells it.
 
-> **Note:** `build`, `platform`, `chunks` and `packageInfo` are **not** honoured for mapped paths — every mapping is built into the same bundle, so there is nothing for them to select. Setting one logs a warning and is ignored.
+`platform`, `chunks` and `packageInfo` are **not** honoured for mapped paths. Setting one logs a warning and is ignored.
+
+### Mapping bundles
+
+Since v4.7, shared mappings and exposed modules are built in separate bundler passes. A chunk the bundler factored out of both would be reached through two import trails — the mapping may be served by another remote, the exposed module never is — and evaluated twice.
+
+By default every mapping goes into one bundle, `mapping-bundle`. A mapping can ask for its own with `build`, the same way a [shared external](#build-modes-on-a-shared-entry) does:
+
+```js
+sharedMappings: [
+  [['@my-org/ui/*'], { build: 'package' }],
+  [['@my-org/auth-lib'], { build: 'separate' }],
+],
+```
+
+- **`'separate'`** — one bundle per mapped entry point.
+- **`'package'`** — one bundle per mapped package, so every expansion of a wildcard mapping stays together.
+
+The exposed modules always build as `mapping-or-exposed`. With [`denseChunking`](#feature-flags) on, each of these bundles gets its own list in the `chunks` map of `remoteEntry.json` and each mapping carries its bundle's name.
 
 ### `mappingsFromWorkspace`
 
@@ -221,7 +239,7 @@ export default withNativeFederation({
 
 - **`.filter(patterns)`** — narrow the selection. Omit it to select every mapped path, the same default as omitting `sharedMappings`.
 - **`.patch(patterns, cfg)`** — annotate a subset. It never *widens* the selection: patching a pattern that `.filter()` excluded is ignored with a warning.
-- **`.get()`** — materialize the `sharedMappings` array.
+- **`.get()`** — materialize the `sharedMappings` array. Since v4.7 it is optional: `sharedMappings` also accepts the builder itself.
 
 Patches are emitted ahead of the base selection, so first-match-wins resolves them first.
 
@@ -236,7 +254,9 @@ sharedMappings: mappingsFromWorkspace({
 ```
 
 - **`keepAll`** keeps the mapping even when nothing imports it, and on a mapping a bare `includeSecondaries: true` means the same thing — a mapping has no secondary entry points, so the flag can only mean "exempt from reachability". A shared package reads it more narrowly: `true` is the default there, and since v4.5 [`{ keepAll: true }`](sharing.md#-keepall-true---opt-out-of-unused-dep-removal) exempts that package's secondaries while the package itself still has to be reached.
-- **`resolveGlob`** is additionally required for **wildcard** mappings. A wildcard is a pattern rather than an entry point; normally only the reachability scan turns it into concrete files. `resolveGlob` expands it against the filesystem instead. Without it a wildcard mapping is dropped with a warning.
+- **`resolveGlob`** is additionally required for **wildcard** mappings. A wildcard is a pattern rather than an entry point; normally only the reachability scan turns it into concrete files. `resolveGlob` expands it against the filesystem instead. Without it a wildcard mapping is dropped with a warning. That includes `ignoreUnusedDeps: false`: with no reachability scan running, `resolveGlob` is the only thing that can expand a wildcard.
+
+Without that exemption, the reachability scan resolves wildcards itself, so no `resolveGlob` is needed. Since v4.7 the scan also follows imports by specifier from one mapping into another: an entry point that only another mapping's barrel re-exports stays published. Relative imports inside a mapping are that library's own code and are bundled into it.
 
 An expanded wildcard is named by the same rule the reachability scan uses, so `libs/ui/*` matching `libs/ui/button/index.ts` is shared as `@my-org/ui/button`.
 
@@ -250,9 +270,21 @@ without this workspace's libraries. Disable 'ignoreUnusedDeps' to publish them a
 A second warning covers the partial case — imports that match a mapping only once case is ignored. That means one directory spelled two ways, usually a mis-cased `paths` value that TypeScript resolves anyway on a case-insensitive filesystem:
 
 ```
-3 import(s) match a shared mapping only when case is ignored, so those libraries were
-pruned from remoteEntry.json -- e.g. '/repo/Libs/ui/src/index.ts'.
+2 import(s) match a shared mapping only when case is ignored, so those libraries were
+pruned from remoteEntry.json:
+  - /repo/Libs/ui/src/index.ts
+  - /repo/Libs/auth/src/index.ts
 ```
+
+Since v4.7 the build also warns when a mapping imports a **subpath** of another published mapping — `@my-org/ui/button` while only `@my-org/ui` is published. The bundler keeps every subpath of an external as it is written, but the import map has no key for it, so the import fails at runtime:
+
+```
+'libs/feature/src/index.ts' imports '@my-org/ui/button', a subpath of the shared mapping
+'@my-org/ui'. The bundler keeps it external, but the import map cannot resolve it. Import a
+mapping by its exact name instead.
+```
+
+Only the files a mapping itself matches are scanned — for a single-file mapping, just its barrel.
 
 > **Note:** A host that provides the libraries its remotes depend on couples the two — the remote can no longer run standalone. Letting each application share the entry points it imports and leaving the orchestrator to deduplicate at runtime is usually the better default.
 

@@ -118,7 +118,7 @@ When `dev: true` and `buildNotifications.enable: true`, the core writes a `build
 Under the hood, `build()` runs three phases (logged verbosely when `verbose: true`):
 
 1. **Shared externals** — `bundleShared` groups shared packages by `platform` (browser / node) and by `build` mode (`default`, `separate`, `package`). Each group is bundled via the adapter and cached.
-2. **Exposed modules & mapped paths** — `bundleExposedAndMappings` bundles every `exposes` entry plus every shared mapped path from your `tsconfig`.
+2. **Mapped paths & exposed modules** — `bundleExposedAndMappings` bundles every shared mapped path from your `tsconfig`, then every `exposes` entry. Since v4.7 these are separate bundler passes: one per [mapping bundle](configuration.md#mapping-bundles), each logged as its own step, then `mapping-or-exposed` for the exposed modules. All of them are rebuilt incrementally.
 3. **Artifact writing** — `writeFederationInfo` emits `remoteEntry.json`; `writeImportMap` emits the import map the runtime consumes.
 
 See [Build Artifacts](artifacts.md) for the shape of the generated files.

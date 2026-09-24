@@ -28,10 +28,10 @@ Configuration DSL used inside `federation.config.js`.
 | Export | Kind | Summary |
 | --- | --- | --- |
 | `withNativeFederation(config)` | function | Normalize a user-supplied `FederationConfig` — applies defaults, prepares the skip list, resolves mapped paths. |
-| `fromPackageJson(baseCfg, projectPath?)` | function | Recommended dep-sharing builder (since v4.3). Shares all `package.json` deps and returns a fluent builder (`.skip` / `.override` / `.patch` / `.get`). |
+| `fromPackageJson(baseCfg, projectPath?)` | function | Recommended dep-sharing builder (since v4.3). Shares all `package.json` deps and returns a fluent builder (`.filter` / `.skip` / `.override` / `.patch` / `.get`). Since v4.7 `shared` accepts the builder without `.get()`. |
 | `shareAll(options, opts?)` | function | Share every dependency found in `package.json`. Accepts `overrides` for per-package deviation. |
 | `share(entries, projectPath?, skipList?)` | function | Share a hand-picked set of packages with per-entry options. |
-| `mappingsFromWorkspace(baseCfg?)` | function | Since v4.4. Builder for `sharedMappings` — `.filter()` narrows the selection, `.patch()` annotates a subset, `.get()` returns the entry array. See [sharedMappings](configuration.md#mappingsfromworkspace). |
+| `mappingsFromWorkspace(baseCfg?)` | function | Since v4.4. Builder for `sharedMappings` — `.filter()` narrows the selection, `.patch()` annotates a subset, `.get()` returns the entry array (optional since v4.7). See [sharedMappings](configuration.md#mappingsfromworkspace). |
 | `setInferVersion(fn)` | function | Override how shared-dependency versions are inferred for `requiredVersion: 'auto'`. |
 | `findRootTsConfigJson()` | function | Locate the root `tsconfig.base.json` or `tsconfig.json` for mapped-path resolution. |
 | `DEFAULT_SKIP_LIST` | const | The baseline skip list `withNativeFederation` merges with your `skip`. |
@@ -40,7 +40,8 @@ Configuration DSL used inside `federation.config.js`.
 
 TypeScript contracts — types only. Useful when authoring an adapter or integrating at the type level.
 
-- `FederationConfig`
+- `FederationConfig`, `SharedMappingEntry`
+- `ConfigBuilder`, `PackageJsonExternalsBuilder`, `WorkspaceMappingsBuilder` — since v4.7, the builder types `fromPackageJson` and `mappingsFromWorkspace` return. `shared` and `sharedMappings` accept any `ConfigBuilder` in place of its value
 - `ExternalConfig`, `SharedExternalsConfig`, `ShareExternalsOptions`, `ShareAllExternalsOptions`, `IncludeSecondariesOptions` — since v4.5 the two `Share*Options` input types accept the [object form of `requiredVersion`](sharing.md#choosing-the-emitted-range)
 - `FederationOptions`, `NormalizedFederationOptions`
 - `NFBuildAdapter`, `NFBuildAdapterOptions`, `NFBuildAdapterContext`, `NFBuildAdapterResult`, `EntryPoint`

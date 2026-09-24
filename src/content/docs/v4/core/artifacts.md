@@ -98,7 +98,9 @@ With code-splitting enabled (the default), the bundler may split a shared packag
 }
 ```
 
-Version and singleton fields are placeholders — a chunk isn't versioned on its own; a content hash in its filename keeps it unique across builds.
+Version and singleton fields are placeholders — a chunk isn't versioned on its own. It belongs to a build, not to a dependency, so it is never shared between applications: each remote loads its own copy.
+
+Since v4.7 the core names every chunk after a hash of the bytes it serves, replacing the hash the bundler chose. Identical chunks therefore share one name across rebuilds, and a changed chunk always gets a new one. The hash keeps the length of the bundler's hash, so every reference keeps its byte length and the emitted source maps stay valid. It is written in upper-case base32, because names differing only in case would collapse to one file on a case-insensitive filesystem.
 
 When `features.denseChunking` is enabled, chunks move off the `shared` array and onto a dedicated `chunks` object:
 
@@ -112,12 +114,14 @@ When `features.denseChunking` is enabled, chunks move off the `shared` array and
     }
   ],
   "chunks": {
-    "browser-shared": ["chunk-AB12.js", "chunk-CD34.js"]
+    "browser-shared": ["chunk-AB23CD45.js", "chunk-EF67GH23.js"],
+    "mapping-bundle": ["chunk-JK23LM45.js"],
+    "mapping-or-exposed": ["chunk-NP67QR23.js"]
   }
 }
 ```
 
-Each shared entry gets a `bundle` property pointing at its chunk bundle by name. The result is a smaller, more cache-friendly `remoteEntry.json` — and the runtime can skip entire chunk groups whose dependencies aren't part of the final import map.
+Each shared entry gets a `bundle` property pointing at its chunk bundle by name. Since v4.7 shared mappings build apart from the exposed modules, so their chunks list under their own bundle (`mapping-bundle`, or `mapping-<name>` for a mapping with [`build`](configuration.md#mapping-bundles) set), and each mapping carries that bundle's name. The result is a smaller, more cache-friendly `remoteEntry.json` — and the runtime can skip entire chunk groups whose dependencies aren't part of the final import map.
 
 ## Dense Externals
 
@@ -147,7 +151,7 @@ type DenseSharedInfo = Omit<SharedInfo, "outFileName"> & {
 }
 ```
 
-Entrypoints whose sharing metadata (`singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`) diverges are split into separate groups. `importmap.json` is unaffected.
+Entrypoints are grouped only when all their metadata matches — everything except the output file and the `dev` hint, which since v4.7 includes `pool` and `bundle`. Entrypoints that diverge are split into separate groups. `importmap.json` is unaffected.
 
 Since v4.4 the array is **uniformly dense**: bundler chunks use the same shape rather than staying flat, so a consumer only ever handles one entry shape. A chunk is never grouped with anything else — it becomes its own object with a single-key `entries` map:
 

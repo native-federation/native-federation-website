@@ -33,11 +33,14 @@ The core calls these in phases. Each phase has a unique `name` — use it as the
 
 ## 2. The phases the core drives
 
-During a full build the core will call your adapter for up to three families of phases:
+During a full build the core will call your adapter for up to four families of phases:
 
 - `browser-shared` / `node-shared` — every `build: 'default'` external for that platform bundled in one pass. Called as a matched `setup` → `build` → `dispose` triple.
 - `browser-<pkg>` / `node-<pkg>` — externals declared with `build: 'separate'` or `build: 'package'`, one phase per package group, again as a matched triple.
-- `mapping-or-exposed` — every `exposes` entry plus every shared `tsconfig` path. This phase is special: the core keeps its context alive across incremental rebuilds. `setup` is called once, then `build` is called again (with `modifiedFiles` populated) for every subsequent rebuild, and `dispose` is only called when the whole federation builder shuts down.
+- `mapping-bundle` / `mapping-<name>` — the shared `tsconfig` paths. Since v4.7 they build apart from the exposed modules: every mapping goes into `mapping-bundle` unless it sets `build: 'separate'` or `build: 'package'`, which gives it a `mapping-<name>` phase of its own.
+- `mapping-or-exposed` — every `exposes` entry.
+
+The source-code phases (the last two families) are special: the core keeps their contexts alive across incremental rebuilds. `setup` is called once per phase, then `build` is called again (with `modifiedFiles` populated) for every subsequent rebuild, and `dispose` is only called when the whole federation builder shuts down. Key your bundler contexts on `name` rather than on the literal `mapping-or-exposed`: a phase is skipped when it has no entry points, and the set of mapping phases follows the config.
 
 The `options.isMappingOrExposed` flag tells you which family you're in. Shared externals and source-code exposed modules usually need different bundler settings — different `resolveExtensions`, different plugins (externals are often CommonJS), different `platform` handling. The esbuild adapter splits this into `createSourceCodeEsbuildContext` vs `createNodeModulesEsbuildContext`; yours probably wants the same split.
 
@@ -47,8 +50,8 @@ The `options.isMappingOrExposed` flag tells you which family you're in. Shared e
 | --- | --- | --- |
 | `entryPoints` | `EntryPoint[]` | `{ fileName, outName, key? }`. Use `fileName` as the bundler's entry source and `outName` as the basename of the emitted file (without hash placeholders — the core handles hashing via `options.hash`). |
 | `external` | `string[]` | Modules the bundler must _not_ inline. Pass through as-is to your bundler's externals setting. |
-| `outdir` | `string` | Absolute target directory for emitted files. For externals it points at the cache directory; for `mapping-or-exposed` it's the project's `outputPath`. |
-| `isMappingOrExposed` | `boolean` | `true` for the source-code phase, `false` for externals. |
+| `outdir` | `string` | Absolute target directory for emitted files. For externals it points at the cache directory; for the source-code phases it's the project's `outputPath`. |
+| `isMappingOrExposed` | `boolean` | `true` for the source-code phases (mapping bundles and `mapping-or-exposed`), `false` for externals. |
 | `platform` | `'browser' \| 'node'` | Forwarded to the bundler's platform setting. |
 | `hash` | `boolean` | If `true`, append a content hash to emitted filenames. The core uses the filename you emit to populate `remoteEntry.json`. |
 | `dev` | `boolean` | Enable sourcemaps, disable minification, set `process.env.NODE_ENV` to `"development"`. |
@@ -64,6 +67,8 @@ The `options.isMappingOrExposed` flag tells you which family you're in. Shared e
 Every emitted file — entry, chunk, `.map` — goes into the returned `NFBuildAdapterResult[]` with an _absolute_ `fileName`. Don't try to filter chunks or sourcemaps yourself: the core does that and matches entries by basename against `outName`, so filtering on your side breaks chunk tracking.
 
 The esbuild adapter writes files to disk inside `build()` and returns the paths it wrote. If your bundler already writes to disk, hand the paths back. If it returns in-memory buffers, write them first — the core reads the files back to hash them and to rewrite chunk imports.
+
+Since v4.7 the core also renames every chunk after a hash of its content, replacing the hash segment of the name your bundler emitted: a trailing `-<hash>` of at least 8 characters, as esbuild and Rollup write it (`chunk-IXOA6WTM.js`). The new hash has the same length, so references keep their byte length and the core shifts the columns of each `.map` it touches. Emit chunk names in that shape and write a `.map` next to each file you want source-mapped. A name without a hash segment gets an 8-character hash appended.
 
 If `opts.signal` aborts:
 
@@ -190,13 +195,13 @@ async function triggerRebuild(): Promise<void> {
 
 ## 9. Incremental rebuilds and `modifiedFiles`
 
-When the core calls `build('mapping-or-exposed', { modifiedFiles })` on an already-`setup` context, it's telling you: "these input paths changed since the last build — your cached state for them is stale." You must:
+When the core calls `build(name, { modifiedFiles })` on an already-`setup` source-code context, it's telling you: "these input paths changed since the last build — your cached state for them is stale." You must:
 
 1. Evict those paths from `options.cache.bundlerCache` (as shown in §6).
 2. Run the bundler. Most bundlers with a persistent context (esbuild's `ctx.rebuild()`, Rspack's `compiler.watch()`, Vite's dev server HMR) will reuse what they have and only redo the affected graph.
 3. Return the full emitted set again. The core reconciles names itself.
 
-The externals phases don't pass `modifiedFiles` — they run once per federation build. Only `mapping-or-exposed` is incremental.
+The externals phases don't pass `modifiedFiles` — they run once per federation build. Only the source-code phases are incremental.
 
 ## 10. CommonJS / UMD externals
 
