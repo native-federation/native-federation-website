@@ -112,7 +112,7 @@ export default withNativeFederation({
     singleton: true,
     strictVersion: true,
     requiredVersion: 'auto',
-  }).get(),
+  }),
 });
 ```
 
@@ -223,7 +223,7 @@ The exposed modules always build as `mapping-or-exposed`. With [`denseChunking`]
 
 ### `mappingsFromWorkspace`
 
-For more than a couple of entries, the `mappingsFromWorkspace` builder is easier to read. It is pure sugar — `.get()` returns exactly the array form above:
+For more than a couple of entries, the `mappingsFromWorkspace` builder is easier to read. It is pure sugar — it resolves to exactly the array form above:
 
 ```js
 import { withNativeFederation, mappingsFromWorkspace } from '@softarc/native-federation/config';
@@ -232,8 +232,7 @@ export default withNativeFederation({
   name: 'shell',
   sharedMappings: mappingsFromWorkspace({ singleton: true, strictVersion: true })
     .filter(['@my-org/ui/*', '@my-org/auth-lib'])
-    .patch(['@my-org/ui/*'], { singleton: false })
-    .get(),
+    .patch(['@my-org/ui/*'], { singleton: false }),
 });
 ```
 
@@ -250,7 +249,7 @@ With [`ignoreUnusedDeps`](#feature-flags) on (the default), mapped paths are pru
 ```js
 sharedMappings: mappingsFromWorkspace({
   includeSecondaries: { keepAll: true, resolveGlob: true },
-}).get(),
+}),
 ```
 
 - **`keepAll`** keeps the mapping even when nothing imports it, and on a mapping a bare `includeSecondaries: true` means the same thing — a mapping has no secondary entry points, so the flag can only mean "exempt from reachability". A shared package reads it more narrowly: `true` is the default there, and [`{ keepAll: true }`](sharing.md#-keepall-true---opt-out-of-unused-dep-removal) exempts that package's secondaries while the package itself still has to be reached.
