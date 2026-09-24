@@ -6,7 +6,7 @@ Shared dependencies are the mechanism that lets hosts and remotes load the same 
 
 ## `fromPackageJson` (recommended)
 
-Since v4.3, `fromPackageJson` is the recommended way to share your dependencies. It shares **all** dependencies found in your `package.json` and returns a small fluent builder so you can fine-tune the result. The base options you pass are applied to every shared dependency; you then chain `.filter(...)`, `.skip(...)`, `.override(...)` and `.patch(...)` as needed and finish with `.get()`:
+`fromPackageJson` is the recommended way to share your dependencies. It shares **all** dependencies found in your `package.json` and returns a small fluent builder so you can fine-tune the result. The base options you pass are applied to every shared dependency; you then chain `.filter(...)`, `.skip(...)`, `.override(...)` and `.patch(...)` as needed and finish with `.get()`:
 
 ```js
 import {
@@ -29,7 +29,7 @@ export default withNativeFederation({
 
 The builder offers four chainable methods, each of which returns the builder so you can combine them:
 
-- **`.filter(patterns)`** — since v4.7. Share only the `package.json` dependencies matching these patterns (e.g. `['@angular/*', 'rxjs']`). Repeated calls add to the selection; omit it to share every dependency. Packages added through `.override(...)` are unaffected, and patching a package the filter excluded is ignored with a warning.
+- **`.filter(patterns)`** — share only the `package.json` dependencies matching these patterns (e.g. `['@angular/*', 'rxjs']`). Repeated calls add to the selection; omit it to share every dependency. Packages added through `.override(...)` are unaffected, and patching a package the filter excluded is ignored with a warning.
 - **`.skip(externals)`** — exclude packages from sharing (added on top of the [default skip list](configuration.md#the-default-skip-list)).
 - **`.override(externals)`** — replace the configuration for specific packages entirely. Use this when a package needs a completely different set of options.
 - **`.patch(externals, cfg)`** — merge a partial configuration onto specific shared externals, keeping the base options for everything you don't touch.
@@ -69,7 +69,7 @@ export default withNativeFederation({
 });
 ```
 
-Since v4.7 the trailing `.get()` is optional: `shared` also accepts the builder itself, and `withNativeFederation` calls `.get()` for you.
+The trailing `.get()` is optional: `shared` also accepts the builder itself, and `withNativeFederation` calls `.get()` for you.
 
 By default the closest `package.json` (relative to your `federation.config.mjs`) is used. You can point at a different one by passing its path as the second argument: `fromPackageJson(baseCfg, projectPath)`.
 
@@ -98,7 +98,7 @@ export default withNativeFederation({
 
 ### Per-Package Overrides
 
-Since v21.1, `shareAll` accepts an `overrides` option to deviate from the defaults for specific packages:
+`shareAll` accepts an `overrides` option to deviate from the defaults for specific packages:
 
 ```js
 ...shareAll(
@@ -154,7 +154,7 @@ shared: share({
 | `build`              | `'default' \| 'separate' \| 'package'`         | `'default'`    | How the shared external is bundled. `'default'` groups all `default` shared externals into one build step. `'separate'` builds the entry on its own. `'package'` builds the entry plus its secondaries as an isolated package bundle — required when you want per-package `chunks` settings to take effect. |
 | `chunks`             | `boolean`                                      | config default | Enable or disable code-splitting for this specific package.                                                                                                                                                                                                                                                 |
 | `shareScope`         | `string`                                       | config default | Optional share-scope override for this package.                                                                                                                                                                                                                                                             |
-| `pool`               | `string`                                       | –              | Since v4.3. Optional resource-pool hint for this shared external. Passed through to `remoteEntry.json` and consumed by the orchestrator; the core build does not act on it.                                                                                                                                 |
+| `pool`               | `string`                                       | –              | Optional resource-pool hint for this shared external. Passed through to `remoteEntry.json` and consumed by the orchestrator; the core build does not act on it.                                                                                                                                 |
 
 ### `requiredVersion: 'auto'`
 
@@ -162,7 +162,7 @@ With `'auto'`, the helper looks up the version in the closest `package.json`. Th
 
 ### Choosing the emitted range
 
-A detected version is emitted exactly as your `package.json` spells it — `^1.2.3` stays `^1.2.3`. Since v4.5, passing an object instead lets you pick the format:
+A detected version is emitted exactly as your `package.json` spells it — `^1.2.3` stays `^1.2.3`. Passing an object instead lets you pick the format:
 
 ```js
 shared: share({
@@ -218,7 +218,7 @@ shared: share({
 
 ### `{ resolveGlob: true }` — expand glob exports
 
-Some packages declare wildcard exports in their `package.json` — for example RxJS exposes `./internal/*`. By default, the `share` helper only emits a bundle for _exact_ entry points, so an import like `rxjs/internal/observable/of` crashes at runtime (the import map only resolves exact matches, never glob paths). Since v21 you can opt in to glob resolution:
+Some packages declare wildcard exports in their `package.json` — for example RxJS exposes `./internal/*`. By default, the `share` helper only emits a bundle for _exact_ entry points, so an import like `rxjs/internal/observable/of` crashes at runtime (the import map only resolves exact matches, never glob paths). You can opt in to glob resolution:
 
 ```js
 shared: share({
@@ -257,7 +257,7 @@ shared: share({
 });
 ```
 
-Since v4.5, `keepAll` is read per **package family** rather than per entry point: every entry point of `@angular/core` is published as long as _something_ still reaches `@angular/core`, while a family nothing imports at all is pruned anyway. That is what keeps the flag meaningful when it is applied to every package at once — it exempts the secondaries from reachability, not the package itself. For a package without secondaries the family is the package, so the flag is a no-op there. To publish everything unconditionally, turn [`ignoreUnusedDeps`](configuration.md#feature-flags) off instead — wildcard `sharedMappings` then still need [`resolveGlob: true`](configuration.md#keeping-mappings-that-nothing-imports).
+`keepAll` is read per **package family** rather than per entry point: every entry point of `@angular/core` is published as long as _something_ still reaches `@angular/core`, while a family nothing imports at all is pruned anyway. That is what keeps the flag meaningful when it is applied to every package at once — it exempts the secondaries from reachability, not the package itself. For a package without secondaries the family is the package, so the flag is a no-op there. To publish everything unconditionally, turn [`ignoreUnusedDeps`](configuration.md#feature-flags) off instead — wildcard `sharedMappings` then still need [`resolveGlob: true`](configuration.md#keeping-mappings-that-nothing-imports).
 
 > **Note:** A [shared mapping](configuration.md#keeping-mappings-that-nothing-imports) reads the same flag more strongly — there it exempts the mapping from reachability entirely, and a bare `includeSecondaries: true` means the same thing.
 
@@ -390,7 +390,7 @@ features: {
 
 ### Dense Externals
 
-Since v4.3, the `denseExternals` feature flag reshapes the `shared` array in `remoteEntry.json` so that all entrypoints of a shared external — its primary import plus every secondary and shared mapping — are grouped under a single object:
+The `denseExternals` feature flag reshapes the `shared` array in `remoteEntry.json` so that all entrypoints of a shared external — its primary import plus every secondary and shared mapping — are grouped under a single object:
 
 ```js
 features: {
@@ -398,15 +398,15 @@ features: {
 }
 ```
 
-When enabled, instead of one flat entry per entrypoint, each package becomes one object whose `entries` map keys the full import name to its output file (e.g. `{ "@angular/common": "…", "@angular/common/http": "…" }`). Entrypoints are grouped only when all their metadata matches — everything except the output file and the `dev` hint, so `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool` and `bundle` included (since v4.7; earlier versions compared the first five and kept the first entry's `bundle` for the whole group). `importmap.json` is unaffected.
+When enabled, instead of one flat entry per entrypoint, each package becomes one object whose `entries` map keys the full import name to its output file (e.g. `{ "@angular/common": "…", "@angular/common/http": "…" }`). Entrypoints are grouped only when all their metadata matches — everything except the output file and the `dev` hint, so `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool` and `bundle` included. `importmap.json` is unaffected.
 
-> **Note:** Since v4.4 the array is uniformly dense — bundler chunks (`@nf-internal/chunk-…`) are emitted in the same `entries` shape rather than staying flat, so a consumer only has to handle one entry shape. A chunk is never grouped with anything: it gets its own single-key `entries` map.
+> **Note:** The array is uniformly dense — bundler chunks (`@nf-internal/chunk-…`) are emitted in the same `entries` shape, so a consumer only has to handle one entry shape. A chunk is never grouped with anything: it gets its own single-key `entries` map.
 
 The flag is opt-in and fully backward compatible: the runtime auto-detects each entry by shape, so both old and new `remoteEntry.json` load. It is orthogonal to `denseChunking` — the two can be combined. See [Build Artifacts](artifacts.md#dense-externals) for the resulting `remoteEntry.json` shape.
 
 ## CommonJS externals
 
-Since v4.4, the `synthesizeCjsExports` feature flag (**on by default**) makes named imports work for shared dependencies that are still CommonJS.
+The `synthesizeCjsExports` feature flag (**on by default**) makes named imports work for shared dependencies that are still CommonJS.
 
 The problem it solves is the module boundary. A shared external is bundled to ESM and handed to the browser through the import map. When the package's entry point is CJS, the bundler can only see a single default export, so `import { debounce } from 'lodash'` resolves to nothing at runtime even though the property exists on the object.
 
@@ -432,7 +432,7 @@ features: {
 
 ## Shared mappings
 
-Monorepo-internal libraries mapped through your `tsconfig` `paths` are shared too, and since v4.4 they accept per-mapping configuration with the same vocabulary as this page: `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool` and `includeSecondaries`.
+Monorepo-internal libraries mapped through your `tsconfig` `paths` are shared too, and they accept per-mapping configuration with the same vocabulary as this page: `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool` and `includeSecondaries`.
 
 ```js
 sharedMappings: [
@@ -441,7 +441,7 @@ sharedMappings: [
 ],
 ```
 
-Since v4.6, `requiredVersion` takes the same [object form](#choosing-the-emitted-range) as a shared package, so a mapping can follow its library's version and still choose the range:
+`requiredVersion` takes the same [object form](#choosing-the-emitted-range) as a shared package, so a mapping can follow its library's version and still choose the range:
 
 ```js
 sharedMappings: [[['@my-org/ui/*'], { requiredVersion: { range: '^' } }]],
@@ -449,4 +449,4 @@ sharedMappings: [[['@my-org/ui/*'], { requiredVersion: { range: '^' } }]],
 
 A mapped path defaults to `~<version>` — an in-workspace library moves in lockstep with nothing, so `~` is the safest bet — and that default also holds for an object that names no `range`. It is the one place mappings differ from a shared package.
 
-Since v4.7 a mapping also honours `build`: by default every mapping lands in one bundle, and `build: 'separate'` or `build: 'package'` gives it a bundle of its own (see [Mapping bundles](configuration.md#mapping-bundles)). `platform`, `chunks` and `packageInfo` are still ignored for mappings. See [sharedMappings](configuration.md#sharedmappings) for the builder (`mappingsFromWorkspace`), the `keepAll` / `resolveGlob` interaction with `ignoreUnusedDeps`, and the barrel-import rule.
+A mapping also honours `build`: by default every mapping lands in one bundle, and `build: 'separate'` or `build: 'package'` gives it a bundle of its own (see [Mapping bundles](configuration.md#mapping-bundles)). `platform`, `chunks` and `packageInfo` are ignored for mappings. See [sharedMappings](configuration.md#sharedmappings) for the builder (`mappingsFromWorkspace`), the `keepAll` / `resolveGlob` interaction with `ignoreUnusedDeps`, and the barrel-import rule.

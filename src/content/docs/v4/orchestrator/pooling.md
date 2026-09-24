@@ -77,7 +77,7 @@ The grouping is contributed **per remote**: a pool forms only once some remote d
 
 ### 2. A remote-declared `pool` tag
 
-A remote sets an optional `pool` on a shared package in its `federation.config.mjs`. It mirrors `shareScope` in shape, and Core (since v4.3) passes it through to `remoteEntry.json` untouched — the build itself does nothing with it. See [Core — per-package options](../core/sharing.md#per-package-options).
+A remote sets an optional `pool` on a shared package in its `federation.config.mjs`. It mirrors `shareScope` in shape, and Core passes it through to `remoteEntry.json` untouched — the build itself does nothing with it. See [Core — per-package options](../core/sharing.md#per-package-options).
 
 ```js
 // federation.config.mjs

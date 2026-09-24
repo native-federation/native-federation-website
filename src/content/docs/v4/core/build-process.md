@@ -55,7 +55,7 @@ await federationBuilder.close();
 | `entryPoints` | `string[]` | no | Additional entry points considered when `ignoreUnusedDeps` is enabled. Defaults to the values of `exposes`. |
 | `dev` | `boolean` | no | Development mode — influences bundling and enables the build-notifications endpoint. |
 | `watch` | `boolean` | no | Hint to the adapter that it should set up watch mode. |
-| `watchLinkedDeps` | `boolean` | no | Since v4.5. Poll-watch shared dependencies resolved through `npm link` so rebuilding the linked library live-reloads this app. Off by default — [see below](#watching-npm-linked-shared-dependencies). |
+| `watchLinkedDeps` | `boolean` | no | Poll-watch shared dependencies resolved through `npm link` so rebuilding the linked library live-reloads this app. Off by default — [see below](#watching-npm-linked-shared-dependencies). |
 | `verbose` | `boolean` | no | Verbose logging. |
 | `cacheExternalArtifacts` | `boolean` | no | Cache built shared externals across builds (default `true`). |
 | `buildNotifications` | `BuildNotificationOptions` | no | Configures the dev-only notification endpoint that tells the runtime to reload on rebuild. |
@@ -118,7 +118,7 @@ When `dev: true` and `buildNotifications.enable: true`, the core writes a `build
 Under the hood, `build()` runs three phases (logged verbosely when `verbose: true`):
 
 1. **Shared externals** — `bundleShared` groups shared packages by `platform` (browser / node) and by `build` mode (`default`, `separate`, `package`). Each group is bundled via the adapter and cached.
-2. **Mapped paths & exposed modules** — `bundleExposedAndMappings` bundles every shared mapped path from your `tsconfig`, then every `exposes` entry. Since v4.7 these are separate bundler passes: one per [mapping bundle](configuration.md#mapping-bundles), each logged as its own step, then `mapping-or-exposed` for the exposed modules. All of them are rebuilt incrementally.
+2. **Mapped paths & exposed modules** — `bundleExposedAndMappings` bundles every shared mapped path from your `tsconfig`, then every `exposes` entry, in separate bundler passes: one per [mapping bundle](configuration.md#mapping-bundles), each logged as its own step, then `mapping-or-exposed` for the exposed modules. All of them are rebuilt incrementally.
 3. **Artifact writing** — `writeFederationInfo` emits `remoteEntry.json`; `writeImportMap` emits the import map the runtime consumes.
 
 See [Build Artifacts](artifacts.md) for the shape of the generated files.

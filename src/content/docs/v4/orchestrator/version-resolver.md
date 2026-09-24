@@ -83,7 +83,7 @@ Never shared. Every remote gets its own copy in its own scope entry — no resol
 
 ## <a id="secondary-entrypoints"></a> Secondary entrypoints — the `entries` map
 
-A package can expose more than one import specifier: a primary entrypoint (`@angular/core`) and one or more secondary entrypoints (`@angular/core/testing`, `@angular/core/rxjs-interop`, …). Core v4.3.0 groups these under a single `DenseSharedInfo`, replacing the flat `outFileName` with an `entries` map from each specifier to its output file:
+A package can expose more than one import specifier: a primary entrypoint (`@angular/core`) and one or more secondary entrypoints (`@angular/core/testing`, `@angular/core/rxjs-interop`, …). With [`denseExternals`](../core/configuration.md#feature-flags) on, the core groups these under a single `DenseSharedInfo`, replacing the flat `outFileName` with an `entries` map from each specifier to its output file:
 
 ```json
 // In remoteEntry.json
