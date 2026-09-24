@@ -31,9 +31,9 @@ import {
 } from "@angular-architects/native-federation/config";
 ```
 
-Everything except `mappingsFromWorkspace` is an Angular-aware wrapper; `mappingsFromWorkspace` is a plain re-export of the core builder (see [below](#shared-mappings)). Anything else (helpers, types, advanced overrides) lives in the core — import it from `@softarc/native-federation/config` or `@softarc/native-federation/domain`.
+Everything except `mappingsFromWorkspace` is an Angular-aware wrapper; `mappingsFromWorkspace` is a plain re-export of the core builder (see [below](#shared-mappings)). Anything else (helpers, other types, advanced overrides) lives in the core — import it from `@softarc/native-federation/config` or `@softarc/native-federation/domain`.
 
-_Since 22.1.3_ the `FederationConfig` type is exported from this entry point too, next to the `withNativeFederation` that takes it.
+_Since 22.1.3_ the `FederationConfig` type is exported from this entry point too, next to the `withNativeFederation` that takes it. _Since 22.2.0_ so are `ExternalConfig`, `SharedExternalsConfig` and `SharedMappingEntry`. Add `// @ts-check` at the top of `federation.config.mjs` to have your editor check the config against `FederationConfig`.
 
 ## What `withNativeFederation` Adds
 
@@ -100,16 +100,15 @@ export default withNativeFederation({
     requiredVersion: "auto",
   })
     .skip(["rxjs/ajax", "rxjs/fetch"])
-    .override({ "large-lib": { singleton: false } })
-    .get(),
+    .override({ "large-lib": { singleton: false } }),
 });
 ```
 
-Unlike the core's `fromPackageJson`, this adapter's version pre-seeds `NG_SKIP_LIST` — the same list `shareAll` uses — so Angular-internal and localization packages are skipped out of the box and `.skip()` only lists what is specific to your app. The builder methods (`.skip`, `.override`, `.patch`, `.get`) are otherwise identical; see [core configuration → shared](../core/configuration.md#shared--the-share-helpers).
+Unlike the core's `fromPackageJson`, this adapter's version pre-seeds `NG_SKIP_LIST` — the same list `shareAll` uses — so Angular-internal and localization packages are skipped out of the box and `.skip()` only lists what is specific to your app. The builder methods (`.filter`, `.skip`, `.override`, `.patch`, `.get`) are otherwise identical, and `shared` accepts the builder without a trailing `.get()`; see [core configuration → shared](../core/configuration.md#shared--the-share-helpers).
 
 ## Platform Inference
 
-Native Federation builds for either `browser` (default) or `node`. The core requires you to set `platform` explicitly; the Angular wrapper infers it: if any shared dependency starts with `@angular/platform-server` or `@angular/ssr`, it sets `platform: 'node'`. Otherwise it stays on `browser`.
+Native Federation builds for either `browser` (default) or `node`. The core requires you to set `platform` explicitly; the Angular wrapper infers it: if any shared dependency starts with `@angular/platform-server` or `@angular/ssr`, it sets `platform: 'node'`. Otherwise it stays on `browser`. A builder passed as `shared` is resolved first, so the inference sees the packages it shares.
 
 You can always override:
 
@@ -127,7 +126,7 @@ Angular ships per-locale data as separate files under `@angular/common/locales`.
 
 ### The recommended path: `ignoreUnusedDeps`
 
-Since adapter v20.0.6, locale loading works out of the box if you opt into `ignoreUnusedDeps` (the default for new projects):
+Locale loading works out of the box if you opt into `ignoreUnusedDeps` (the default for new projects):
 
 ```ts
 export default withNativeFederation({
@@ -142,7 +141,7 @@ The core scans your entry points and only ships the locale files you actually im
 
 ### The fallback: `shareAngularLocales`
 
-If you can't enable `ignoreUnusedDeps` (for example, you're on an older release), declare the locales explicitly:
+If you can't enable `ignoreUnusedDeps`, declare the locales explicitly:
 
 ```ts
 import {
@@ -255,8 +254,7 @@ export default withNativeFederation({
     strictVersion: true,
   })
     .filter(["@my-org/ui/*", "@my-org/auth-lib"])
-    .patch(["@my-org/ui/*"], { singleton: false })
-    .get(),
+    .patch(["@my-org/ui/*"], { singleton: false }),
 });
 ```
 
@@ -269,7 +267,7 @@ For reference, this is the `federation.config.mjs` that `ng add` emits for a rem
 ```ts
 import {
   withNativeFederation,
-  shareAll,
+  fromPackageJson,
 } from "@angular-architects/native-federation/config";
 
 export default withNativeFederation({
@@ -279,29 +277,15 @@ export default withNativeFederation({
     "./Component": "./projects/mfe1/src/app/app.component.ts",
   },
 
-  shared: {
-    ...shareAll(
-      {
-        singleton: true,
-        strictVersion: true,
-        requiredVersion: "auto",
-        build: "package",
-      },
-      {
-        overrides: {
-          // includeSecondaries is an opt-out of ignoreUnusedDeps, so all of
-          // @angular/core is shared to prevent mismatches.
-          "@angular/core": {
-            singleton: true,
-            strictVersion: true,
-            requiredVersion: "auto",
-            build: "package",
-            includeSecondaries: { keepAll: true },
-          },
-        },
-      },
-    ),
-  },
+  shared: fromPackageJson({
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: "auto",
+    build: "package",
+  })
+    // includeSecondaries is an opt-out of ignoreUnusedDeps, so all of
+    // @angular/core is shared to prevent mismatches.
+    .patch(["@angular/core"], { includeSecondaries: { keepAll: true } }),
 
   skip: [
     "rxjs/ajax",
@@ -321,7 +305,7 @@ export default withNativeFederation({
 });
 ```
 
-Notable defaults: `build: 'package'` for the per-package build mode (each external gets its own meta file — see [build modes](../core/configuration.md#build-modes-on-a-shared-entry)), `includeSecondaries.keepAll` for `@angular/core` only (see [below](#why-keepall-for-angularcore)), and `denseChunking: true` to compress the `remoteEntry.json`. The schematic doesn't generate an override for `@angular/common`; only `@angular/core` gets the `keepAll` guard out of the box.
+Notable defaults: `build: 'package'` for the per-package build mode (each external gets its own meta file — see [build modes](../core/configuration.md#build-modes-on-a-shared-entry)), `includeSecondaries.keepAll` patched onto `@angular/core` only (see [below](#why-keepall-for-angularcore)), and `denseChunking: true` to compress the `remoteEntry.json`. `.patch()` merges into the entry `fromPackageJson` already built, so `@angular/core` keeps the base options and its installed version. Only `@angular/core` gets the `keepAll` guard out of the box. Configs generated before 22.2.0 spread `shareAll(...)` with an `overrides` entry instead; the resolved config is the same.
 
 ### Why `keepAll` for `@angular/core`?
 

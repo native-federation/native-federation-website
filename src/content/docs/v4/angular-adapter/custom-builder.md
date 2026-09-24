@@ -2,7 +2,7 @@
 
 > Inject custom esbuild plugins into the Native Federation Angular builder via runBuilder.
 
-Sometimes you need an esbuild plugin in the federation build itself — code transformation, bundling tweaks, third-party tooling. Since v4 the Angular adapter exposes its builder factory as `runBuilder` from `@angular-architects/native-federation/internal`, so you can wrap it in your own Architect builder and pass extra plugins through.
+Sometimes you need an esbuild plugin in the federation build itself — code transformation, bundling tweaks, third-party tooling. The Angular adapter exposes its builder factory as `runBuilder` from `@angular-architects/native-federation/internal`, so you can wrap it in your own Architect builder and pass extra plugins through.
 
 ## The Pattern
 

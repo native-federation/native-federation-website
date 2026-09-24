@@ -1,6 +1,6 @@
 # Schematics
 
-> The Angular adapter's schematics: init/ng-add, appbuilder, update-v4, update22, update18 and remove — plus the Nx generator.
+> The Angular adapter's schematics: init/ng-add, appbuilder, update-v4, update22, update22-2, update18 and remove — plus the Nx generator.
 
 The adapter ships a small collection of schematics for the Angular CLI (and an Nx generator). They scaffold projects, migrate older setups forward, and tear federation back out cleanly when you no longer need it.
 
@@ -12,6 +12,7 @@ The adapter ships a small collection of schematics for the Angular CLI (and an N
 - [appbuilder](#appbuilder)
 - [update-v4](#update-v4)
 - [update22 (Angular 22)](#update22-angular-22)
+- [update22-2](#update22-2)
 - [update18 (auto migration)](#update18-auto-migration)
 - [remove](#remove)
 - [Nx generator](#nx-generator)
@@ -37,8 +38,8 @@ Initializes a project for Native Federation. `ng add` and `ng g …:init` both r
 ### What it changes
 
 1. **Polyfills.** Adds `es-module-shims` to the polyfills array (or to a `polyfills.ts` file).
-2. **Federation config.** Generates `projects/<name>/federation.config.mjs` from a template — for remotes, the project's `app.component.ts` is auto-detected and exposed as `./Component`. The template enables `denseChunking` and adds an `@angular/core` override with `includeSecondaries: { keepAll: true }`. Skipped if a config already exists.
-3. **tsconfig.** Generates `projects/<name>/tsconfig.federation.json` — extends the project's `tsconfig.json`, narrows `types` to `[]`, and only includes `src/**/*.ts` minus specs.
+2. **Federation config.** Generates `projects/<name>/federation.config.mjs` from a template — for remotes, the project's `app.component.ts` is auto-detected and exposed as `./Component`. The template shares dependencies with `fromPackageJson`, enables `denseChunking` and patches `includeSecondaries: { keepAll: true }` onto `@angular/core` (see [What the schematic generates](configuration.md#what-the-schematic-generates)). Skipped if a config already exists.
+3. **tsconfig.** Generates `projects/<name>/tsconfig.federation.json` — extends the project's app tsconfig and includes only the `.d.ts` files under `src`. It has no `files`: the builder gives each build context [its own](builder.md#one-tsconfig-per-build-context).
 4. **angular.json.** Switches the existing build to `@angular/build:application` (if it isn't already), renames it to `esbuild`, renames the existing serve to `serve-original`, and slots the `@angular-architects/native-federation:build` builder into `build` + `serve`. See [the angular.json layout](builder.md#the-angularjson-layout).
 5. **main.ts split.** Moves your existing `main.ts` to `bootstrap.ts` and rewrites `main.ts` to call `initFederation(...)` first, then dynamically `import('./bootstrap')`. The first argument depends on `--type`:
    - `remote` → `{}` — it registers itself through `hostRemoteEntry`
@@ -123,7 +124,7 @@ Not touched by this schematic: the v4 runtime/core package versions in the root 
 ng update @angular-architects/native-federation
 ```
 
-The migration to **Angular 22**. From Angular 22 the v4 adapter is published under its original name `@angular-architects/native-federation` (22.x), so this is the schematic you run to move a v4 project (on the `-v4` package) — or a v3 project — onto the Angular 22 release. `ng update` pulls the new package and runs the bundled `update22` migration, which rewrites your setup to the v22 ESM standard automatically: it swaps `@angular-architects/native-federation-v4` imports and `angular.json` builder references back to `@angular-architects/native-federation`, and renames `federation.config.js` to `federation.config.mjs` if you haven't already.
+The migration to **Angular 22**. From Angular 22 the v4 adapter is published under its original name `@angular-architects/native-federation` (22.x), so this is the schematic you run to move a v4 project (on the `-v4` package) — or a v3 project — onto the Angular 22 release. `ng update` pulls the new package and runs the bundled `update22` migration, which rewrites your setup to the v22 ESM standard automatically: it swaps `@angular-architects/native-federation-v4` imports and `angular.json` builder references back to `@angular-architects/native-federation`, renames `federation.config.js` to `federation.config.mjs` if you haven't already, and generates a `tsconfig.federation.json` for every federated project.
 
 If you already pulled the package yourself (e.g. `npm install @angular-architects/native-federation@22`), run the migration on its own in **migrate-only** mode:
 
@@ -132,6 +133,16 @@ ng update @angular-architects/native-federation --migrate-only --name update22
 ```
 
 The schematic is enough on its own — you do **not** need to set `"type": "module"` in `package.json`. The ESM config lives in `federation.config.mjs`, which Node treats as ESM regardless of the package-wide setting. See [Migration to v4 → Updating to Angular 22](migration-v4.md#updating-to-angular-22) for the full walkthrough.
+
+## update22-2
+
+_Since 22.2.0._ Runs automatically when `ng update @angular-architects/native-federation` crosses 22.2.0. It removes `files` from every project's `tsconfig.federation.json`, which the builder now [supplies per build context](builder.md#one-tsconfig-per-build-context). The file is edited in place, so its comments and formatting survive, and other tsconfigs are left alone. A `tsconfig.federation.json` that isn't valid JSON is skipped with a warning to remove `files` by hand.
+
+To run it on its own:
+
+```bash
+ng update @angular-architects/native-federation --migrate-only --name update22-2
+```
 
 ## update18 (auto migration)
 

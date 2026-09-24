@@ -6,7 +6,7 @@ Shared dependencies are the mechanism that lets hosts and remotes load the same 
 
 ## `fromPackageJson` (recommended)
 
-`fromPackageJson` is the recommended way to share your dependencies. It shares **all** dependencies found in your `package.json` and returns a small fluent builder so you can fine-tune the result. The base options you pass are applied to every shared dependency; you then chain `.filter(...)`, `.skip(...)`, `.override(...)` and `.patch(...)` as needed and finish with `.get()`:
+`fromPackageJson` is the recommended way to share your dependencies. It shares **all** dependencies found in your `package.json` and returns a small fluent builder so you can fine-tune the result. The base options you pass are applied to every shared dependency; you then chain `.filter(...)`, `.skip(...)`, `.override(...)` and `.patch(...)` as needed and hand the builder to `shared`:
 
 ```js
 import {
@@ -21,7 +21,7 @@ export default withNativeFederation({
     strictVersion: true,
     requiredVersion: "auto",
     includeSecondaries: false,
-  }).get(),
+  }),
 });
 ```
 
@@ -64,12 +64,11 @@ export default withNativeFederation({
       singleton: false,
       includeSecondaries: { skip: "package-b/icons/*" },
       build: "package",
-    })
-    .get(),
+    }),
 });
 ```
 
-The trailing `.get()` is optional: `shared` also accepts the builder itself, and `withNativeFederation` calls `.get()` for you.
+`withNativeFederation` resolves the builder for you. Call `.get()` yourself only when you need the resolved object, for instance to spread it or inspect it.
 
 By default the closest `package.json` (relative to your `federation.config.mjs`) is used. You can point at a different one by passing its path as the second argument: `fromPackageJson(baseCfg, projectPath)`.
 

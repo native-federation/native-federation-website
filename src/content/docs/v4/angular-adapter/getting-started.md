@@ -19,7 +19,7 @@ npm i @angular-architects/native-federation -D
 > | 22+ | `@angular-architects/native-federation` |
 > | 20 – 21 | `@angular-architects/native-federation-v4` |
 
-The package brings `@softarc/native-federation` (`~4.6.0`) and `@softarc/native-federation-orchestrator` (`^4.6.0`) as dependencies. The `ng add` step below adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` (as a devDependency) on top — nothing else to install up front.
+The package brings `@softarc/native-federation` (`~4.7.0`) and `@softarc/native-federation-orchestrator` (`^4.6.0`) as dependencies. The `ng add` step below adds `es-module-shims`, `@angular-devkit/build-angular` and `@softarc/native-federation-orchestrator` (as a devDependency) on top — nothing else to install up front.
 
 ## 2. Scaffold a Remote (Micro Frontend)
 
@@ -109,7 +109,7 @@ After running `ng add` against a project, expect the following layout:
 ```
 projects/mfe1/
 ├── federation.config.mjs         ← shared/exposes config (see Angular Config)
-├── tsconfig.federation.json      ← extends tsconfig.json, used only by the federation builder
+├── tsconfig.federation.json      ← extends the app tsconfig, used only by the federation builder
 └── src/
     ├── main.ts                   ← initFederation(...) bootstrap (orchestrator by default)
     └── bootstrap.ts              ← the *original* Angular bootstrap (bootstrapApplication etc.)
