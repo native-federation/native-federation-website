@@ -60,7 +60,7 @@ Adapters are registered either by passing them to `federationBuilder.init`:
 ```js
 await federationBuilder.init({
   options: { /* ... */ },
-  adapter: esBuildAdapter,
+  adapter: createEsBuildAdapter({ plugins: [] }),
 });
 ```
 
@@ -86,7 +86,7 @@ Every production adapter tends to follow the same shape:
 
 ## Reference Adapters
 
-- [`@softarc/native-federation-esbuild`](../adapters/esbuild/index.md) — the reference adapter, a thin wrapper over esbuild with a rollup fallback for features esbuild doesn't (yet) cover.
+- [`@softarc/native-federation-esbuild`](../adapters/esbuild/index.md) — the reference adapter, a thin wrapper over esbuild.
 - [`@angular-architects/native-federation`](../angular-adapter/index.md) — the Angular adapter, which plugs into the Angular CLI builders.
 
 ## Writing Your Own Adapter

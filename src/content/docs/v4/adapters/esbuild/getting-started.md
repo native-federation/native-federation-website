@@ -9,13 +9,11 @@ This page walks the [React reference example](https://github.com/Aukevanoost/nat
 ## 1. Install
 
 ```bash
-npm i -D esbuild \
-  @softarc/native-federation \
-  @softarc/native-federation-esbuild
+npm i -D @softarc/native-federation @softarc/native-federation-esbuild
 npm i @softarc/native-federation-orchestrator
 ```
 
-> **Note:** You no longer install `@chialab/esbuild-plugin-commonjs` — it ships as a dependency of the adapter and the React CommonJS plugin is wired up automatically by the default React preset.
+`@softarc/native-federation` is a peer dependency of the adapter. esbuild and `@chialab/esbuild-plugin-commonjs` come with the adapter, and the default React preset wires up the CommonJS plugin for you.
 
 Also make sure your `package.json` has `"type": "module"` — the adapter and its generated `federation.config.js` are native ESM.
 
@@ -28,6 +26,7 @@ import {
   withNativeFederation,
   shareAll,
 } from "@softarc/native-federation/config";
+import { REACT_SKIP_LIST } from "@softarc/native-federation-esbuild/frameworks/react";
 
 export default withNativeFederation({
   name: "@team/mfe1",
@@ -42,6 +41,7 @@ export default withNativeFederation({
       strictVersion: true,
       requiredVersion: "auto",
     }, {
+      skipList: REACT_SKIP_LIST,
       overrides: {
         "react": {
           singleton: true,
@@ -61,20 +61,14 @@ export default withNativeFederation({
 
   features: {
     ignoreUnusedDeps: true
-  },
-  skip: [
-    'react-dom/server',
-    'react-dom/server.node',
-    'react-dom/server.browser',
-    'react-dom/test-utils'
-  ]
+  }
 });
 ```
 
 A few things are specifically shaped for React; the rest is standard federation config — see [federation.config.js](../../core/configuration.md) for the full schema.
 
 - `react` and `react-dom` are pinned as **singletons** with `includeSecondaries: { keepAll: true }` — React's internal sub-modules (`react/jsx-runtime`, `react-dom/client`, …) must all resolve to the same copy.
-- The `skip` list removes server entry points that React ships but the browser build should not try to bundle.
+- `skipList: REACT_SKIP_LIST` keeps React DOM's server, static, test and profiling entry points out of the browser share, on top of the core's default skip list and the adapter's own entry points. See [Skip Lists](configuration.md#skip-lists).
 - `features.ignoreUnusedDeps: true` tells the core to skip sharing anything the build didn't actually pull in — useful for apps that list everything in `package.json`.
 
 ## 3. `build.mjs`

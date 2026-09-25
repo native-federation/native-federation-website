@@ -128,11 +128,44 @@ A few esbuild options are fixed by the adapter and cannot be overridden through 
 | `format` | `'esm'` | The runtime loads remotes as ES modules via the import map. |
 | `platform` | `'browser'` or `'node'` | Derived from the core's platform detection (see [Build Process](../../core/build-process.md)). |
 | `target` | `['esnext']` | Source-code bundle only. Downlevel in your own toolchain if needed. |
-| `splitting` | `false` | Splitting is not yet supported; every entry is one file. |
+| `splitting` | from `chunks` | Follows the core's [`chunks`](../../core/configuration.md#chunks) setting for the bundle being built — on by default. The chunks are written next to their entries and reported back to the core, which records them in `remoteEntry.json`. |
 | `write` | `false` | The adapter writes files itself, so it can hash names and feed them to the federation cache. |
 | `entryNames` | `'[name]-[hash]'` / `'[name]'` | Hashed when the core asks for hashed output, plain otherwise. |
 | `resolveExtensions` | `.ts .tsx .mjs .js .cjs` (source) / `.mjs .js .cjs` (node-modules) | TypeScript is only resolved in the source-code bundle. Framework presets can add more (e.g. `.vue`). |
 | `external` | from the core | All shared dependencies are marked external so they load via the import map. |
 | `sourcemap` / `minify` | from `dev` | `dev: true` enables sourcemaps and disables minification. |
 
-Everything else flows from `EsBuildAdapterConfig` — extra plugins, framework presets, replaced entry paths, and custom loaders.
+The source-code bundle also gets the adapter's shared-mappings plugin ahead of your own `plugins` — see [Shared Mappings](#shared-mappings). Everything else flows from `EsBuildAdapterConfig` — extra plugins, framework presets, replaced entry paths, and custom loaders.
+
+## Shared Mappings
+
+esbuild's `external` list matches an import specifier as written. An import spelled `@my-org/ui` stays external, but a relative import that reaches into the same library — `../../libs/ui/src/button` — would be bundled into the consumer next to the federated copy, leaving two instances of one library at runtime.
+
+Whenever the build has [shared mappings](../../core/configuration.md#sharedmappings), the adapter adds a plugin to the source-code bundle that checks every relative `import` statement. Where the imported file sits inside a shared mapping and the mapping's entry point re-exports it under the same names, the import is rewritten onto the mapping's specifier and left external. Where the entry point is readable and omits the file, the build warns and names the symbols to add to the barrel. The rule itself lives in the core — see `createMappingImportResolver` in the [API Reference](../../core/api-reference.md#softarcnative-federationinternal).
+
+The plugin resets its state at the start of every build, so an edited barrel is picked up by the next watch-mode rebuild. There is nothing to configure.
+
+## Skip Lists
+
+The adapter ships two ready-made skip lists to pass as `skipList` to the core's `shareAll` or `share`, or to `fromPackageJson(...).skip(...)`:
+
+| Export | Entry point | Contents |
+| --- | --- | --- |
+| `ESBUILD_SKIP_LIST` | `@softarc/native-federation-esbuild/config` | The core's [`DEFAULT_SKIP_LIST`](../../core/configuration.md#the-default-skip-list) plus the adapter's subpath entry points (`/config`, `/domain`, `/frameworks/react`). `DEFAULT_SKIP_LIST` matches strings exactly, so it only covers the adapter's root entry. |
+| `REACT_SKIP_LIST` | `@softarc/native-federation-esbuild/frameworks/react` | `ESBUILD_SKIP_LIST` plus React DOM's server, static, test and profiling entry points. See [React & CommonJS Interop](react-interop.md#skip-the-server-exports). |
+
+```js
+import { withNativeFederation, shareAll } from '@softarc/native-federation/config';
+import { ESBUILD_SKIP_LIST } from '@softarc/native-federation-esbuild/config';
+
+export default withNativeFederation({
+  name: 'mfe1',
+  exposes: { './component': './src/component.ts' },
+  shared: shareAll(
+    { singleton: true, strictVersion: true, requiredVersion: 'auto' },
+    { skipList: [...ESBUILD_SKIP_LIST, /^@my-org\/internal/] }
+  ),
+});
+```
+
+A `skipList` handed to `shareAll` or `share` replaces `DEFAULT_SKIP_LIST` rather than extending it, which is why both lists spread the core defaults in. `fromPackageJson(...).skip(...)` adds to the defaults instead, so either list works there too. See [core configuration → skip](../../core/configuration.md#skip) for how a skip list differs from the top-level `skip` option.

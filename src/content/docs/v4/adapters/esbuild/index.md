@@ -16,6 +16,7 @@ The `@softarc/native-federation-esbuild` package is a thin, framework-agnostic a
 | **Low-level adapter** | `createEsBuildAdapter(config)` | Returns an `NFBuildAdapter` (`setup` / `build` / `dispose`) for users who want to drive `buildForFederation` directly. See [Build Adapters](../../core/build-adapters.md). |
 | **Build options** | `EsBuildBuilderOptions` | Workspace-level options: `outputPath`, `tsConfig`, `entryPoints`, `dev`, `watch`, `cachePath`, … See [Builder](builder.md). |
 | **Adapter config** | `EsBuildAdapterConfig` | esbuild-specific extension points: `plugins`, `frameworks`, `fileReplacements`, `loader`. See [Configuration](configuration.md). |
+| **Skip lists** | `ESBUILD_SKIP_LIST` (`/config`), `REACT_SKIP_LIST` (`/frameworks/react`) | Ready-made `skipList` values for `shareAll` / `share`. See [Skip Lists](configuration.md#skip-lists). |
 
 ## Why an Adapter?
 
@@ -23,13 +24,15 @@ The [core builder](../../core/index.md) is intentionally bundler-agnostic — it
 
 - **Two bundling modes** — source-code entries (your exposed modules) and node-modules entries (shared dependencies) are bundled with different esbuild configurations. Shared dependencies get `process.env.NODE_ENV` defined, and — when a [framework preset](configuration.md#frameworks) requests it (the default React preset does) — run through `@chialab/esbuild-plugin-commonjs` so CommonJS libraries Just Work.
 - **File writes + cache integration** — esbuild runs with `write: false`; the adapter writes outputs into `outputPath` and tracks every input file through the core's federation cache, so watch-mode rebuilds only touch what changed.
+- **Code splitting** — the core's [`chunks`](../../core/configuration.md#chunks) setting maps onto esbuild's `splitting`, so shared dependencies and exposed modules are split into chunks that load on demand.
+- **Shared mappings stay shared** — a relative import that reaches into a [shared mapping](../../core/configuration.md#sharedmappings) (`../../libs/ui/src/button` rather than `@my-org/ui`) is rewritten onto the mapping's specifier, so the library isn't bundled a second time next to its federated copy. See [Shared Mappings](configuration.md#shared-mappings).
 - **Watch mode** — wraps `esbuild.context()` with a debounced `RebuildQueue`, an `AbortSignal`-aware rebuild loop, and the core file watcher. Cancelled rebuilds are aborted cleanly rather than racing.
 - **Framework presets** — the `frameworks` option bundles per-framework esbuild settings (file replacements, loaders, extra `resolveExtensions`, the CommonJS plugin). A React preset ships built-in and is applied by default; `fileReplacements` lets you swap problematic CJS entry points for their pre-bundled variants (e.g. React's `cjs/` files).
 
 ## Install
 
 ```bash
-npm i -D esbuild @softarc/native-federation @softarc/native-federation-esbuild
+npm i -D @softarc/native-federation @softarc/native-federation-esbuild
 ```
 
 On the host page, you also want the orchestrator runtime for import-map + remote loading:
@@ -49,7 +52,7 @@ npm i @softarc/native-federation-orchestrator
 
 - **Node 18+** — the adapter is ESM-only and uses top-level `await` in typical build scripts.
 - **`"type": "module"`** in your project's `package.json` — the adapter and its entry points are native ESM.
-- **esbuild** — you install it yourself; the adapter imports `esbuild` directly rather than bundling a copy.
-- **`@softarc/native-federation` ~4.1.0** — pulled in as a dependency; the adapter calls `buildForFederation` / `rebuildForFederation` from it. `@chialab/esbuild-plugin-commonjs` ships bundled too, so neither needs a separate install.
+- **`@softarc/native-federation` ~4.7.0** — a peer dependency, installed next to the adapter. The adapter calls `buildForFederation` / `rebuildForFederation` from it, and your `federation.config.js` imports `withNativeFederation` and `shareAll` from the same copy.
+- **esbuild** and **`@chialab/esbuild-plugin-commonjs`** ship as dependencies of the adapter, so neither needs a separate install.
 
 > **Note:** A complete working example lives at [native-federation-examples-react](https://github.com/Aukevanoost/native-federation-examples-react/) — React 18 + esbuild + Shadow-DOM custom element + orchestrator host page.

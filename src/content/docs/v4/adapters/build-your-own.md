@@ -4,7 +4,7 @@
 
 Native Federation Core doesn't ship a bundler. Every adapter — esbuild, Angular, Vite — is a thin shim that implements a three-method contract (`NFBuildAdapter`) and hands its bundler's emitted files back to the core. If you want to support Rspack, Rolldown, swc, or anything else, you write one of those shims — and optionally wrap it in a higher-level _builder_ that plugs into the file watcher and rebuild queue the core already ships.
 
-> **Note:** This page walks through the full surface. If you just want a reference implementation open in another tab, the [esbuild adapter source](https://github.com/angular-architects/module-federation-plugin/tree/main/libs/native-federation-esbuild) is the smallest complete example, and the corresponding [Builder](esbuild/builder.md) page documents every piece you're about to reimplement.
+> **Note:** This page walks through the full surface. If you just want a reference implementation open in another tab, the [esbuild adapter source](https://github.com/native-federation/esbuild-adapter/tree/main/src) is the smallest complete example, and the corresponding [Builder](esbuild/builder.md) page documents every piece you're about to reimplement.
 
 ## Before you start
 
