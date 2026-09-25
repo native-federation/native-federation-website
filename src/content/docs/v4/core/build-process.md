@@ -16,7 +16,7 @@ The `federationBuilder` object is the entry point for the core build. It wraps t
 ```js
 import * as esbuild from 'esbuild';
 import * as path from 'path';
-import { esBuildAdapter } from '@softarc/native-federation-esbuild';
+import { createEsBuildAdapter } from '@softarc/native-federation-esbuild';
 import { federationBuilder } from '@softarc/native-federation';
 
 await federationBuilder.init({
@@ -27,7 +27,7 @@ await federationBuilder.init({
     federationConfig: 'shell/federation.config.js',
     verbose: false,
   },
-  adapter: esBuildAdapter,
+  adapter: createEsBuildAdapter({ plugins: [] }),
 });
 
 await esbuild.build({

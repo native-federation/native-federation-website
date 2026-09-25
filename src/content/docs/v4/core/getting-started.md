@@ -70,7 +70,7 @@ The `federationBuilder` exposes three calls that wrap around your existing build
 ```js
 import * as esbuild from 'esbuild';
 import * as path from 'path';
-import { esBuildAdapter } from '@softarc/native-federation-esbuild';
+import { createEsBuildAdapter } from '@softarc/native-federation-esbuild';
 import { federationBuilder } from '@softarc/native-federation';
 
 const projectName = 'shell';
@@ -85,7 +85,7 @@ await federationBuilder.init({
     federationConfig: `${projectName}/federation.config.js`,
     verbose: false,
   },
-  adapter: esBuildAdapter,
+  adapter: createEsBuildAdapter({ plugins: [] }),
 });
 
 // 2. Run your own build, respecting the computed externals

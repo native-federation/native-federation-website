@@ -152,7 +152,7 @@ await federationBuilder.init({
     federationConfig: 'mfe1/federation.config.js',
     cacheExternalArtifacts: true,   // default; set to false to opt out
   },
-  adapter: esBuildAdapter,
+  adapter: createEsBuildAdapter({ plugins: [] }),
 });
 ```
 

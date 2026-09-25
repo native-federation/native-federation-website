@@ -2,7 +2,7 @@
 
 > CommonJS interop for the esbuild adapter — the React preset, fileReplacements, shareAll overrides and the Shadow-DOM custom-element pattern.
 
-Most of the React-specific plumbing in the esbuild adapter exists because React still ships as CommonJS. In v4 this is wrapped up in a built-in **React preset** that the adapter applies by default, so a React remote works out of the box. This page explains what that preset does and the knobs around it — the CommonJS plugin, `fileReplacements`, the `shareAll` overrides, the `skip` list, and the Shadow-DOM custom-element pattern.
+Most of the React-specific plumbing in the esbuild adapter exists because React still ships as CommonJS. In v4 this is wrapped up in a built-in **React preset** that the adapter applies by default, so a React remote works out of the box. This page explains what that preset does and the knobs around it — the CommonJS plugin, `fileReplacements`, the `shareAll` overrides, `REACT_SKIP_LIST`, and the Shadow-DOM custom-element pattern.
 
 ## The React Preset (Default)
 
@@ -99,6 +99,7 @@ shared: {
     strictVersion: true,
     requiredVersion: "auto",
   }, {
+    skipList: REACT_SKIP_LIST,
     overrides: {
       "react": {
         singleton: true,
@@ -121,16 +122,21 @@ shared: {
 
 ## Skip the Server Exports
 
-React DOM's package also exposes server-rendering entry points that the core will otherwise try to bundle for the browser. Skip them:
+React DOM's package also exposes server-rendering, static-rendering, test and profiling entry points that the core would otherwise try to bundle for the browser. `REACT_SKIP_LIST` skips them:
 
 ```ts
-skip: [
-  'react-dom/server',
-  'react-dom/server.node',
-  'react-dom/server.browser',
+import { REACT_SKIP_LIST } from '@softarc/native-federation-esbuild/frameworks/react';
+
+// REACT_SKIP_LIST is:
+[
+  ...ESBUILD_SKIP_LIST,
+  /^react-dom\/(server|static)(\.|$)/,
   'react-dom/test-utils',
+  'react-dom/profiling',
 ]
 ```
+
+Pass it as `skipList` to `shareAll` (as above), to `share`, or to `fromPackageJson(...).skip(...)`. Extend it with your own entries the same way — `[...REACT_SKIP_LIST, /^@my-org\/internal/]`. See [Skip Lists](configuration.md#skip-lists) for `ESBUILD_SKIP_LIST`, the base it builds on.
 
 (If you actually want SSR, set up a separate build with `platform: 'node'` — but that is out of scope for the browser remote.)
 
@@ -177,6 +183,6 @@ The entry point in your `federation.config.js`'s `exposes` map points at this fi
 
 - Leave the default React preset in place — don't pass `frameworks: []` for a React app.
 - Share `react` and `react-dom` as _singletons_ with `includeSecondaries: { keepAll: true }`.
-- Skip `react-dom/server*` and `react-dom/test-utils`.
+- Pass `REACT_SKIP_LIST` as the `skipList` of `shareAll` / `share`.
 - Expose a custom element with Shadow DOM so the remote is drop-in on any host.
 - Only override `fileReplacements` if you need React pinned to a build the preset doesn't pick.
