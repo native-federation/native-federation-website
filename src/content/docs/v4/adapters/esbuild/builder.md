@@ -32,14 +32,16 @@ Everything else has a sensible default. The only required field is `outputPath` 
 | Option | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `outputPath` | `string` | **required** | Directory that receives `remoteEntry.json` and the bundled artifacts. |
-| `workspaceRoot` | `string` | `process.cwd()` | Resolved against `cwd()`. Useful when the build script runs from a monorepo root. |
+| `workspaceRoot` | `string` | `process.cwd()` | Resolved against `cwd()`. Useful when the build script runs from a monorepo root. On Windows the drive-letter case is taken from the disk, so `c:\repo` and `C:\repo` build the same. |
 | `tsConfig` | `string` | `'tsconfig.json'` | Forwarded to esbuild's `tsconfig` option for the source-code bundle. |
-| `cachePath` | `string` | core default | If given, joined with `workspaceRoot`. Otherwise the core's `getDefaultCachePath` is used. See [Caching](../../core/caching.md). |
+| `cachePath` | `string` | core default | A relative path is resolved against `workspaceRoot`; an absolute path is used as-is. Otherwise the core's `getDefaultCachePath` is used. See [Caching](../../core/caching.md). |
 | `projectName` | `string` | — | Forwarded to the core; used for logging and cache scoping in multi-project workspaces. |
 | `entryPoints` | `string[]` | — | Source entries for the federation build. Usually the files referenced by `exposes` in `federation.config.js`. |
 | `packageJson` | `string` | — | Path to the project's `package.json`. Override when it is not next to the federation config. |
 | `dev` | `boolean` | `false` | Enables sourcemaps and disables minification in both the source-code and node-modules esbuild contexts. Also flips the `process.env.NODE_ENV` define to `"development"`. |
 | `watch` | `boolean` | `false` | Starts the file watcher and rebuild queue. The returned `federation` object stays live until you call `close()`. |
+| `watchLinkedDeps` | `boolean` | `false` | In watch mode, also polls shared packages that are `npm link`ed into a checkout outside `node_modules`, so rebuilding the library rebuilds this app. See [Watch Mode](#watch-mode). |
+| `watcher` | `WatchPort['watch']` | Node's `fs.watch` | Replaces the function the file watcher uses to observe a path. For tests, or to plug in another watching library. |
 | `verbose` | `boolean` | `false` | Sets the adapter's log level to `verbose`. Rebuild cancellations, watcher events and full error stacks are logged. |
 | `rebuildDelay` | `number` | `50` (ms) | Debounce before a rebuild fires after a file change. Clamped to a minimum of 10 ms internally. |
 | `cacheExternalArtifacts` | `boolean` | `true` | Set `false` to force the core to re-bundle shared node-modules on every build. Only useful when debugging cache issues. |
@@ -65,9 +67,11 @@ interface EsBuildBuilder {
 
 When `watch: true`, the adapter:
 
-1. Creates an [NF file watcher](../../core/caching.md) that observes every source file the initial build touched.
-2. Queues a rebuild on change. Rebuilds are debounced by `rebuildDelay` and serialized through a `RebuildQueue` — a new change mid-build cancels the in-flight rebuild via `AbortSignal` rather than racing it.
+1. Creates an [NF file watcher](../../core/caching.md) that observes every source file the initial build touched, plus the source directories of your [shared mappings](../../core/configuration.md#sharedmappings) — so a file added to a mapped library after the last build is picked up too. A mapping directory that contains the workspace root is left to the per-file watch, to keep the watcher out of `node_modules`.
+2. Queues a rebuild on change. Changes under `node_modules`, `outputPath` and the cache directory are ignored, since the build itself writes there. Rebuilds are debounced by `rebuildDelay` and serialized through a `RebuildQueue` — a new change mid-build cancels the in-flight rebuild via `AbortSignal` rather than racing it.
 3. Calls `rebuildForFederation` on the core, which only re-bundles the entry points whose inputs changed.
+
+A shared package you are developing through `npm link` sits outside the watched sources. Set `watchLinkedDeps: true` to have the watcher poll its real directory as well; without it, a watching build names the linked packages it skips. See [Watching npm-linked shared dependencies](../../core/build-process.md#watching-npm-linked-shared-dependencies).
 
 Rebuild outcomes:
 

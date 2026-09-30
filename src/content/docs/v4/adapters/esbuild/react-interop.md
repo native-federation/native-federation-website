@@ -9,9 +9,9 @@ Most of the React-specific plumbing in the esbuild adapter exists because React 
 The adapter's [`frameworks`](configuration.md#frameworks) option defaults to `[reactFrameworkPlugin()]` whenever you don't pass `frameworks` yourself. That preset does two things:
 
 1. Registers the canonical React `fileReplacements` (the `cjs/` map below), picking the development or production variant from the build's `dev` flag.
-2. Sets `needsCommonJsPlugin: true`, which turns on `@chialab/esbuild-plugin-commonjs` for the node-modules bundle.
+2. Sets `needsCommonJsPlugin: true`, which turns on the adapter's [CommonJS plugin](#the-commonjs-plugin) for the node-modules bundle.
 
-So for a React remote you usually configure nothing — just leave `adapterConfig.plugins: []` (or omit `adapterConfig` entirely) and the preset handles React. The package ships `@chialab/esbuild-plugin-commonjs` as a dependency, so there is nothing extra to install.
+So for a React remote you usually configure nothing — just leave `adapterConfig.plugins: []` (or omit `adapterConfig` entirely) and the preset handles React. The plugin is part of the adapter, so there is nothing extra to install.
 
 If you are **not** building a React app, opt out by passing an empty array:
 
@@ -24,9 +24,13 @@ adapterConfig: {
 
 ## The CommonJS Plugin
 
-When a preset sets `needsCommonJsPlugin` (the React preset does), the **node-modules** bundle is built with [`@chialab/esbuild-plugin-commonjs`](https://www.npmjs.com/package/@chialab/esbuild-plugin-commonjs). The adapter also defines `process.env.NODE_ENV` (`"development"` or `"production"` based on `dev`) on that bundle unconditionally. For most CJS libraries the plugin is enough — it converts `module.exports` / `exports.*` patterns to ESM named exports and you import them as normal.
+esbuild handles CommonJS on its own: a CJS package bundled into ESM output gets its `module.exports` wrapped, and you import it as normal. The gap is a CJS `require()` of another **shared** package. That package is external, and esbuild turns the call into a `__require` shim that throws in the browser (`Dynamic require of "react" is not supported`).
 
-With `frameworks: []` (no preset requesting it), the CommonJS plugin is not applied — the node-modules bundle is built as plain ESM.
+When a preset sets `needsCommonJsPlugin` (the React preset does), the adapter adds its CommonJS plugin to the **node-modules** bundle. The plugin routes each `require()` of an external through a small ESM stub, so it becomes a real top-level `import` that the import map resolves to the shared copy. The caller gets back the value it expects: the package's `module.exports` for a CommonJS package, the module namespace for an ES module. Everything else keeps esbuild's own interop — files are never converted. On `platform: 'node'`, `require()`s of Node builtins go through the same stub.
+
+The adapter also defines `process.env.NODE_ENV` (`"development"` or `"production"` based on `dev`) on the node-modules bundle, with or without a preset.
+
+With `frameworks: []` (no preset requesting it), the CommonJS plugin is not applied.
 
 ## Why React Needs Extra Work
 

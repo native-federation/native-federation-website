@@ -22,11 +22,11 @@ The `@softarc/native-federation-esbuild` package is a thin, framework-agnostic a
 
 The [core builder](../../core/index.md) is intentionally bundler-agnostic — it orchestrates the federation build and delegates the actual bundling to an [`NFBuildAdapter`](../../core/build-adapters.md). The esbuild adapter is that bridge for esbuild:
 
-- **Two bundling modes** — source-code entries (your exposed modules) and node-modules entries (shared dependencies) are bundled with different esbuild configurations. Shared dependencies get `process.env.NODE_ENV` defined, and — when a [framework preset](configuration.md#frameworks) requests it (the default React preset does) — run through `@chialab/esbuild-plugin-commonjs` so CommonJS libraries Just Work.
+- **Two bundling modes** — source-code entries (your exposed modules) and node-modules entries (shared dependencies) are bundled with different esbuild configurations. Shared dependencies get `process.env.NODE_ENV` defined, and — when a [framework preset](configuration.md#frameworks) requests it (the default React preset does) — get a CommonJS plugin that turns a `require()` of another shared package into a real ESM import, so CommonJS libraries Just Work.
 - **File writes + cache integration** — esbuild runs with `write: false`; the adapter writes outputs into `outputPath` and tracks every input file through the core's federation cache, so watch-mode rebuilds only touch what changed.
 - **Code splitting** — the core's [`chunks`](../../core/configuration.md#chunks) setting maps onto esbuild's `splitting`, so shared dependencies and exposed modules are split into chunks that load on demand.
 - **Shared mappings stay shared** — a relative import that reaches into a [shared mapping](../../core/configuration.md#sharedmappings) (`../../libs/ui/src/button` rather than `@my-org/ui`) is rewritten onto the mapping's specifier, so the library isn't bundled a second time next to its federated copy. See [Shared Mappings](configuration.md#shared-mappings).
-- **Watch mode** — wraps `esbuild.context()` with a debounced `RebuildQueue`, an `AbortSignal`-aware rebuild loop, and the core file watcher. Cancelled rebuilds are aborted cleanly rather than racing.
+- **Watch mode** — wraps `esbuild.context()` with a debounced `RebuildQueue`, an `AbortSignal`-aware rebuild loop, and the core file watcher, which also covers shared-mapping directories and — with `watchLinkedDeps` — npm-linked shared packages. Cancelled rebuilds are aborted cleanly rather than racing.
 - **Framework presets** — the `frameworks` option bundles per-framework esbuild settings (file replacements, loaders, extra `resolveExtensions`, the CommonJS plugin). A React preset ships built-in and is applied by default; `fileReplacements` lets you swap problematic CJS entry points for their pre-bundled variants (e.g. React's `cjs/` files).
 
 ## Install
@@ -53,6 +53,6 @@ npm i @softarc/native-federation-orchestrator
 - **Node 18+** — the adapter is ESM-only and uses top-level `await` in typical build scripts.
 - **`"type": "module"`** in your project's `package.json` — the adapter and its entry points are native ESM.
 - **`@softarc/native-federation` ~4.7.0** — a peer dependency, installed next to the adapter. The adapter calls `buildForFederation` / `rebuildForFederation` from it, and your `federation.config.js` imports `withNativeFederation` and `shareAll` from the same copy.
-- **esbuild** and **`@chialab/esbuild-plugin-commonjs`** ship as dependencies of the adapter, so neither needs a separate install.
+- **esbuild** ships as a dependency of the adapter, so it needs no separate install.
 
 > **Note:** A complete working example lives at [native-federation-examples-react](https://github.com/Aukevanoost/native-federation-examples-react/) — React 18 + esbuild + Shadow-DOM custom element + orchestrator host page.
