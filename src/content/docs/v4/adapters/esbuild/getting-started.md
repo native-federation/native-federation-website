@@ -13,7 +13,7 @@ npm i -D @softarc/native-federation @softarc/native-federation-esbuild
 npm i @softarc/native-federation-orchestrator
 ```
 
-`@softarc/native-federation` is a peer dependency of the adapter. esbuild and `@chialab/esbuild-plugin-commonjs` come with the adapter, and the default React preset wires up the CommonJS plugin for you.
+`@softarc/native-federation` is a peer dependency of the adapter. esbuild comes with the adapter, and the default React preset wires up the CommonJS plugin for you.
 
 Also make sure your `package.json` has `"type": "module"` — the adapter and its generated `federation.config.js` are native ESM.
 

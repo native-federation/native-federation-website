@@ -2,7 +2,7 @@
 
 > Reference for EsBuildAdapterConfig — extra esbuild plugins, framework presets, file replacements and loader mappings.
 
-`EsBuildAdapterConfig` is the esbuild-specific extension point. You pass it as `adapterConfig` on [`runEsBuildBuilder`](builder.md) (or directly into `createEsBuildAdapter`). Four fields — all optional except `plugins` — control extra esbuild plugins, framework presets, entry-point rewriting, and custom file loaders.
+`EsBuildAdapterConfig` is the esbuild-specific extension point. You pass it as `adapterConfig` on [`runEsBuildBuilder`](builder.md) (or directly into `createEsBuildAdapter`). Its fields — all optional except `plugins` — control extra esbuild plugins, framework presets, entry-point rewriting, custom file loaders, and a handful of esbuild options passed straight through.
 
 ## Shape
 
@@ -14,6 +14,10 @@ export interface EsBuildAdapterConfig {
   fileReplacements?: Record<string, string | { file: string }>;
   loader?: { [ext: string]: esbuild.Loader };
   frameworks?: NfFrameworkPlugin[];
+  define?: Record<string, string>;
+  preserveSymlinks?: boolean;
+  target?: string | string[];
+  sourcemap?: esbuild.BuildOptions['sourcemap'];
 }
 ```
 
@@ -84,7 +88,7 @@ A preset is a plain object implementing `NfFrameworkPlugin`:
 | `resolveExtensions` | `string[]` | Extra esbuild `resolveExtensions` (e.g. `['.vue']`). Merged with the adapter's defaults. |
 | `loader` | `Record<string, esbuild.Loader>` | esbuild loader overrides. Merged with `config.loader`; your own entries win. |
 | `esbuildPlugins` | `esbuild.Plugin[]` | Framework-specific esbuild plugins. Prepended to `config.plugins`. |
-| `needsCommonJsPlugin` | `boolean` | Set `true` when the framework's runtime ships CommonJS (React). Triggers `@chialab/esbuild-plugin-commonjs` for the node-modules bundle. |
+| `needsCommonJsPlugin` | `boolean` | Set `true` when the framework's runtime ships CommonJS (React). Adds the adapter's [CommonJS plugin](react-interop.md#the-commonjs-plugin) to the node-modules bundle. |
 
 A minimal custom preset:
 
@@ -118,24 +122,45 @@ adapterConfig: {
 }
 ```
 
+## esbuild Passthroughs
+
+Four esbuild options are forwarded as-is. Leave them unset to keep the adapter's defaults.
+
+| Field | Applies to | Default | Notes |
+| --- | --- | --- | --- |
+| `define` | source-code bundle | — | esbuild [`define`](https://esbuild.github.io/api/#define): global identifiers replaced at build time, e.g. `{ 'process.env.API_URL': '"https://api.example.com"' }`. Values are code, so strings need their own quotes. |
+| `target` | both bundles | `['esnext']` (source) / esbuild's default (node-modules) | esbuild [`target`](https://esbuild.github.io/api/#target), e.g. `'es2020'` or `['chrome100', 'safari15']`. |
+| `sourcemap` | both bundles | from `dev` | esbuild [`sourcemap`](https://esbuild.github.io/api/#sourcemap): `true`, `false`, `'linked'`, `'inline'`, `'external'` or `'both'`. |
+| `preserveSymlinks` | source-code bundle | `false` | esbuild [`preserveSymlinks`](https://esbuild.github.io/api/#preserve-symlinks). |
+
+```ts
+adapterConfig: {
+  plugins: [],
+  target: 'es2020',
+  sourcemap: 'linked',
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+}
+```
+
+> [!WARNING] **Changing `target` or `sourcemap` needs a cleared cache.** Shared npm packages are [cached](../../core/caching.md), so a new value only reaches them once the cache is rebuilt — delete the cache directory or run one build with `cacheExternalArtifacts: false`.
+
 ## What the Adapter Sets for You
 
-A few esbuild options are fixed by the adapter and cannot be overridden through `EsBuildAdapterConfig`. They are:
+The remaining esbuild options are fixed by the adapter:
 
 | esbuild option | Value | Why |
 | --- | --- | --- |
 | `bundle` | `true` | Federation artifacts must be self-contained. |
 | `format` | `'esm'` | The runtime loads remotes as ES modules via the import map. |
 | `platform` | `'browser'` or `'node'` | Derived from the core's platform detection (see [Build Process](../../core/build-process.md)). |
-| `target` | `['esnext']` | Source-code bundle only. Downlevel in your own toolchain if needed. |
 | `splitting` | from `chunks` | Follows the core's [`chunks`](../../core/configuration.md#chunks) setting for the bundle being built — on by default. The chunks are written next to their entries and reported back to the core, which records them in `remoteEntry.json`. |
 | `write` | `false` | The adapter writes files itself, so it can hash names and feed them to the federation cache. |
 | `entryNames` | `'[name]-[hash]'` / `'[name]'` | Hashed when the core asks for hashed output, plain otherwise. |
 | `resolveExtensions` | `.ts .tsx .mjs .js .cjs` (source) / `.mjs .js .cjs` (node-modules) | TypeScript is only resolved in the source-code bundle. Framework presets can add more (e.g. `.vue`). |
 | `external` | from the core | All shared dependencies are marked external so they load via the import map. |
-| `sourcemap` / `minify` | from `dev` | `dev: true` enables sourcemaps and disables minification. |
+| `minify` | from `dev` | `dev: true` disables minification. |
 
-The source-code bundle also gets the adapter's shared-mappings plugin ahead of your own `plugins` — see [Shared Mappings](#shared-mappings). Everything else flows from `EsBuildAdapterConfig` — extra plugins, framework presets, replaced entry paths, and custom loaders.
+The source-code bundle also gets the adapter's shared-mappings plugin ahead of your own `plugins` — see [Shared Mappings](#shared-mappings). Everything else flows from `EsBuildAdapterConfig` — extra plugins, framework presets, replaced entry paths, custom loaders, and the [passthroughs](#esbuild-passthroughs).
 
 ## Shared Mappings
 

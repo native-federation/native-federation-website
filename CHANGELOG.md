@@ -29,6 +29,7 @@ Repo: https://github.com/native-federation/esbuild-adapter
 
 | Date       | Version | Commit    |
 | ---------- | ------- | --------- |
+| 2026-09-30 | `4.2.0` | `93cf2c1` |
 | 2026-09-25 | `4.1.0` | `e5394eb` |
 | 2026-05-26 | `4.0.0` | `f3d5810` |
 

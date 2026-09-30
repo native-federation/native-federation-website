@@ -207,7 +207,7 @@ The externals phases don't pass `modifiedFiles` — they run once per federation
 
 Real-world externals are frequently CommonJS with dynamic `exports` tricks (React is the canonical offender). Bundlers that default to ESM will trip over these. The esbuild adapter solves this in two places and you'll likely want to mirror both:
 
-- A **CommonJS plugin** (it uses `@chialab/esbuild-plugin-commonjs`) applied to the externals phase only, to translate CJS into something ESM-friendly.
+- A **CommonJS plugin** applied to the externals phase only, which turns a CJS `require()` of another external into a real ESM `import`, so the import map can resolve it instead of esbuild's throwing `__require` shim.
 - A **`fileReplacements`** / **`compensateExports`** layer that swaps the resolved entry for a hand-written shim when the package's own `exports` field points at something unbundlable. See [esbuild adapter configuration](esbuild/configuration.md) for how this is exposed to users.
 
 ## 11. Build notifications (optional)
