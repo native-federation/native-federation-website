@@ -275,19 +275,18 @@ For every package in every dirty scope:
 
 The algorithm above resolves every shared external **independently**: each one picks its own shared version, sourced from whichever remote contributed the winning tag. Packages that ship as a **family** are not independent, so this can hand a remote a combination nobody built — `@acme/ui@3.4.0` from one remote beside `@acme/tokens@3.2.0` from another, both "compatible" by their declared ranges. The sharper case is transitive: a design system compiled against `@framework/core@15`, shared into a remote running `core@16`, drags a second framework runtime in behind it.
 
-**Pooling** is the opt-in feature that prevents this. It groups coupled externals — automatically by npm scope, or explicitly through a `pool` tag on a shared external — and makes each remote take the whole group from a single build that shipped them together, its own included. It is a re-resolution layered on top of the resolution above: it rewrites the verdicts, but elects no versions of its own and grants no dedup the resolver did not.
+**Pooling** is the opt-in feature that prevents this. A remote groups coupled externals by giving them a `pool` tag in its `remoteEntry.json`, and pooling makes each remote take the whole group from a single build that shipped them together, its own included. It is a re-resolution layered on top of the resolution above: it rewrites the verdicts, but elects no versions of its own and grants no dedup the resolver did not.
 
-```ts
-await initFederation(manifest, {
-  feature: { useAutoExternalPooling: true },
-});
+```json
+// In remoteEntry.json
+{ "packageName": "@framework/core", "version": "22.0.5", "requiredVersion": "^22.0.0", "pool": "framework" }
 ```
 
 Two gates decide, per remote: a remote the resolver marked `scope` on _any_ member is **islanded** onto its own build for the whole family, and every remaining remote must either already be resolving through builds that shipped what it imports, dedup onto one build that covers it whole, or serve its own family. Pooling applies to the global scope and named share scopes; the `strict` scope is never pooled, and a warm init that re-elects nothing does no pooling work.
 
 > **Pooling buys coherence, not downloads** — on every portfolio measured it left the download count unchanged or increased it, never reduced it.
 
-> **See [Dependency Pooling](pooling.md)** for the full picture: whether you need it, how membership is decided, both gates in detail, the measured cost, tagging guidance for unscoped lockstep families, and the diagnostics.
+> **See [Dependency Pooling](pooling.md)** for the full picture: whether you need it, how membership is decided, both gates in detail, the measured cost, tagging guidance, what pooling stores, and the diagnostics.
 
 ## <a id="dynamic-init"></a> Dynamic init — adding remotes after the fact
 

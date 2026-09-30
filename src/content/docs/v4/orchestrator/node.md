@@ -137,7 +137,10 @@ The loader hosts a W3C-compatible import-map resolve algorithm. For every `impor
 
 1. If the specifier is a **bridged host instance** (see [below](#host-instances)), short-circuits it to a synthetic `nf-host:<specifier>` URL — these win over the import map.
 2. Otherwise walks `scopes` matching the parent URL and falls back to top-level `imports`, matching by exact specifier first then by trailing-slash prefix.
-3. Passes the rewritten URL on to the default resolver.
+3. With no import-map match, resolves a relative specifier (a sibling chunk) against its parent, and passes an absolute `http(s)://` specifier through as-is. When Node hands over an empty `parentURL`, the last remote module the loader fetched stands in as the parent.
+4. Short-circuits any `http(s)://` result, and passes everything else on to the default resolver.
+
+Only federated modules — import-map targets and the relative chunks they import — are marked as ESM. Everything else, such as the host's own npm dependencies, keeps Node's own format detection, so a package that resolves to CommonJS (rxjs 7 under the `node` condition, for one) loads as CommonJS.
 
 The `load` hook then handles three cases:
 

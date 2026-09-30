@@ -35,7 +35,9 @@ export default defineConfig({
 					secondaryBorderColor: '#d97706', // --color-accent
 					tertiaryColor: '#f1f5f9', // --color-border-light
 					background: '#ffffff', // --color-surface
-					fontFamily: 'inherit',
+					// Explicit, not 'inherit': the diagram sits in a <pre>, so inherit renders in the mono font
+					// while mermaid measures labels in the body font, and the wider text gets clipped.
+					fontFamily: '"DM Sans", system-ui, sans-serif',
 				},
 			},
 		}),
