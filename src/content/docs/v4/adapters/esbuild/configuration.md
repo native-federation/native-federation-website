@@ -128,10 +128,10 @@ Four esbuild options are forwarded as-is. Leave them unset to keep the adapter's
 
 | Field | Applies to | Default | Notes |
 | --- | --- | --- | --- |
-| `define` | source-code bundle | — | esbuild [`define`](https://esbuild.github.io/api/#define): global identifiers replaced at build time, e.g. `{ 'process.env.API_URL': '"https://api.example.com"' }`. Values are code, so strings need their own quotes. The node-modules bundle keeps its own `process.env.NODE_ENV` define. |
+| `define` | source-code bundle | — | esbuild [`define`](https://esbuild.github.io/api/#define): global identifiers replaced at build time, e.g. `{ 'process.env.API_URL': '"https://api.example.com"' }`. Values are code, so strings need their own quotes. |
 | `target` | both bundles | `['esnext']` (source) / esbuild's default (node-modules) | esbuild [`target`](https://esbuild.github.io/api/#target), e.g. `'es2020'` or `['chrome100', 'safari15']`. |
-| `sourcemap` | both bundles | from `dev` | esbuild [`sourcemap`](https://esbuild.github.io/api/#sourcemap): `true`, `false`, `'linked'`, `'inline'`, `'external'` or `'both'`. Set it to get sourcemaps in a production build, or to turn them off in dev. |
-| `preserveSymlinks` | source-code bundle | `false` | esbuild [`preserveSymlinks`](https://esbuild.github.io/api/#preserve-symlinks). Imports through a symlinked directory still resolve onto their [shared mapping](#shared-mappings). |
+| `sourcemap` | both bundles | from `dev` | esbuild [`sourcemap`](https://esbuild.github.io/api/#sourcemap): `true`, `false`, `'linked'`, `'inline'`, `'external'` or `'both'`. |
+| `preserveSymlinks` | source-code bundle | `false` | esbuild [`preserveSymlinks`](https://esbuild.github.io/api/#preserve-symlinks). |
 
 ```ts
 adapterConfig: {
@@ -142,7 +142,7 @@ adapterConfig: {
 }
 ```
 
-> [!WARNING] **Changing `target` or `sourcemap` needs a cleared cache.** Shared npm packages are [cached](../../core/caching.md) under a key that covers the federation config but not the adapter options, so a new `target` or `sourcemap` value only reaches them once the cache is rebuilt — delete the cache directory or run one build with `cacheExternalArtifacts: false`. `define` and `preserveSymlinks` apply to the source-code bundle only for the same reason.
+> [!WARNING] **Changing `target` or `sourcemap` needs a cleared cache.** Shared npm packages are [cached](../../core/caching.md), so a new value only reaches them once the cache is rebuilt — delete the cache directory or run one build with `cacheExternalArtifacts: false`.
 
 ## What the Adapter Sets for You
 

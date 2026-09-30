@@ -26,7 +26,7 @@ adapterConfig: {
 
 esbuild handles CommonJS on its own: a CJS package bundled into ESM output gets its `module.exports` wrapped, and you import it as normal. The gap is a CJS `require()` of another **shared** package. That package is external, and esbuild turns the call into a `__require` shim that throws in the browser (`Dynamic require of "react" is not supported`).
 
-When a preset sets `needsCommonJsPlugin` (the React preset does), the adapter adds its CommonJS plugin to the **node-modules** bundle. The plugin routes each `require()` of an external through a small ESM stub, so it becomes a real top-level `import` that the import map resolves to the shared copy. The caller gets back the value it expects: the package's `module.exports` for a CommonJS package, the module namespace for an ES module. Everything else keeps esbuild's own interop — files are never converted. On `platform: 'node'`, `require()`s of Node builtins go through the same stub.
+When a preset sets `needsCommonJsPlugin` (the React preset does), the adapter adds its CommonJS plugin to the **node-modules** bundle. The plugin routes each `require()` of an external through a small ESM stub, so it becomes a real top-level `import` that the import map resolves to the shared copy. Everything else keeps esbuild's own interop.
 
 The adapter also defines `process.env.NODE_ENV` (`"development"` or `"production"` based on `dev`) on the node-modules bundle, with or without a preset.
 

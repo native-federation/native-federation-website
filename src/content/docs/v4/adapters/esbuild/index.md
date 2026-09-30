@@ -26,7 +26,7 @@ The [core builder](../../core/index.md) is intentionally bundler-agnostic — it
 - **File writes + cache integration** — esbuild runs with `write: false`; the adapter writes outputs into `outputPath` and tracks every input file through the core's federation cache, so watch-mode rebuilds only touch what changed.
 - **Code splitting** — the core's [`chunks`](../../core/configuration.md#chunks) setting maps onto esbuild's `splitting`, so shared dependencies and exposed modules are split into chunks that load on demand.
 - **Shared mappings stay shared** — a relative import that reaches into a [shared mapping](../../core/configuration.md#sharedmappings) (`../../libs/ui/src/button` rather than `@my-org/ui`) is rewritten onto the mapping's specifier, so the library isn't bundled a second time next to its federated copy. See [Shared Mappings](configuration.md#shared-mappings).
-- **Watch mode** — wraps `esbuild.context()` with a debounced `RebuildQueue`, an `AbortSignal`-aware rebuild loop, and the core file watcher, which also covers shared-mapping directories and — with `watchLinkedDeps` — npm-linked shared packages. Cancelled rebuilds are aborted cleanly rather than racing.
+- **Watch mode** — wraps `esbuild.context()` with a debounced `RebuildQueue`, an `AbortSignal`-aware rebuild loop, and the core file watcher. Cancelled rebuilds are aborted cleanly rather than racing.
 - **Framework presets** — the `frameworks` option bundles per-framework esbuild settings (file replacements, loaders, extra `resolveExtensions`, the CommonJS plugin). A React preset ships built-in and is applied by default; `fileReplacements` lets you swap problematic CJS entry points for their pre-bundled variants (e.g. React's `cjs/` files).
 
 ## Install
