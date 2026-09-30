@@ -137,11 +137,13 @@ interface Logger {
 }
 ```
 
-| Option     | Default      | Description                                                                                            |
-| ---------- | ------------ | ------------------------------------------------------------------------------------------------------ |
-| `logger`   | `noopLogger` | Where logs go. Use `consoleLogger` during development, or provide your own for Sentry / Bugsnag / etc. |
-| `logLevel` | `'error'`    | Level threshold. `'warn'` emits warn+error; `'debug'` emits everything.                                |
-| `sse`      | `false`      | Dev feature — listens to server-sent rebuild events from remotes and triggers `reloadBrowserFn`.       |
+| Option     | Default      | Description                                                                                                 |
+| ---------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
+| `logger`   | `noopLogger` | Where logs go. Use `consoleLogger` during development, or provide your own for Sentry / Bugsnag / etc.      |
+| `logLevel` | `'error'`    | Level threshold. `'warn'` emits warn+error; `'debug'` emits everything.                                     |
+| `sse`      | `false`      | Dev feature — listens to server-sent rebuild events from remotes and triggers `reloadBrowserFn`. See below. |
+
+With `sse` on, one tab per origin holds each build-notification stream: tabs elect a holder through a Web Lock and it relays rebuild events to the others over a `BroadcastChannel`, so many open tabs don't exhaust the browser's per-origin connection limit. A tab only reloads for endpoints of remotes it has loaded itself. Streams close when a page enters the back/forward cache and reopen on restore. Where `navigator.locks` is unavailable, each tab connects directly.
 
 ### Example
 
@@ -184,7 +186,6 @@ type ModeOptions = {
   };
   feature?: {
     convertFlatSharedInfo?: boolean;
-    useAutoExternalPooling?: boolean;
   };
 };
 ```
@@ -224,12 +225,11 @@ The profile controls _how_ the resolver picks winners and _whether_ it refreshes
 
 ### Features
 
-Opt-in behaviors that change how shared externals are processed and stored. Both default to `false`.
+Opt-in behaviors that change how shared externals are processed and stored.
 
-| Option                           | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| -------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `feature.convertFlatSharedInfo`  | `false` | Opts into runtime densification of a remote's shared externals. A core build with [`denseExternals`](../core/configuration.md#feature-flags) on emits `DenseSharedInfo` (a per-package `entries` map covering primary **and** secondary entrypoints) natively, and those pass through unchanged. For flat remote builds that emit one flat `SharedInfo` per entrypoint, enabling this groups secondary entrypoints under their parent package (by npm scope) so they resolve as one shared external. See [Version Resolver — Secondary entrypoints](version-resolver.md#secondary-entrypoints). |
-| `feature.useAutoExternalPooling` | `false` | When `true`, shared externals are grouped into pools by their npm scope (`@framework/core`, `@framework/common` → pool `framework`) so that no remote draws a coupled family from builds that never shipped it together: a remote either takes the whole family from one build, or serves the whole family from its own. Buys coherence at a possible cost in downloads, never a reduction. Unscoped packages are not auto-pooled; a remote can also opt a specific external into a pool with a `pool` tag regardless of this flag. See [Dependency Pooling](pooling.md).                                                                      |
+| Option                          | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `feature.convertFlatSharedInfo` | `false` | Opts into runtime densification of a remote's shared externals. A core build with [`denseExternals`](../core/configuration.md#feature-flags) on emits `DenseSharedInfo` (a per-package `entries` map covering primary **and** secondary entrypoints) natively, and those pass through unchanged. For flat remote builds that emit one flat `SharedInfo` per entrypoint, enabling this groups secondary entrypoints under their parent package (by npm scope) so they resolve as one shared external. See [Version Resolver — Secondary entrypoints](version-resolver.md#secondary-entrypoints). |
 
 ### Two ready-made profiles
 
@@ -263,14 +263,16 @@ type StorageOptions = {
   storage?: StorageEntryCreator;
   clearStorage?: boolean;
   storageNamespace?: string;
+  exposeStorageGetter?: boolean;
 };
 ```
 
-| Option             | Default                   | Description                                                                                                                                        |
-| ------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `storage`          | `globalThisStorageEntry`  | How the cache is persisted. Built-ins: `globalThisStorageEntry`, `sessionStorageEntry`, `localStorageEntry`. Custom implementations are supported. |
-| `clearStorage`     | `false`                   | When `true`, `initFederation` wipes the namespace before initializing — handy for one-shot cache busts after a deploy.                             |
-| `storageNamespace` | `'__NATIVE_FEDERATION__'` | Namespace prefix for stored keys (e.g. `__NATIVE_FEDERATION__.remotes`). Change it to run multiple orchestrators on the same origin.               |
+| Option                | Default                   | Description                                                                                                                                                                                                  |
+| --------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `storage`             | `globalThisStorageEntry`  | How the cache is persisted. Built-ins: `globalThisStorageEntry`, `sessionStorageEntry`, `localStorageEntry`. Custom implementations are supported.                                                           |
+| `clearStorage`        | `false`                   | When `true`, `initFederation` wipes the namespace before initializing — handy for one-shot cache busts after a deploy.                                                                                       |
+| `storageNamespace`    | `'__NATIVE_FEDERATION__'` | Namespace prefix for stored keys (e.g. `__NATIVE_FEDERATION__.remotes`). Change it to run multiple orchestrators on the same origin.                                                                         |
+| `exposeStorageGetter` | `true`                    | _Since 4.7.0._ Publishes a read-only `get(key)` on [`globalThis.__NF_ORCHESTRATOR__`](#storage-pointer). Set to `false` to keep the state of a custom storage unreadable for page scripts. |
 
 ### Example
 
@@ -298,6 +300,41 @@ initFederation("http://example.org/manifest.json", {
 ```
 
 > **Note:** Most server-rendered hosts want `sessionStorageEntry`: it survives navigation-triggered full reloads (the whole point of caching here) but is automatically cleared when the tab closes, so a stale resolution can never live longer than the user's session.
+
+### <a id="storage-pointer"></a> Discovering the storage from tools
+
+_Since 4.7.0._ Every `initFederation` call publishes a frozen, read-only descriptor on `globalThis.__NF_ORCHESTRATOR__`, so devtools, browser extensions and debug scripts can find the cached state without knowing the host's config:
+
+```js
+globalThis.__NF_ORCHESTRATOR__ = {
+  storage: {
+    // keyed by storageNamespace; every namespace on the page is listed
+    __NATIVE_FEDERATION__: {
+      version: "4.7.0", // the orchestrator that published this namespace
+      type: "localStorage", // 'globalThis' | 'localStorage' | 'sessionStorage' | 'custom'
+      namespace: "__NATIVE_FEDERATION__",
+      keys: ["remotes", "shared-externals", "scoped-externals", "shared-chunks"],
+      get: (key) => {}, // a copy of the stored value; absent when exposeStorageGetter is false
+    },
+  },
+};
+```
+
+There are two ways to read the state:
+
+- **`get(key)`** works for every storage, custom ones included. It returns a copy of the last committed value — in-progress work only reaches storage when a flow commits it — or `undefined` for a key that isn't in `keys`. Nothing on the descriptor can write to the storage. For the built-in storages this exposes nothing a page script couldn't already read, but a custom storage that keeps its state in a closure becomes readable by any script on the page; pass `exposeStorageGetter: false` to prevent that.
+- **Reading the location directly** suits tools that must not call page functions, such as a passive devtools probe. `type` tells you where each key lives:
+
+| `type`           | Location of `<key>`                                         |
+| ---------------- | ----------------------------------------------------------- |
+| `globalThis`     | `globalThis[namespace][key]`                                |
+| `localStorage`   | `` localStorage.getItem(`${namespace}.${key}`) `` (JSON)   |
+| `sessionStorage` | `` sessionStorage.getItem(`${namespace}.${key}`) `` (JSON) |
+| `custom`         | Not directly readable — use `get(key)`                      |
+
+Each namespace carries its own `version`, because separate orchestrator bundles on one page can publish side by side. Publishing never fails `initFederation`: if the global can't be written, the descriptor is simply missing.
+
+A custom `StorageEntryCreator` reports `'custom'` unless you tag it with a `type` property — e.g. `myStorage.type = 'localStorage'` when it wraps `localStorage` with the same key layout. The published object is typed as `NFOrchestratorGlobal`, exported from `@softarc/native-federation-orchestrator/options`.
 
 ## Putting it together
 

@@ -47,7 +47,7 @@ The simplest integration uses the pre-built `quickstart.mjs` runtime and a decla
     </script>
 
     <!-- Include the orchestrator -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.6.0/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.7.0/quickstart.mjs"></script>
   </head>
   <body>
     <my-header></my-header>
@@ -97,7 +97,7 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
     <title>My Application</title>
 
     <!-- 1. Init the registry BEFORE any consumers -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.6.0/init-registry.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.7.0/init-registry.mjs"></script>
 
     <script type="esms-options">{ "shimMode": true }</script>
 
@@ -118,7 +118,7 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
     </script>
 
     <!-- 4. The orchestrator -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.6.0/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.7.0/quickstart.mjs"></script>
   </head>
   <body>
     <my-header></my-header>
