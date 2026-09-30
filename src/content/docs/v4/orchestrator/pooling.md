@@ -426,17 +426,61 @@ await initFederation(manifest, {
 });
 ```
 
-Lines from the init path are prefixed with the share scope and the pool name, e.g. `[__GLOBAL__][pool:framework]`; the dynamic-init line carries the share scope only.
+Lines from the init path are prefixed with the share scope and the pool name, e.g. `[__GLOBAL__][pool:framework]`; the dynamic-init line carries the share scope only. `N` always counts what that one remote imports, not the whole pool. Each message is a single line in the log; the long ones are wrapped below for reading.
 
-| Level | Line | What it means |
-| --- | --- | --- |
-| `warn` | `'<remote>' is islanded: the resolver scoped its '<member>@<version>', so all N members it imports are scoped for it.` | **Gate 1.** That remote re-downloads the whole family. Align its version, or accept the cost. N counts what that remote imports, not the pool. |
-| `warn` | `'<remote>' serves its own family: no shared build offers every entrypoint it imports at a version it accepts — '<gap>' is the gap, closest is '<build>'. All N members it imports are scoped for it.` | **Gate 2**, and the main cost of the promise. `<gap>` names the one thing the closest build fell short on — an entrypoint it does not carry, or a member at a version outside this remote's range. Closing that gap in **either** build recovers the dedup. |
-| `warn` | `'<remote>' serves its own family: no committed build offers …` | The same finding on the dynamic-init path: the remote just loaded would have bridged builds that shipped none of each other's members. |
-| `warn` | `'<remote>' serves its own family: the mapping would have handed it <specifier>@<tag>, …, which no build shipped together, …` | The final check caught a combination nothing built. No portfolio is known to reach this; if you see it, it is worth reporting with the line. |
-| `warn` | `'<member>' is scoped-only — no coherent shared build provides it; N remotes download their own copy.` | Sharing was possible and was lost. Counts only the copies that really self-serve. Suppressed when an island in the same pass already named the cause. |
-| `warn` | `[<member>] declares a 'pool' tag but no other external joined its pool; likely a typo or a missing sibling.` | A tag that formed no pool. |
-| `debug` | `N members across M remotes, incompatible={…}` | Pool formation — the fastest way to confirm membership came out the way you intended. The set lists the remotes gate 1 will island. |
+#### Gate 1: a remote is islanded (`warn`)
+
+```
+'<remote>' is islanded: the resolver scoped its '<member>@<version>',
+so all N members it imports are scoped for it.
+```
+
+That remote re-downloads its whole family. Align its version, or accept the cost.
+
+#### Gate 2: a remote serves its own family (`warn`)
+
+```
+'<remote>' serves its own family: no shared build offers every entrypoint it imports
+at a version it accepts — '<gap>' is the gap, closest is '<build>'.
+All N members it imports are scoped for it.
+```
+
+The main cost of the promise. `<gap>` names the one thing the closest build fell short on: an entrypoint it does not carry, or a member at a version outside this remote's range. Closing that gap in **either** build recovers the dedup.
+
+On the dynamic-init path the same finding reads `no committed build offers …`: the remote just loaded would have bridged builds that shipped none of each other's members.
+
+#### The final check caught a combination (`warn`)
+
+```
+'<remote>' serves its own family: the mapping would have handed it <specifier>@<tag>, …,
+which no build shipped together, …
+```
+
+No portfolio is known to reach this. If you see it, it is worth reporting with the line.
+
+#### A member lost its shared build (`warn`)
+
+```
+'<member>' is scoped-only — no coherent shared build provides it;
+N remotes download their own copy.
+```
+
+Sharing was possible and was lost. Only the copies that really serve themselves are counted. The line is left out when an island in the same pass already named the cause.
+
+#### A tag formed no pool (`warn`)
+
+```
+[<member>] declares a 'pool' tag but no other external joined its pool;
+likely a typo or a missing sibling.
+```
+
+#### Pool formation (`debug`)
+
+```
+N members across M remotes, incompatible={…}
+```
+
+The fastest way to confirm membership came out the way you intended. The set lists the remotes gate 1 will island.
 
 **Reading them as a workflow.** A gate-2 warning is the actionable one: it names a specific gap in a specific build. Usually the fix is on the build side — either bump the lagging remote, or have the widest remote share the entrypoint it is missing — and the dedup comes back on the next deploy. A gate-1 warning is a genuine version conflict that pooling merely made expensive instead of silently wrong.
 
