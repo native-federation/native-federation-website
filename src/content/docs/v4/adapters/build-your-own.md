@@ -18,6 +18,8 @@ An adapter is any object that implements `NFBuildAdapter` from `@softarc/native-
 
 ```ts
 interface NFBuildAdapter {
+  readonly externalsCacheKey?: ExternalsCacheKey;
+
   setup(name: string, options: NFBuildAdapterOptions): Promise<void>;
 
   build(
@@ -28,6 +30,15 @@ interface NFBuildAdapter {
   dispose(name?: string): Promise<void>;
 }
 ```
+
+```ts
+interface ExternalsCacheKey {
+  adapter: string;
+  options?: Record<string, string | number | boolean>;
+}
+```
+
+`externalsCacheKey` feeds the [externals cache](../core/caching.md#the-checksum) checksum. The core's checksum knows its own version, but your adapter produces the bytes, so declare its identity (package name and version, e.g. `'my-adapter@1.2.0'`) and every option that changes the shared bundles. A change to any of them then rebuilds the cached externals instead of serving output from the old settings. Set it when the adapter is created: the core reads it before the first `setup()`. Join list-valued options into a string yourself — only you know whether their order matters. The property is optional for now and becomes required in the next major.
 
 The core calls these in phases. Each phase has a unique `name` — use it as the key for a bundler context you keep alive between rebuilds. One persistent bundler context per `name` is the pattern you want: it's what makes incremental rebuilds cheap and is exactly how the esbuild adapter uses `esbuild.context()`.
 
@@ -50,14 +61,14 @@ The `options.isMappingOrExposed` flag tells you which family you're in. Shared e
 | --- | --- | --- |
 | `entryPoints` | `EntryPoint[]` | `{ fileName, outName, key? }`. Use `fileName` as the bundler's entry source and `outName` as the basename of the emitted file (without hash placeholders — the core handles hashing via `options.hash`). |
 | `external` | `string[]` | Modules the bundler must _not_ inline. Pass through as-is to your bundler's externals setting. |
-| `outdir` | `string` | Absolute target directory for emitted files. For externals it points at the cache directory; for the source-code phases it's the project's `outputPath`. |
+| `outdir` | `string` | Absolute target directory for emitted files. For externals it points at that bundle's folder in the cache directory; for the source-code phases it's the project's resolved `outputPath`. |
 | `isMappingOrExposed` | `boolean` | `true` for the source-code phases (mapping bundles and `mapping-or-exposed`), `false` for externals. |
 | `platform` | `'browser' \| 'node'` | Forwarded to the bundler's platform setting. |
 | `hash` | `boolean` | If `true`, append a content hash to emitted filenames. The core uses the filename you emit to populate `remoteEntry.json`. |
 | `dev` | `boolean` | Enable sourcemaps, disable minification, set `process.env.NODE_ENV` to `"development"`. |
 | `watch` | `boolean` | Informational — the core doesn't drive the watcher for you; it just tells you whether the builder is running in watch mode so you can pick a long-lived context. |
 | `chunks` | `boolean` | Informational. The core decides how to wire chunks into `remoteEntry.json`; your job is to emit them and return them in `NFBuildAdapterResult[]`. |
-| `tsConfigPath` | `string?` | Wire into your TypeScript pipeline (esbuild: `tsconfig`; swc: its config; Vite: forward to its esbuild options). |
+| `tsConfigPath` | `string?` | Passed through as the user configured it; resolve a relative path against `workspaceRoot`. Wire into your TypeScript pipeline (esbuild: `tsconfig`; swc: its config; Vite: forward to its esbuild options). |
 | `mappedPaths` | `PathToImport` | Resolved `tsconfig` path aliases. Honor these so shared-mapping entries resolve to the same file your app resolves them to. |
 | `optimizedMappings` | `boolean?` | `true` when `features.ignoreUnusedDeps` is on. Usually means you can skip the default Node-lib externals list. |
 | `cache` | `FederationCache<TBundlerCache>` | Shared cache object. `cache.bundlerCache` is the only field adapters should touch — see §6. The bundler cache. |
