@@ -44,7 +44,7 @@ TypeScript contracts — types only. Useful when authoring an adapter or integra
 - `ConfigBuilder`, `PackageJsonExternalsBuilder`, `WorkspaceMappingsBuilder` — the builder types `fromPackageJson` and `mappingsFromWorkspace` return. `shared` and `sharedMappings` accept any `ConfigBuilder` in place of its value
 - `ExternalConfig`, `SharedExternalsConfig`, `ShareExternalsOptions`, `ShareAllExternalsOptions`, `IncludeSecondariesOptions` — the two `Share*Options` input types accept the [object form of `requiredVersion`](sharing.md#choosing-the-emitted-range)
 - `FederationOptions`, `NormalizedFederationOptions`
-- `NFBuildAdapter`, `NFBuildAdapterOptions`, `NFBuildAdapterContext`, `NFBuildAdapterResult`, `EntryPoint`
+- `NFBuildAdapter`, `NFBuildAdapterOptions`, `NFBuildAdapterContext`, `NFBuildAdapterResult`, `EntryPoint`, `ExternalsCacheKey`
 - `FederationInfo`, `SharedInfo`, `ExposesInfo`, `ChunkInfo`, `ArtifactInfo`, `IntegrityMap`
 - `FederationManifest` — the host manifest shape: `Record<string, string | { url; integrity?; main? }>`
 - `FederationCache`
@@ -66,7 +66,7 @@ Utility exports intended for adapter authors. Treated as semi-public; breaking c
 
 > **Note:** `createMappingImportResolver(sharedMappings, io?)` answers one question for an adapter's bundler hook: a relative import that lands inside a shared-mapped library — `../../libs/ui/src/button` rather than `@my-org/ui` — would bundle that file into the consumer next to the shared copy. The resolver returns the specifier to rewrite the import onto, or `null` to leave it alone. Hand it the `sharedMappings` that `normalizeFederationOptions` leaves on the config: those are expanded and pruned, which is what keeps a rewrite off a specifier that was never published. A rewrite happens only where every binding the target exports arrives under the same name through the mapping's entry point; where that entry point is readable and omits them, the build warns instead, naming the file and the symbols to re-export. Call `reset()` when a build starts — a plugin outlives a rebuild, and the TypeScript program the resolver keeps would go stale.
 
-> **Note:** `getChecksum` takes three optional parameters beyond the packages — the feature flags, per-package content signals and installed versions that take part in the [cache key](caching.md#the-checksum).
+> **Note:** Beyond the packages, `getChecksum` takes the optional inputs that take part in the [cache key](caching.md#the-checksum): the dev flag, the builder version, the feature flags, per-package content signals, installed versions and the adapter's `ExternalsCacheKey`.
 
 ## `@softarc/native-federation/internal/browser`
 

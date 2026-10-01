@@ -6,10 +6,12 @@ The core library doesn't ship a bundler. Instead, it defines a contract — `NFB
 
 ## The Contract
 
-A build adapter is an object implementing three methods:
+A build adapter is an object implementing three methods, plus an optional cache key:
 
 ```ts
 export interface NFBuildAdapter {
+  readonly externalsCacheKey?: ExternalsCacheKey; // { adapter: string; options?: Record<string, string | number | boolean> }
+
   setup(name: string, options: NFBuildAdapterOptions): Promise<void>;
 
   build(
@@ -23,6 +25,8 @@ export interface NFBuildAdapter {
 
 The core calls these in phases. Each phase uses a unique `name` — for example `'browser-shared'`, `'node-shared'`, `'browser-<pkg>'`, or `'exposed'` — so an adapter can maintain one persistent context per phase (useful for watch mode and incremental compile).
 
+`externalsCacheKey` names the adapter and the options that change its shared bundles, and takes part in the [externals cache](caching.md#the-checksum) checksum — see [Build Your Own Adapter](../adapters/build-your-own.md#1-the-contract).
+
 ## `NFBuildAdapterOptions`
 
 The options object tells the adapter exactly what to compile in a given phase:
@@ -35,7 +39,7 @@ The options object tells the adapter exactly what to compile in a given phase:
 | `mappedPaths` | `PathToImport` | Resolved tsconfig path mappings relevant to this build. |
 | `isMappingOrExposed` | `boolean` | `true` when compiling exposed modules or shared mapped paths; `false` when bundling shared npm externals. |
 | `platform` | `'browser' \| 'node'` | Target platform. |
-| `tsConfigPath` | `string` | Path to the `tsconfig.json` to use. |
+| `tsConfigPath` | `string` | Path to the `tsconfig.json` to use, as configured. A relative path is relative to `workspaceRoot`. |
 | `dev` | `boolean` | Development build (source maps, no minify). |
 | `watch` | `boolean` | Opt in to watch-mode behavior. |
 | `chunks` | `boolean` | Enable code-splitting. |

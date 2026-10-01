@@ -47,7 +47,7 @@ await federationBuilder.close();
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `workspaceRoot` | `string` | yes | Absolute path to the monorepo / workspace root. All other paths are resolved against it. |
-| `outputPath` | `string` | yes | Directory for federation artifacts (shared bundles, `remoteEntry.json`, import map). |
+| `outputPath` | `string` | yes | Directory for federation artifacts (shared bundles, `remoteEntry.json`, import map). Relative to `workspaceRoot`, or absolute. |
 | `federationConfig` | `string` | yes | Path (relative to `workspaceRoot`) to `federation.config.js`. |
 | `projectName` | `string` | no | Overrides the project name used for cache isolation. Defaults to the `name` field of the federation config. |
 | `tsConfig` | `string` | no | Path to `tsconfig.json`. Used to resolve mapped paths. |

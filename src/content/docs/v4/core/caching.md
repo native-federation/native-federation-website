@@ -36,20 +36,23 @@ By default the cache lives under the workspace's `node_modules` folder, isolated
 node_modules/.cache/native-federation/<projectName>/
 ```
 
-Inside you'll find the bundle's emitted `.js` files plus one `.meta.json` per bundle:
+Inside you'll find one `.meta.json` per bundle, each next to a folder of the same name that holds that bundle's emitted files:
 
 ```
 node_modules/.cache/native-federation/mfe1/
+├── .nf-cache.json                      # records the builder version that wrote this folder
 ├── browser-shared.meta.json
+├── browser-shared/
+│   ├── _angular_core.CH1f-PL9lh.js
+│   ├── _angular_core_primitives_di.63DUUDHkzv.js
+│   ├── _angular_core_primitives_signals.5PqDyOp3np.js
+│   ├── chunk-IXOA6WTM.js
+│   ├── chunk-WDE5IQ2F.js
+│   └── .nf-cjs-entries/                # synthetic ESM entries for CommonJS externals
 ├── browser-shared-dev.meta.json        # dev cache lives side-by-side
+├── browser-shared-dev/
 ├── node-shared.meta.json
-├── _angular_core.CH1f-PL9lh.js
-├── _angular_core_primitives_di.63DUUDHkzv.js
-├── _angular_core_primitives_signals.5PqDyOp3np.js
-├── chunk-IXOA6WTM.js
-├── chunk-WDE5IQ2F.js
-├── chunk-2VMXMS7J.js
-└── .nf-cjs-entries/                    # synthetic ESM entries for CommonJS externals
+└── node-shared/
 ```
 
 The `.nf-cjs-entries` folder holds the generated entries for [CommonJS externals](sharing.md#commonjs-externals). They are build inputs — nothing from it is copied into `outputPath`.
@@ -62,7 +65,8 @@ A cache hit is decided by a SHA-256 checksum over everything that affects a bund
 
 - the packages in the bundle and their **installed** versions — the version actually resolved from `node_modules`, not the range declared in your config,
 - their sharing metadata: `requiredVersion`, `singleton`, `strictVersion`, `shareScope` and `pool`,
-- the [feature flags](configuration.md#feature-flags), the builder version, and whether it's a dev or a prod build.
+- the [feature flags](configuration.md#feature-flags), the builder version, and whether it's a dev or a prod build,
+- the build adapter's identity and the adapter options that change shared bundles, when the adapter declares them (see [`externalsCacheKey`](../adapters/build-your-own.md#1-the-contract)).
 
 Change any of those and the affected bundles rebuild. Leave them alone and the cache is reused.
 
@@ -132,9 +136,11 @@ At the start of each bundle phase, the core:
 1. Computes the fresh checksum for the bundle.
 2. Reads the stored meta file, if any, and compares its `checksum`.
 3. **If they match** — cache hit. The build adapter is never invoked. The cached `files` are copied straight into the output directory, and the cached `externals` are added to the in-memory `FederationCache`.
-4. **If they differ** — cache miss. The core clears the stale entries, calls the adapter to rebuild the bundle, and persists a new meta file.
+4. **If they differ** — cache miss. The core empties the bundle's cache folder, calls the adapter to rebuild the bundle, and persists a new meta file.
 
 A first-ever build, a version bump, a new shared package, or a dev/prod flip all look like a miss on the affected bundle. Everything else is a hit.
+
+When the project cache folder was written by a different minor version of the core, the build deletes it before bundling and starts cold. A patch upgrade keeps the folder and only rebuilds the bundles whose checksum changed.
 
 ## Dev and prod caches
 
@@ -177,7 +183,7 @@ Adapters use the `bundlerCache` slot on `FederationCache` to persist bundler-spe
 
 ## Invalidation & recovery
 
-The checksum covers the packages in a bundle, their installed versions, their sharing metadata and the feature flags — so most edits that change the output invalidate the cache on their own. Code-splitting is the notable exception: `chunks` is not part of the key, so toggling it on a `build: 'package'` external keeps serving the previously bundled output.
+The checksum covers the packages in a bundle, their installed versions, their sharing metadata, the feature flags and the adapter's options — so most edits that change the output invalidate the cache on their own. Code-splitting is the notable exception: `chunks` is not part of the key, so toggling it on a `build: 'package'` external keeps serving the previously bundled output.
 
 If a build ever produces surprising output and you suspect a stale entry, wipe the cache folder and let the next build recreate it:
 
@@ -191,7 +197,7 @@ For a single project, delete only that project's subfolder:
 rm -rf node_modules/.cache/native-federation/mfe1
 ```
 
-There is no built-in "force rebuild one bundle" flag — deleting the corresponding `.meta.json` is the manual way.
+There is no built-in "force rebuild one bundle" flag — deleting the corresponding `.meta.json` and its folder is the manual way.
 
 ### A corrupted cache fails the build
 
