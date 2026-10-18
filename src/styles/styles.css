@@ -1323,6 +1323,30 @@ li code {
   color: #92400e;
 }
 
+/* --- Announcement --- */
+.announcement {
+  background: var(--color-primary-darker);
+  color: #fff;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 8px 16px;
+}
+
+.announcement p {
+  margin: 0;
+}
+
+.announcement a {
+  color: var(--color-primary-light);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.announcement a:hover {
+  color: #fff;
+}
+
 /* --- Playground Banner --- */
 .playground-banner {
   display: flex;

@@ -4,7 +4,7 @@
 
 The [Version Resolver](version-resolver.md) resolves every shared external **independently**. That is the right default — it minimizes downloads, and for a flat dependency like `lodash` there is nothing to coordinate. But packages that ship as a **family** are not independent: `@angular/core` and `@angular/router`, `react` and `react-dom`, your own `@acme/ui` and `@acme/tokens`. Resolve those one at a time and a remote can end up running a combination nobody ever built.
 
-**Pooling** is the opt-in feature that prevents that. You tag the packages that belong together, and the orchestrator makes each remote take that whole group from **one build** — a shared one that shipped exactly that combination, or its own.
+**Pooling** is the opt-in feature that prevents that. You label the packages that belong together, and the orchestrator makes each remote take that whole group from **one build** — a shared one that shipped exactly that combination, or its own.
 
 > **The promise.** Within a pool, every member a remote runs comes from a build that shipped them together.
 
@@ -79,7 +79,7 @@ mfe-b now runs **two framework runtimes**: two DI containers that cannot see eac
 
 ## Do you need it?
 
-Pooling is inert until a remote tags a family. Reach for it when:
+Pooling is inert until a remote labels a family. Reach for it when:
 
 - **Yes** — you share a package family published from one monorepo (`@angular/*`, `@acme/*`) across remotes that **deploy independently**. This is the case it was built for: independent deploys are exactly what lets versions drift apart between members.
 - **Yes** — you share an unscoped lockstep pair (`react` + `react-dom`, `vue` + `vue-router`).
@@ -91,9 +91,9 @@ Symptoms worth checking against: two instances of a framework singleton, `instan
 
 ## Enabling pooling
 
-An external joins a pool through an optional `pool` on a shared package in the remote's `federation.config.mjs`. It mirrors `shareScope` in shape. Core passes it through to `remoteEntry.json` untouched, and the build itself does nothing with it. See [Core — per-package options](../core/sharing.md#per-package-options).
+An external joins a pool through an optional `pool` label on a shared package in the remote's `federation.config.mjs`. It mirrors `shareScope` in shape. Core passes it through to `remoteEntry.json` untouched, and the build itself does nothing with it. See [Core — per-package options](../core/sharing.md#per-package-options).
 
-> **Upgrading from 4.6.** Orchestrator 4.7.0 removed `feature.useAutoExternalPooling`, which grouped scoped packages by npm scope at runtime. Pools now form only from `pool` tags; to keep a scope pooled, tag its packages at build time.
+> **Upgrading from 4.7.** Orchestrator 4.8.0 elects a pool's members together as one family, where 4.7 let the resolver pick each member's version and then checked the result. A pooled family's global version can therefore move — an older build wins when it serves more remotes — and the log lines changed (see [Diagnostics](#diagnostics)).
 
 ```js
 // federation.config.mjs
@@ -119,24 +119,23 @@ Which lands in the remote entry as:
 }
 ```
 
-Tagging every package of an npm scope with that scope (`@framework/core`, `@framework/common` → `framework`) is the usual way to pool a framework family. The design-system hazard is covered by tagging **across** scopes: give `@design-system/ui` and `@framework/core` the same tag.
+Labelling every package of an npm scope with that scope (`@framework/core`, `@framework/common` → `framework`) is the usual way to pool a framework family. The design-system hazard is covered by labelling **across** scopes: give `@design-system/ui` the family's label, `framework`.
 
 ## How a pool is formed
 
-Pool identity is not a string that remotes must agree on. The orchestrator draws a graph and each **connected group** is a pool:
+**A pool is a name.** Every external labelled `framework`, by any remote, is in the `framework` pool. Formally the orchestrator draws a graph and each **connected group** is a pool:
 
-- every shared external is a node;
-- every `pool` tag is a node **per remote** — mfe-a's `framework` and mfe-b's `framework` are two different nodes;
-- a remote that tags an external links the two;
-- a secondary entrypoint is always linked to its package (`@framework/core/testing` → `@framework/core`), tagged or not.
+- every shared external is a node, and so is every label;
+- a remote that labels an external links the two;
+- a secondary entrypoint is always linked to its package (`@framework/core/testing` → `@framework/core`), labelled or not.
 
-For example, mfe-a tags three framework packages `framework`, mfe-b tags its design system together with `@framework/core` as `design-system`, and mfe-c tags `react` and `react-dom` as `react`:
+For example, mfe-a labels `@framework/core` and `@framework/router` with `framework`, mfe-b labels `@framework/forms` and `@design-system/ui` with `framework`, mfe-c labels `@framework/core` with `ng`, and mfe-d labels `react` and `react-dom` with `react`:
 
 ```mermaid
 flowchart LR
     subgraph P1["pool 'framework'"]
-        t1(("framework<br/>@ mfe-a"))
-        t2(("design-system<br/>@ mfe-b"))
+        t1(("framework"))
+        t2(("ng"))
         core["@framework/core"]
         router["@framework/router"]
         forms["@framework/forms"]
@@ -144,15 +143,15 @@ flowchart LR
         ui["@design-system/ui"]
     end
     subgraph P2["pool 'react'"]
-        t3(("react<br/>@ mfe-c"))
+        t3(("react"))
         react["react"]
         rdom["react-dom"]
     end
-    t1 --- core
-    t1 --- router
-    t1 --- forms
-    t2 --- core
-    t2 --- ui
+    t1 ---|mfe-a| core
+    t1 ---|mfe-a| router
+    t1 ---|mfe-b| forms
+    t1 ---|mfe-b| ui
+    t2 ---|mfe-c| core
     testing -. "entrypoint → package" .- core
     t3 --- react
     t3 --- rdom
@@ -160,67 +159,111 @@ flowchart LR
 
 Three consequences follow from the picture:
 
-- **Groups merge through a shared member, never through a shared label.** mfe-a's `framework` group and mfe-b's `design-system` group become one pool because both contain `@framework/core`. Two unrelated groups that happen to reuse a label stay separate. That is why the design system above ends up coordinated with the framework: `@framework/core` is the **bridge member**.
-- **A pool needs two sides.** It forms only once some remote declares members from both sides. Two remotes that share no member never pool together, and need not: neither is in a position to run an incoherent pair.
-- **Entrypoints follow their package.** `@framework/core/testing` carries no tag of its own and still joins, because a package and its entrypoints are one artefact. On its own, with no tag in the group, that link forms no pool.
+- **Remotes need not label the same members.** mfe-a's `core` + `router` and mfe-b's `forms` + `ui` are one pool because both use the label `framework`.
+- **Different names that share an external merge.** mfe-c calls the family `ng`, but labels `@framework/core`, which is already in `framework`, so `ng` joins the same pool.
+- **Entrypoints follow their package.** `@framework/core/testing` carries no label of its own and still joins, because a package and its entrypoints are one artefact. On its own, with no label in the group, that link forms no pool.
 
-> A member carrying a tag that pools with nothing is almost always a typo or a missing sibling, so it is logged as a warning.
+> A label that joins no other external is almost always a typo or a missing sibling. It is logged at `debug`.
 
-**A pool is named after the tag most of its copies declare**, with ties broken alphabetically. The pool above has three `framework` links against two `design-system` ones, so it is named `framework`. Because tags are remote-local, two unrelated pools can end up with the same tag: the one whose smallest member sorts first keeps it, and the others are suffixed `framework~2`, `framework~3`. The name is derived, not declared — a new remote that merges two pools renames one of them — so treat it as a label to group by, not a key to keep.
+**A pool is named after the label most of its copies declare**, with ties broken alphabetically. The pool above is named `framework`.
 
 ## Where pooling runs
 
-Pooling is a step in the init pipeline, between the resolver and the import map:
+Pooling is a step in the init pipeline, before the per-package resolver:
 
 ```mermaid
 flowchart LR
     A["Fetch every<br/>remoteEntry.json"] --> B["Store each remote's<br/>copies"]
-    B --> C["Mark pools for<br/>re-election"]
-    C --> D["Resolver:<br/>share / skip / scope<br/>per package"]
-    D --> E["Pooling:<br/>gate 1, gate 2"]
-    E --> F["Generate the<br/>import map"]
+    B --> E["Pooling:<br/>elect each pool<br/>as one family"]
+    E --> D["Resolver:<br/>every unpooled<br/>package"]
+    D --> S["Pick each package's<br/>serving build"]
+    S --> F["Generate the<br/>import map"]
     style E fill:#fef3c7,stroke:#d97706
 ```
 
-- **Mark pools for re-election.** A pool is one unit of state: the moment one member changed (a remote was added, redeployed or removed), every member is re-elected. That way a verdict pooling made for an earlier portfolio can never outlive the condition that caused it.
-- **The resolver** has already decided, per package, which version is shared (`share`), which copies dedup onto it (`skip`) and which must keep their own file (`scope`). Host precedence and `requiredVersion` acceptance are settled here.
-- **Pooling** re-runs no compatibility search and elects no versions of its own. It only decides, **per remote**, whether that remote may actually _take_ the dedups the resolver granted it.
+- **Pooling** elects the members of every pool together, and writes the verdicts the import map needs. The [Version Resolver](version-resolver.md) never sees a pooled external.
+- **Re-election is per scope.** The moment one external in a scope changed (a remote was added, redeployed or removed), every pool of that scope is re-elected, so a verdict made for an earlier portfolio cannot outlive the condition that caused it.
 
-When nothing was re-elected — a warm init with no new remotes — pooling does no work at all.
+When nothing in a scope is dirty — a warm init with no new remotes — pooling does no work there.
 
 ## How pooling decides
 
-The unit pooling reasons about is a **build**: one remote's whole set of `member → version`. A build is coherent by construction, because those files were compiled and tested together. So pooling only ever asks "did some build ship this combination?" and "does this build cover what that remote imports, at versions its range accepts?". It never judges how "close" two version numbers look. Version arithmetic cannot carry the promise: a minor line is a convention each vendor picks, two unrelated packages sharing one would be treated as coupled, and a family whose members version independently has no line to compare at all.
+The unit pooling reasons about is a **build**: everything one remote ships in the pool, as `specifier → version`. A build is coherent by construction, because those files were compiled and tested together. So pooling only asks two things of a build:
 
-For each pool it runs these steps:
+- does it **serve** a remote — ship every entrypoint that remote imports, at versions the remote's `requiredVersion` accepts?
+- does a remote **agree** with it — ship every specifier both have at the same version?
+
+It never judges how "close" two version numbers look. Version arithmetic cannot carry the promise: a minor line is a convention each vendor picks.
+
+For each pool:
 
 ```mermaid
 flowchart TD
-    A["A pool: ≥2 members across ≥2 remotes"] --> G1["Gate 1: island every remote the<br/>resolver scoped on any member"]
-    G1 --> F{"One build<br/>serves all?"}
-    F -->|"yes"| K["Keep the resolver's verdicts"]
-    F -->|"no: ask per remote"| W{"2a<br/>Witnessed?"}
-    W -->|"yes"| K2["Keep its verdict"]
-    W -->|"no"| C{"2b<br/>Covering build?"}
-    C -->|"yes"| S["Dedup onto that build"]
-    C -->|"no"| O["Serve its own family<br/>+ warning"]
-    O -. "re-check the others" .-> W
+    A["A pool's builds:<br/>one per remote"] --> R1["Round 1: elect the build<br/>that serves the most remotes<br/>(the host's, if it ships the family)"]
+    R1 --> G["Its files form the global map"]
+    R1 --> P["Remotes it does not serve"]
+    P --> R2{"Does a waiting remote's build<br/>serve ≥ 2 waiting remotes?"}
+    R2 -->|"yes"| SP["Subpool: those remotes<br/>run that build"]
+    SP --> R2
+    R2 -->|"no"| O["Everyone left serves<br/>their own family + warning"]
 ```
 
-After gate 1 comes a shortcut: if one build serves every member and every entrypoint the other remotes import, there is nothing left to decide. That is the common case — in a coherent or lockstep portfolio nobody is islanded, one build serves the whole pool, and pooling writes nothing. The rest is easiest to follow through the two examples from the start of this page, plus a third.
+1. **Round 1 elects the global map.** Every build is a candidate, ranked by: the newest build under [`profile.latestSharedExternal`](configuration.md#profile); then most remotes served; then most remotes that agree with it without being served; then the build the stored record already elected; then the newer build, then name. A host that ships the family is always round 1: its files are loaded anyway and cannot be repointed.
+2. **Subpools.** Among the remotes round 1 does not serve, the build that serves the most of them — at least two — forms a **subpool**: those remotes run that build's files through their scopes. Rounds repeat until no build serves two.
+3. **Extension.** A package the winner doesn't ship at all can still be published globally, when every remote that agrees with the winner and ships that package ships it at one version. A remote moves onto the global map only if one build shipped the exact combination it would resolve.
+4. **Everyone left serves their own family**, from their own build, with a warning and the reason stored.
 
-### Gate 1 — islanding an incompatible remote
+A remote off the global map takes **nothing** from it — not even a file at its own version, because that file's own imports would bind the global peers.
 
-A remote the resolver marked `scope` on **any** member of the pool is **islanded**: its entire family comes from its own build, with **no** dedup — not even on a member whose version matches the shared one.
+The examples from the start of this page, plus two more, show each outcome.
 
-That last part is the whole point, and the one thing the per-package resolver cannot do. In the [second example](#2-a-second-framework-runtime-through-a-shared-intermediary), mfe-a's `core@15.2.0` is scoped, so pooling islands mfe-a. Its `@design-system/ui@1.0.0` is scoped too, even though that version matches the shared one exactly, and the shared design system is now published from mfe-b's copy:
+### The family split: one build wins
+
+In the [first example](#1-a-family-split-across-two-builds), round 1 compares the two builds:
+
+| Build | Serves mfe-a? | Serves mfe-b? | Remotes served |
+| --- | --- | --- | --- |
+| mfe-a's (`ui@3.2.0`, `tokens@3.2.0`) | ✓ its own | ✓ `^3.0.0` accepts both | **2** |
+| mfe-b's (`ui@3.4.0`, `tokens@3.4.0`) | ✗ `~3.2.0` rejects `tokens@3.4.0` | ✓ its own | 1 |
+
+mfe-a's build wins, and both remotes run it:
+
+```mermaid
+flowchart LR
+    ma["mfe-a"] --> A
+    mb["mfe-b"] --> A
+    subgraph A["mfe-a's build: elected"]
+        a_ui["@acme/ui 3.2.0"]
+        a_tok["@acme/tokens 3.2.0"]
+    end
+    style A fill:#dcfce7,stroke:#16a34a
+```
+
+```json
+{
+  "imports": {
+    "@acme/ui": "http://mfe-a/@acme/ui.js",
+    "@acme/tokens": "http://mfe-a/@acme/tokens.js"
+  }
+}
+```
+
+The per-package resolver would have picked `ui@3.4.0`; electing the family moved it back to `3.2.0`, the version every range accepts. Two files were downloaded before, and two are downloaded now. Pooling logs nothing, because every remote is on the elected build.
+
+Add a third remote, mfe-c, whose build happens to be `ui@3.4.0` with `tokens@3.2.0` (both `^3.0.0`). Its build serves all three remotes too, so it ties with mfe-a's, and the tie goes to the newer build: everyone runs mfe-c's pair. That pair _was_ built and tested together — by mfe-c.
+
+### The transitive case: a remote is islanded
+
+In the [second example](#2-a-second-framework-runtime-through-a-shared-intermediary), with `@framework/core` and `@design-system/ui` both labelled `framework`, each build serves only its own remote: `^15.0.0` rejects `core@16.1.0` and the other way round. The tie goes to the newer build, mfe-b's. mfe-a's range rejects a version of the elected build, so mfe-a is **islanded**: its entire family comes from its own build — including `@design-system/ui@1.0.0`, even though that version matches the shared one exactly.
+
+That last part is the whole point, and the one thing the per-package resolver cannot do:
 
 ```mermaid
 flowchart TB
     subgraph A["mfe-a: islanded, runs its own build"]
         a_ds["design system 1.0.0<br/>mfe-a's file"] -->|"imports"| a_core["core 15.2.0<br/>mfe-a's file"]
     end
-    subgraph B["mfe-b: the shared set"]
+    subgraph B["mfe-b: the elected build"]
         b_ds["design system 1.0.0<br/>mfe-b's file"] -->|"imports"| b_core["core 16.1.0<br/>mfe-b's file"]
     end
     style A fill:#dcfce7,stroke:#16a34a
@@ -245,62 +288,10 @@ flowchart TB
 Each remote runs one framework runtime. mfe-a pays one extra download for the design system, and the log says so:
 
 ```
-[__GLOBAL__][pool:framework] 'mfe-a' is islanded: the resolver scoped its '@framework/core@15.2.0', so all 2 members it imports are scoped for it.
+[__GLOBAL__][pool:framework] 'mfe-a' is islanded: its range rejects '@framework/core@16.1.0' of the elected build 'mfe-b'. All 2 of its entrypoints are scoped for it.
 ```
 
-An islanded remote also offers **no** build to the others — not even for a member it is the only provider of. Otherwise a previous-major remote correctly islanded on `@framework/core` would keep its `@framework/animations@21.2.18` globally shared beside `core@22.0.8`, and any remote consuming both would load a mismatched pair. If that leaves a member with no provider at all, the member stops being shared: every remote that imports it serves its own copy.
-
-### Gate 2 — every other remote
-
-A split family contains no incompatibility, so gate 1 never fires on it. Gate 2 asks three questions of every remote gate 1 left alone, **in this order**.
-
-**a. Is it already fine?** If some build in the pool ships every entrypoint this remote imports at exactly the versions the import map already serves, nothing changes. Its own build is the common case. The general form is what keeps a remote sitting one patch below the shared set free rather than expensive. This question comes first because asking for a covering build first would pin remotes that are already correct onto one build, for no gain in coherence and a real cost in downloads.
-
-In the [first example](#1-a-family-split-across-two-builds), add a third remote, mfe-c, whose build happens to be `ui@3.4.0` with `tokens@3.2.0`. The map serves exactly that pair, and mfe-c's build shipped it, so every remote is witnessed and pooling changes nothing. The pair _was_ built and tested together — by mfe-c.
-
-**b. Is there one build that covers it?** Otherwise the remote may dedup onto a **single** build that offers every entrypoint it imports, at versions its own `requiredVersion` accepts.
-
-Without mfe-c, neither remote is witnessed: the map serves `ui@3.4.0` with `tokens@3.2.0`, and neither build shipped that pair. So pooling looks for a covering build:
-
-| Can… serve… | Coverage | Versions | Result |
-| --- | --- | --- | --- |
-| mfe-b's build serve mfe-a? | ✓ both packages | ✗ mfe-a's `~3.2.0` rejects `tokens@3.4.0` | No |
-| mfe-a's build serve mfe-b? | ✓ both packages | ✓ mfe-b's `^3.0.0` accepts both `3.2.0` copies | **Yes** |
-
-mfe-a's build becomes the **anchor**. Both remotes now run it:
-
-```mermaid
-flowchart LR
-    ma["mfe-a"] --> A
-    mb["mfe-b"] --> A
-    subgraph A["mfe-a's build: the anchor"]
-        a_ui["@acme/ui 3.2.0"]
-        a_tok["@acme/tokens 3.2.0"]
-    end
-    style A fill:#dcfce7,stroke:#16a34a
-```
-
-```json
-{
-  "imports": {
-    "@acme/tokens": "http://mfe-a/@acme/tokens.js"
-  },
-  "scopes": {
-    "http://mfe-a/": { "@acme/ui": "http://mfe-a/@acme/ui.js" },
-    "http://mfe-b/": { "@acme/ui": "http://mfe-a/@acme/ui.js" }
-  }
-}
-```
-
-Three things are worth noticing in this result:
-
-- **The elected tag moved backwards.** The resolver picked `ui@3.4.0`, yet everyone runs `3.2.0`. Pooling never re-elects a winner; it changes which _file_ a remote resolves, and both ranges accept `3.2.0`.
-- **`@acme/ui` left the global `imports`.** The only copy of `3.4.0` was mfe-b's, and mfe-b now runs somebody else's build. A file is published globally only by a remote that runs it itself, so each consumer gets `ui` through its own scope entry instead.
-- **It cost nothing.** Two files were downloaded before, and two are downloaded now.
-
-When several remotes need a build, the anchors are picked greedily and deterministically. The host goes first, because its build is loaded anyway. After that, the build that can serve the most remotes still waiting wins, with ties broken by arrival order, then by name. An anchor always runs its own build, so nobody dedups onto a remote that is itself deduping onto somebody else. One pool can end up with several anchors: which build serves which remote is recorded per remote, and forcing a single build on the whole portfolio would cost more downloads.
-
-**c. Otherwise it serves its own family**, whole, from its own build — and says so with a warning, since this is the rule's main cost and nothing else would make it visible.
+### A host pin: a remote serves its own family
 
 The third example is a host that pins an older framework, and a remote that is one minor ahead:
 
@@ -309,15 +300,13 @@ The third example is a host that pins an older framework, and a remote that is o
 | host | `22.0.5` | — |
 | mfe-a | `22.1.0`, accepts `^22.0.0` | `22.1.0`, accepts `^22.0.0` |
 
-Host precedence makes `core@22.0.5` the shared version, and mfe-a's range accepts it, so the resolver lets mfe-a dedup. Without pooling mfe-a runs the host's `core@22.0.5` beside its own `router@22.1.0` — and `router@22.1.0` was built against `core@22.1.0`.
-
-With pooling, mfe-a is not witnessed: no build ships `core@22.0.5` with `router@22.1.0`. The only other build is the host's, and it has no `router` at all. So mfe-a serves its own family:
+The host's build is round 1. Without pooling, mfe-a would run the host's `core@22.0.5` beside its own `router@22.1.0` — and `router@22.1.0` was built against `core@22.1.0`. With pooling, the host's build doesn't serve mfe-a (it has no `router`), and no other build serves two remotes, so mfe-a serves its own family:
 
 ```mermaid
 flowchart TB
     host["host"] --> H
     ma["mfe-a"] --> A
-    subgraph H["host's build"]
+    subgraph H["host's build: elected"]
         h_core["core 22.0.5"]
     end
     subgraph A["mfe-a's own build"]
@@ -327,78 +316,100 @@ flowchart TB
 ```
 
 ```
-[__GLOBAL__][pool:framework] 'mfe-a' serves its own family: no shared build offers every entrypoint it imports at a version it accepts — '@framework/router' is the gap, closest is 'host'. All 2 members it imports are scoped for it.
+[__GLOBAL__][pool:framework] 'mfe-a' serves its own family: no elected build offers every entrypoint it imports at a version it accepts (gap '@framework/router', closest 'host'). All 2 of its entrypoints are scoped for it.
 ```
 
-The warning names the gap and the closest build: if the host shared `@framework/router@22.0.5` too, mfe-a could dedup onto the host's build.
+The warning names the gap and the closest build: if the host shipped `@framework/router` too, its build would serve mfe-a.
 
-Serving its own family takes that build out of the pool for everyone else, which can leave another remote without a covering build. Gate 2 therefore repeats until nothing moves. Once it has settled, pooling checks the result one final time: every remote must resolve a combination that some single build shipped. No known portfolio reaches that check, but a remote that failed it would serve its own family too.
+### Two remotes ahead of the host: a subpool
+
+Now let mfe-a **and** mfe-b both ship `core@22.1.0` with `router@22.1.0`. The host's build serves neither, but mfe-a's build serves both, so they form a **subpool** named after it. Both run mfe-a's files through their scopes, and the second framework runtime is downloaded once instead of twice:
+
+```json
+{
+  "imports": {
+    "@framework/core": "http://host/@framework/core.js"
+  },
+  "scopes": {
+    "http://mfe-a/": {
+      "@framework/core": "http://mfe-a/@framework/core.js",
+      "@framework/router": "http://mfe-a/@framework/router.js"
+    },
+    "http://mfe-b/": {
+      "@framework/core": "http://mfe-a/@framework/core.js",
+      "@framework/router": "http://mfe-a/@framework/router.js"
+    }
+  }
+}
+```
+
+Each subpool member still gets a warning, ending in where its copies now come from:
+
+```
+… 'mfe-a' serves its own family: … Its build serves subpool 'mfe-a': its 2 entrypoints and 1 other remote(s).
+… 'mfe-b' serves its own family: … It runs in subpool 'mfe-a' for all 2 of its entrypoints.
+```
 
 ### The rules that fall out of it
 
-**All-or-nothing per remote.** A remote that cannot take every member it imports from one build serves its _whole_ family itself. One member at the remote's own version beside another from a foreign build at a different version is precisely the combination nothing compiled.
+**All-or-nothing per remote.** A remote that cannot take every member it imports from one build runs its _whole_ family from a single other build. One member at the remote's own version beside another from a foreign build is precisely the combination nothing compiled.
 
-**A `skip` the resolver granted does not automatically survive.** The resolver marks a remote `skip` whenever its declared range accepts the shared version. Gate 2 decides whether it may actually take that dedup — and where no build shipped the resulting combination, it may not.
+**The consumer gives way, never the host.** The host's build is always elected when it ships the family. A remote whose range rejects the host's version is islanded, and one that imports an entrypoint the host lacks (`core/rxjs-interop`, say) runs on a subpool's or its own runtime. To keep such a remote on the host's runtime, the host must ship that entrypoint.
 
-**The consumer gives way, never the host.** Host precedence still decides the version, and no coverage question moves it — as in the third example, the mixing remote pays the extra download while the host keeps its pin. The host is never assigned somebody else's build either: it runs exactly what it declares, and stays a candidate anchor for everybody else.
+**Coherent per remote, not per page.** A remote on another build runs another framework instance. Rendering its components inside the host's tree, which shares DI with the host's instance, fails (Angular: `NG0203`). Keep remotes you compose into the host on the host's build: align their versions and ranges with the host's, and ship what they import in the host.
 
-**Coverage is per entrypoint.** Pooling compares the entrypoints each build carries, so a build can be the shared source of every _member_ of a pool and still fail on one secondary entrypoint. Inside a pool, a package therefore cannot be torn across two builds. See [Entrypoint coverage and tearing](version-resolver.md#entrypoint-coverage-and-tearing) for the unpooled behaviour and the settings that govern it.
+**Coverage is per entrypoint.** A build can ship every _member_ of a pool and still lack one secondary entrypoint a remote imports, and then it does not serve that remote. Inside a pool, a package therefore cannot be torn across two builds.
 
-**Strict mode.** Under `strictExternalCompatibility` a gate-1 island throws — defensively, since a real incompatibility already threw in the resolver. A gate-2 self-serve does **not** throw: nothing about its versions is wrong, so a coverage gap must not turn a strict portfolio into a failure.
+**Strict mode.** Under `strictExternalCompatibility` init throws when a `strictVersion` range rejects a version of the elected build — the same incompatibility the resolver refuses. A remote that only misses round 1 for **coverage** never throws: nothing about its versions is wrong.
 
 ## What it costs
 
-> **Pooling buys coherence, not downloads.** On every portfolio measured it left the download count unchanged or **increased** it. It never reduced it.
+> **Pooling chooses coherence first, then downloads.** Between two coherent placements it prefers, in order: with a host, more remotes on the host's runtime; fewer duplicate instances; fewer self-served copies; fewer builds.
 
-What it removes is the incoherence: a shared set spanning majors `{21, 22}` collapses to `{22}`, packages split across two versions disappear, and no remote is handed a family assembled from builds that never shipped it together.
+Because the election maximises the remotes one build serves and then groups the rest into subpools, it can also _save_ downloads where per-package resolution split a family:
 
 | Portfolio | Effect |
 | --- | --- |
-| Seven-remote production capture | Unchanged in every measure — same downloads, same chunks, same shared versions, byte-identical import map. |
-| Eleven-remote drifted portfolio | +23.6% downloads, nearly all of it the single remote that ships the widest family and can therefore be covered by nobody. |
-| Warm init (nothing re-elected) | Zero. Pooling does no work and writes nothing. |
+| Seven-remote production capture | Unchanged: 37 `@angular/*` files. |
+| Eleven-remote drifted portfolio | `@angular/*` files the map can fetch drop from 75 to 63. |
+| Warm init (nothing dirty) | Zero. Pooling does no work and writes nothing. |
 
-A coherent or lockstep portfolio — the overwhelmingly common case — pays nothing, because the shortcut or gate 2's first question answers "already fine" for every remote. Cost appears exactly where incoherence did.
-
-The escape hatch is to **not pool that family** (drop the `pool` tag) — not a per-portfolio tuning knob.
+Where it costs, it costs exactly where incoherence was: a remote that would have mixed builds downloads its own family. The escape hatch is to **not pool that family** (drop the `pool` label) — not a per-portfolio tuning knob.
 
 ## Declaring the coupling you actually have
 
 Pooling exists to compensate for information the remote entry does not carry. You can carry some of it yourself.
 
-**Tighten ranges where the real coupling is tighter.** Write `~22.0.6` rather than `^22.0.0` when that is the truth. Gate 2 enforces coupling at every granularity anyway — patch included — so the outcome is the same either way. What changes is _which verdict you see_: a range violation is a version problem with a name, reported by the resolver and islanded by gate 1, while a gate-2 self-serve is a statement about what nobody built.
+**Tighten ranges where the real coupling is tighter.** Write `~22.0.6` rather than `^22.0.0` when that is the truth. A remote that disagrees with the elected build never takes a file from it anyway, so the placement is the same. What changes is _which verdict you see_: a range that rejects the elected build is reported as an island (`incompatible`) and refused under `strictExternalCompatibility` — a version problem with a name — while a coverage miss is a statement about what nobody built.
 
-**Tag the whole family.** A remote's tag groups only what that remote tagged — plus each tagged member's own package, since entrypoints follow their package. A member left untagged pools only if some _other_ remote tags it, and the failure is quiet: the member is still shared, just no longer coordinated with the family. A build emitting flat entries makes this easy to get wrong — `@framework/core` and `@framework/core/primitives/di` are two externals, and tagging only the first leaves the second relying on the package link rather than on your tag.
+**Label the whole family.** A member left unlabelled pools only if some _other_ remote labels it, or as an entrypoint of a labelled package, and the failure is quiet: the member is still shared, just no longer coordinated with the family. A build emitting flat entries makes this easy to get wrong — `@framework/core` and `@framework/core/primitives/di` are two externals, and labelling only the first leaves the second relying on the package link rather than on your label.
 
-**One remote declaring a tag is enough for the whole portfolio.** The tag is remote-local for _membership_ — it decides which externals form the pool — but the pool then operates on the whole shared external for each member: every version, every remote. Remotes that never declared a `pool` tag are still subject to the family's coherence rules for those packages. That is deliberate (one team can fix a portfolio it does not own), but worth knowing before adding a tag.
+**A label decides what a remote runs on its own build.** Pooled, a remote no build covers runs its whole family from its own build. Unlabelled, the fallback unit is the package alone ([one build per package](version-resolver.md#one-build-per-package)): the remote runs its own `@framework/core` while the shared `@framework/common` it also takes binds the shared one, so it runs two cores.
 
-> A coupling **no single remote witnesses** — where no remote ships both members — cannot be expressed. This is rare, and by design: a portfolio where nothing brings the two together has nothing to make incoherent.
+**One remote declaring a label is enough for the whole portfolio.** The label decides which externals form the pool, but the pool then operates on each member as a whole: every version, every remote. Remotes that never declared a `pool` label are still subject to the family's coherence rules. That is deliberate (one team can fix a portfolio it does not own), but worth knowing before adding a label.
+
+> A coupling **no remote declares** — two externals no label connects — cannot be expressed. This is by design.
 
 ## Scope and dynamic init
 
 Pooling applies to the **global scope** and to **named share scopes**. The [`strict` share scope](version-resolver.md#the-strict-share-scope) is never pooled — it exists precisely to let versions coexist.
 
-Pooling also runs when a remote is added at runtime with `initRemoteEntry`. The import map is immutable once committed, so this pass is **additive**: it adjusts only the newly loaded remote, and every remote already running keeps exactly what it has.
+Pooling also runs when a remote is added at runtime with `initRemoteEntry`. The import map is immutable once committed, so this pass holds **no election**: it judges only the newly loaded remote against the committed map, and every remote already running keeps exactly what it has.
 
 ```mermaid
 flowchart TD
-    N["initRemoteEntry loads a remote"] --> I{"Scoped on<br/>a member?"}
-    I -->|"yes"| X["Serve its own family"]
-    I -->|"no"| W{"Witnessed by a<br/>committed build?"}
-    W -->|"yes"| K["Nothing changes"]
-    W -->|"no"| C{"Covering<br/>committed build?"}
-    C -->|"yes"| S["Point it at that build's files"]
-    C -->|"no"| X2["Serve its own family<br/>+ warning"]
+    N["initRemoteEntry loads a remote"] --> I{"A range rejects a<br/>version the map serves?"}
+    I -->|"yes"| X["Serve its own family<br/>(islanded) + warning"]
+    I -->|"no"| W{"Agrees with the map, or the map<br/>serves it a combination one<br/>committed build shipped?"}
+    W -->|"yes"| K["Resolve through the committed map"]
+    W -->|"no"| X2["Serve its own family<br/>+ warning"]
 ```
 
-Read the questions exactly as on the init path: "scoped" is gate 1, "witnessed" is gate 2a, "covering" is gate 2b. The difference is that only **committed** builds count, and only the new remote can move.
+Per pool, the loaded remote either resolves through the committed global map or serves its own family; it never joins a committed subpool. Every file it would reach must also resolve each specifier the way it would itself, so it never runs one specifier from two files.
 
-Two details differ from the init path:
+**Membership comes from the committed record**, not from the entry being loaded. A remote loaded at runtime is subject to every pool the portfolio has — including one formed by another remote's `pool` label. Otherwise a remote loaded later is exactly the consumer that would bridge two builds the portfolio had deliberately pooled apart.
 
-- **The candidate must run its own whole family already.** It either wins every member it ships, or it is an island. A build that resolves part of its family through somebody else's files has its modules bound to those files already, and a newcomer deduping onto it would inherit that. Candidates are tried cheapest first: a build the map already serves this pool from costs no download at all, then the host, whose build the browser has loaded anyway, then by name so the choice is reload-stable.
-- **Membership comes from the committed record**, not from the entry being loaded. A remote loaded at runtime is subject to every pool the portfolio has — including one formed by another remote's `pool` tag, and a cross-scope bridge it declares nothing about itself. Otherwise a remote loaded later is exactly the consumer that would bridge two builds the portfolio had deliberately pooled apart.
-
-The dynamic pass writes its verdicts for the loaded remote's copies back to the record (see [What pooling stores](#what-pooling-stores)). A reload rebuilds the map from the record without re-electing anything, so it publishes the same combination the pass chose.
+**The next init re-elects.** A load marks the loaded remote's pooled members dirty, so the next init re-elects their pools with the remote in it: the next page is the one a manifest listing that remote would have built. Under `strictExternalCompatibility` nothing is marked, and the next page keeps the load's verdicts.
 
 ## What pooling stores
 
@@ -407,17 +418,18 @@ Pooling's results live in the shared-externals record next to the verdicts they 
 | Where | Field | Meaning | In the examples |
 | --- | --- | --- | --- |
 | `SharedExternal` | `poolName` | The pool this external resolves in, named as [above](#how-a-pool-is-formed). | `framework`, `acme` |
-| `SharedVersionMeta` | `pool` | The `pool` tag this remote declared — pooling's input, never rewritten. | |
-| `SharedVersionMeta` | `servedBy` | The build this copy dedups onto, where that is not the one the global `imports` publishes. | Both `@acme/ui` copies: `mfe-a` |
-| `SharedVersionMeta` | `poolCause` | Why pooling made this copy serve itself: `incompatible` (gate 1), `uncovered` (gate 2), `torn` (the final check), `unshared` (its member lost every provider to an island). | mfe-a's framework copies: `incompatible` in the second example, `uncovered` in the third |
+| `SharedExternal` | `poolWinner` | The build round 1 elected. A re-election on equal terms keeps it. | `mfe-b` in the second example, `host` in the third |
+| `SharedVersionMeta` | `pool` | The `pool` label this remote declared — pooling's input, never rewritten. | |
+| `SharedVersionMeta` | `servedBy` | The build of the subpool this copy runs in — the remote itself on its own build's copies. | Both remotes' copies in the subpool example: `mfe-a` |
+| `SharedVersionMeta` | `poolCause` | Why this copy serves itself: `incompatible` (its range rejects a version of the elected build) or `uncovered` (the elected build does not serve every entrypoint it imports). | mfe-a's copies: `incompatible` in the second example, `uncovered` in the third |
 
-`poolCause` says what the `scope` action alone cannot: a copy scoped for a range violation and one scoped because no build covers it otherwise look identical. The detail behind it — the gap, the closest build — is only in the matching `warn` line.
+`poolCause` says what the `scope` action alone cannot: a copy scoped for a range violation and one scoped because no build covers it look identical otherwise. The detail behind it — the gap, the closest build — is only in the matching `warn` line.
 
-Only pooling writes these fields, so they leave with the pool. When a pool dissolves — say the remote whose tag formed it redeployed without it — its former members lose `poolName`, `servedBy` and `poolCause` and are re-elected. Membership is kept apart from the declared tags on purpose: pooling recomputes pools from the `pool` tags every time it runs, and writing its own result back into its input would keep a pool alive after the remote that formed it had left.
+Only pooling writes these fields, so they leave with the pool. When a pool dissolves — say the remote whose label formed it redeployed without it — its former members lose `poolName`, `poolWinner`, `servedBy` and `poolCause` and are resolved again by the per-package resolver.
 
 ## Diagnostics
 
-Everything pooling reports is at `warn` level or below, so `logLevel: 'warn'` is enough to see the costs:
+The costs are reported at `warn`, so `logLevel: 'warn'` is enough to see them:
 
 ```ts
 await initFederation(manifest, {
@@ -426,66 +438,82 @@ await initFederation(manifest, {
 });
 ```
 
-Lines from the init path are prefixed with the share scope and the pool name, e.g. `[__GLOBAL__][pool:framework]`; the dynamic-init line carries the share scope only. `N` always counts what that one remote imports, not the whole pool. Each message is a single line in the log; the long ones are wrapped below for reading.
+Init's lines about a pool are prefixed with the share scope and the pool name, e.g. `[__GLOBAL__][pool:framework]`; the dynamic-init lines carry the share scope only. Every remote not on the elected build gets a warning, ending in a clause that says where its copies come from:
 
-#### Gate 1: a remote is islanded (`warn`)
+- `All N of its entrypoints are scoped for it.` — it serves its whole family itself;
+- `It runs in subpool '<build>' for all N of its entrypoints.` — it runs another remote's build;
+- `Its build serves subpool '<self>': its N entrypoints and K other remote(s).` — its build runs the subpool.
 
-```
-'<remote>' is islanded: the resolver scoped its '<member>@<version>',
-so all N members it imports are scoped for it.
-```
+Each message is a single line in the log; the long ones are wrapped below for reading.
 
-That remote re-downloads its whole family. Align its version, or accept the cost.
-
-#### Gate 2: a remote serves its own family (`warn`)
+#### A remote is islanded (`warn`)
 
 ```
-'<remote>' serves its own family: no shared build offers every entrypoint it imports
-at a version it accepts — '<gap>' is the gap, closest is '<build>'.
-All N members it imports are scoped for it.
+'<remote>' is islanded: its range rejects '<member>@<version>'
+of the elected build '<winner>'. <where>
 ```
 
-The main cost of the promise. `<gap>` names the one thing the closest build fell short on: an entrypoint it does not carry, or a member at a version outside this remote's range. Closing that gap in **either** build recovers the dedup.
+A range rejects a version of the elected build. Align that remote's version or range, or accept the cost.
 
-On the dynamic-init path the same finding reads `no committed build offers …`: the remote just loaded would have bridged builds that shipped none of each other's members.
-
-#### The final check caught a combination (`warn`)
+#### A remote serves its own family: coverage (`warn`)
 
 ```
-'<remote>' serves its own family: the mapping would have handed it <specifier>@<tag>, …,
-which no build shipped together, …
+'<remote>' serves its own family: no elected build offers every entrypoint it imports
+at a version it accepts (gap '<gap>', closest '<winner>'). <where>
 ```
 
-No portfolio is known to reach this. If you see it, it is worth reporting with the line.
+The main cost of the promise. `<gap>` is the first specifier the elected build does not serve. Shipping it in the elected build, or dropping it from this remote, recovers the dedup.
 
-#### A member lost its shared build (`warn`)
-
-```
-'<member>' is scoped-only — no coherent shared build provides it;
-N remotes download their own copy.
-```
-
-Sharing was possible and was lost. Only the copies that really serve themselves are counted. The line is left out when an island in the same pass already named the cause.
-
-#### A tag formed no pool (`warn`)
+#### A remote serves its own family: no build shipped the combination (`warn`)
 
 ```
-[<member>] declares a 'pool' tag but no other external joined its pool;
-likely a typo or a missing sibling.
+'<remote>' serves its own family: no build shipped its entrypoints together
+at the elected versions (gap '<gap>', closest '<winner>'). <where>
 ```
+
+The global map would serve everything this remote imports at versions it accepts, but no single build shipped that combination. Shipping those versions together in one build recovers the dedup.
+
+#### A subpool keeps its build (`warn`)
+
+```
+'<build>' keeps subpool '<build>': the elected build would serve it,
+but K other remote(s) in it need its build.
+```
+
+Nothing to fix on that remote; aligning the other members moves the whole subpool onto the global map.
+
+#### Dynamic init (`warn`)
+
+The same findings, judged against the committed map: `is islanded: its range rejects '<specifier>@<version>' of the committed map`, `no committed build offers every entrypoint it imports …`, and `no committed build shipped the map's combination for it`. One more is specific to a load:
+
+```
+'<remote>' serves its own family: committed build '<build>', whose files it would reach,
+resolves '<specifier>' to another file than it would. All N of its entrypoints are scoped for it.
+```
+
+Shipping `<specifier>` in this remote's build at the map's version, or not importing it, recovers the dedup.
+
+#### Pooling failed (`error`)
+
+```
+version-incompatible remotes cannot be pooled: {…}.
+```
+
+Logged under `strictExternalCompatibility`, naming every remote whose `strictVersion` range rejects the elected build; the init then rejects with `Could not pool '<pool>' in scope <scope>.` An unexpected error while pooling fails the init too, with `Could not pool shared externals in scope <scope>.`
 
 #### Pool formation (`debug`)
 
 ```
-N members across M remotes, incompatible={…}
+re-electing N pool(s): K dirty external(s).
+'<external>' has a 'pool' label that joins no other external; likely a typo or a missing sibling.
 ```
 
-The fastest way to confirm membership came out the way you intended. The set lists the remotes gate 1 will island.
+The fastest way to confirm a re-election ran, and that no label was mistyped.
 
-**Reading them as a workflow.** A gate-2 warning is the actionable one: it names a specific gap in a specific build. Usually the fix is on the build side — either bump the lagging remote, or have the widest remote share the entrypoint it is missing — and the dedup comes back on the next deploy. A gate-1 warning is a genuine version conflict that pooling merely made expensive instead of silently wrong.
+**Reading them as a workflow.** A coverage warning is the actionable one: it names a specific gap in a specific build. Usually the fix is on the build side — bump the lagging remote, or have the elected build ship the entrypoint it is missing — and the dedup comes back on the next deploy. An island is a genuine version conflict that pooling made expensive instead of silently wrong.
 
 ## See also
 
-- [Version Resolver](version-resolver.md) — the resolution this feature layers on top of: share scopes, priority rules, `strictVersion`, and entrypoint coverage.
+- [Version Resolver](version-resolver.md) — the resolution for unpooled packages: share scopes, priority rules, `strictVersion`, and one build per package.
 - [Core — sharing dependencies](../core/sharing.md) — the build-side config that emits `shared` entries, including the `pool` field.
 - [The orchestrator docs](https://github.com/native-federation/orchestrator/blob/main/docs/version-resolver.md#dependency-pooling) — the upstream chapter, including the internals and the measured captures.

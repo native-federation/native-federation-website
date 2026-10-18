@@ -1,6 +1,7 @@
 ---
 import '../styles/styles.css';
 import Header from '../components/Header.astro';
+import Announcement from '../components/Announcement.astro';
 import Footer from '../components/Footer.astro';
 
 interface Props {
@@ -61,6 +62,7 @@ const {
 		<slot name="head" />
 	</head>
 	<body>
+		<Announcement />
 		<Header activePage={activePage} />
 
 		<slot />
