@@ -47,6 +47,7 @@ Repo: https://github.com/native-federation/angular-adapter
 
 | Date       | Version  | Package | Commit    |
 | ---------- | -------- | ------- | --------- |
+| 2026-10-18 | `22.2.3` | base    | `b083e75` |
 | 2026-08-06 | `22.1.0` | base    | `c2941ef` |
 | 2026-07-11 | `22.0.5` | base    | `8647b2c` |
 | 2026-06-01 | `21.2.3` | `-v4`   | `fafd466` |

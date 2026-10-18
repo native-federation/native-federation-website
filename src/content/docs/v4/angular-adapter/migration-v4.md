@@ -104,6 +104,7 @@ export default withNativeFederation({
   features: {
     // ignoreUnusedDeps is enabled by default in v4
     denseChunking: true, // opt-in: groups chunks in remoteEntry.json for smaller metadata
+    denseExternals: true, // opt-in: one entry per package, so every build publishes the same entry points
   },
 });
 ```
@@ -133,7 +134,7 @@ export default withNativeFederation({
     requiredVersion: "auto",
   })
     .skip(["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"])
-    .patch(["@angular/core"], { includeSecondaries: { keepAll: true } }),
+    .patch(["@angular/*"], { includeSecondaries: { keepAll: true } }),
 
   sharedMappings: mappingsFromWorkspace({ singleton: true, strictVersion: true })
     .filter(["@my-org/ui/*", "@my-org/auth-lib"])
