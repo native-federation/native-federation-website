@@ -44,9 +44,9 @@ export default withNativeFederation({
 | `platform` | `'browser' \| 'node'` | `'browser'` | Default platform for shared externals that don't set their own. |
 | `chunks` | `boolean` | `true` | Default code-splitting behavior for shared dependencies. Set to `false` to bundle each shared package as a single file. |
 | `skip` | `string[]` | *see skip list* | Packages (or mapped paths) to exclude from sharing. Merged with the built-in skip list. |
-| `externals` | `string[]` | `[]` | Extra externals to expose to your bundler via `federationBuilder.externals` on top of the shared ones. |
+| `externals` | `string[]` | `[]` | Specifiers something else provides at runtime (the host page, another loader). They reach the bundler as externals, so they stay bare imports, but they are never published in `remoteEntry.json`. |
 | `shareScope` | `string` | *undefined* | Optional share scope name, propagated to every shared external. |
-| `features` | `{ mappingVersion?, ignoreUnusedDeps?, denseChunking?, denseExternals?, integrityHashes?, synthesizeCjsExports? }` | see below | Feature flags — [details below](#feature-flags). |
+| `features` | `{ mappingVersion?, ignoreUnusedDeps?, denseChunking?, denseExternals?, integrityHashes?, synthesizeCjsExports?, strictImports? }` | see below | Feature flags — [details below](#feature-flags). |
 
 ## name
 
@@ -176,7 +176,9 @@ Notes:
 
 - `sharedMappings` is optional. Omit it and **all** mapped paths are shared.
 - `skip` still applies on top. For wildcard mappings it is matched against each resolved import (`@my-org/ui/button`), not against the pattern.
-- Mapped paths are read from the workspace root tsconfig — `tsconfig.base.json` if present, otherwise `tsconfig.json`. The workspace root is found by searching upward from the current working directory until a `package.json` turns up.
+- Mapped paths are read from the tsconfig the build compiles with (the adapter's `tsConfig`, resolved against the workspace root), so sharing and compiling see the same `paths`. They are parsed the way TypeScript does it: `extends` is followed, and targets resolve against `baseUrl` or the file that defines `paths`. A missing `extends` target fails the build, since it would otherwise drop the inherited `paths` silently. Only the first target of each key is used.
+- If that tsconfig doesn't exist, the build warns and falls back to the workspace root tsconfig — `tsconfig.base.json` if present, otherwise `tsconfig.json`. A config loaded outside a build uses that fallback too.
+- Name mappings like npm packages: `package` or `@company/package`, lowercase. A published mapping with another name warns once per package, or fails the build under [`strictImports`](#feature-flags). Subpaths and wildcards (`@company/package/*`) are fine, but they belong to the package their name implies: `build: 'package'`, pruning and `denseExternals` group them under it.
 
 ### Per-mapping configuration
 
@@ -367,20 +369,33 @@ The `build` field on each shared entry controls how the core groups packages whe
 
 ## Feature Flags
 
-All feature flags live under `features` on the config. `ignoreUnusedDeps`, `mappingVersion` and `synthesizeCjsExports` are on by default (opt-out); `denseChunking`, `denseExternals` and `integrityHashes` are off by default (opt-in).
+All feature flags live under `features` on the config. `ignoreUnusedDeps`, `mappingVersion` and `synthesizeCjsExports` are on by default (opt-out); `denseChunking`, `denseExternals`, `integrityHashes` and `strictImports` are off by default (opt-in).
 
 | Flag | Default | Effect |
 | --- | --- | --- |
-| `ignoreUnusedDeps` | `true` | Drops shared externals that aren't actually imported by the entry points. Also the pass that materializes wildcard mapped paths — with it off, a wildcard mapping needs [`includeSecondaries: { resolveGlob: true }`](#keeping-mappings-that-nothing-imports) or it is dropped with a warning. |
+| `ignoreUnusedDeps` | `true` | Drops shared externals that aren't actually imported by the entry points. Static imports and dynamic `import()` calls both count. Also the pass that materializes wildcard mapped paths — with it off, a wildcard mapping needs [`includeSecondaries: { resolveGlob: true }`](#keeping-mappings-that-nothing-imports) or it is dropped with a warning. |
 | `denseChunking` | `false` | Groups chunks by bundle name in `remoteEntry.json` so each shared package references its chunk bundle by name rather than listing chunks individually. Produces a smaller, more cache-friendly `remoteEntry.json`. |
 | `denseExternals` | `false` | Groups all entrypoints of a shared external (primary import, secondaries and shared mappings) under a single object with an `entries` map in `remoteEntry.json`, instead of one flat entry per entrypoint. Opt-in and backward compatible. See [Dense Externals](sharing.md#dense-externals). |
 | `mappingVersion` | `true` | Emits a real semver for every shared mapped path (monorepo-internal library) — picked up from the nearest `package.json` walking up from the entry file to the workspace root. Also sets `requiredVersion: '~<version>'` and `strictVersion: true` on the resulting shared entry, so version mismatches across remotes are detected at runtime. The `~` is a default a per-mapping [`requiredVersion`](#per-mapping-configuration) can replace. Set to `false` to fall back to the unversioned `version: ''` shape. |
 | `integrityHashes` | `false` | Emit SRI hashes for every shared external, exposed module and chunk under a top-level `integrity` map in `remoteEntry.json`. The orchestrator copies these onto the import map so the browser (or `es-module-shims`) can verify each module before executing it. See [Subresource Integrity](../orchestrator/security.md#subresource-integrity). |
 | `synthesizeCjsExports` | `true` | For a shared external that is CommonJS, `require()`s it at build time, enumerates its runtime named exports and bundles a synthetic ESM entry that re-exports them. See [CommonJS externals](sharing.md#commonjs-externals). |
+| `strictImports` | `false` | Fails the build, instead of warning, on a bare import that `remoteEntry.json` doesn't declare, and on a shared mapping whose name isn't npm-style. See [Unresolvable bare imports](#unresolvable-bare-imports). |
 
 ### When to leave `ignoreUnusedDeps` on (and when to override it)
 
-The feature is on by default because most builds benefit from it: unused secondaries never enter `remoteEntry.json`, build output stays small, and glob-expanded libraries (RxJS, Material) don't explode. But it has a subtle interaction with cross-remote version resolution — if two remotes share different versions of Angular and one of them hasn't used `@angular/core/rxjs-interop`, the orchestrator can end up splitting the framework across versions. Opt out per-package with `includeSecondaries: { keepAll: true }` for tightly-coupled framework libraries. See [Downsides of treeshaking shared packages](sharing.md#downsides-of-treeshaking-shared-packages) for the full scenario.
+The feature is on by default because most builds benefit from it: unused secondaries never enter `remoteEntry.json`, build output stays small, and glob-expanded libraries (RxJS, Material) don't explode. But it has a subtle interaction with cross-remote version resolution — if two remotes share different versions of Angular and one of them hasn't used `@angular/core/rxjs-interop`, the remote that does use it ends up running its own copy of the whole framework (the orchestrator never serves one package from two builds). Opt out per-package with `includeSecondaries: { keepAll: true }` for tightly-coupled framework libraries. See [Downsides of treeshaking shared packages](sharing.md#downsides-of-treeshaking-shared-packages) for the full scenario.
+
+### Unresolvable bare imports
+
+The bundler keeps every subpath of an external as a bare import, but the import map only has the exact keys `remoteEntry.json` declares. A secondary entry point of a shared package that `ignoreUnusedDeps` pruned, or that is in `skip`, therefore stays an import nothing resolves, and the page fails at runtime.
+
+After writing `remoteEntry.json`, the build reads every published file (shared externals, mappings, exposed modules, chunks) and reports each bare specifier that is neither declared in `remoteEntry.json`, a published chunk, nor listed in [`externals`](#top-level-options). Node built-ins only pass in `platform: 'node'` bundles. It warns by default; turn on `strictImports` to fail the build instead:
+
+```js
+features: { strictImports: true },
+```
+
+To fix a finding, share the missing entry point (`includeSecondaries: { keepAll: true }` keeps every secondary of a package), stop skipping it, or list it in `externals` when something else provides it.
 
 ## platform & shareScope
 
@@ -431,7 +446,7 @@ shared: {
 features: { ignoreUnusedDeps: true },
 ```
 
-### Avoid cross-version splits on a framework library
+### Keep every build on the same framework entry points
 
 ```js
 shared: {

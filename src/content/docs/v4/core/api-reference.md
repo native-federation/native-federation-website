@@ -33,7 +33,7 @@ Configuration DSL used inside `federation.config.js`.
 | `share(entries, projectPath?, skipList?)` | function | Share a hand-picked set of packages with per-entry options. |
 | `mappingsFromWorkspace(baseCfg?)` | function | Builder for `sharedMappings` — `.filter()` narrows the selection, `.patch()` annotates a subset, `.get()` returns the entry array (optional). See [sharedMappings](configuration.md#mappingsfromworkspace). |
 | `setInferVersion(fn)` | function | Override how shared-dependency versions are inferred for `requiredVersion: 'auto'`. |
-| `findRootTsConfigJson()` | function | Locate the root `tsconfig.base.json` or `tsconfig.json` for mapped-path resolution. |
+| `findRootTsConfigJson()` | function | Locate the root `tsconfig.base.json` or `tsconfig.json` — the fallback for mapped-path resolution when no build `tsConfig` is given. |
 | `DEFAULT_SKIP_LIST` | const | The baseline skip list `withNativeFederation` merges with your `skip`. |
 
 ## `@softarc/native-federation/domain`
