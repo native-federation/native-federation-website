@@ -1326,25 +1326,45 @@ li code {
 /* --- Announcement --- */
 .announcement {
   background: var(--color-primary-darker);
-  color: #fff;
+  color: var(--color-primary-light);
   font-size: 0.875rem;
+  line-height: 1.5;
   text-align: center;
-  padding: 8px 16px;
+  padding: 10px 16px;
 }
 
 .announcement p {
   margin: 0;
+  color: inherit;
+}
+
+.announcement strong {
+  color: #fff;
+  white-space: nowrap;
 }
 
 .announcement a {
-  color: var(--color-primary-light);
+  color: #fff;
   font-weight: 600;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+  text-underline-offset: 3px;
+  margin-left: 6px;
 }
 
 .announcement a:hover {
-  color: #fff;
+  text-decoration-color: #fff;
+}
+
+@media (max-width: 600px) {
+  .announcement {
+    font-size: 0.8125rem;
+    padding: 8px 16px;
+  }
+
+  .announcement__extra {
+    display: none;
+  }
 }
 
 /* --- Playground Banner --- */
