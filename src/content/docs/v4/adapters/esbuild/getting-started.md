@@ -140,7 +140,7 @@ The host page declares the remotes, pulls in the orchestrator runtime, and mount
     </script>
 
     <!-- 3. Include the orchestrator runtime -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.6.0/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.8.0/quickstart.mjs"></script>
   </head>
   <body>
     <!-- 4. Use your loaded components -->

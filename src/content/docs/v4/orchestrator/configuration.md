@@ -174,12 +174,10 @@ type ModeOptions = {
         strictExternalSameVersionCompatibility?: boolean;
         strictExternalVersion?: boolean;
         strictImportMap?: boolean;
-        strictEntryPointCoverage?: boolean;
       };
   profile?: {
     latestSharedExternal?: boolean;
     skipInvalidExternalVersions?: boolean;
-    scopeUncoveredEntrypoints?: boolean;
     overrideCachedRemotes?: "always" | "never" | "init-only";
     overrideCachedRemotesIfURLMatches?: boolean;
     cacheTag?: string;
@@ -202,7 +200,8 @@ All flags default to `false`, which means "log and continue". Setting `strict: t
 | `strict.strictExternalSameVersionCompatibility` | Niche edge case — throws when an already-cached shared version is re-submitted with a different `requiredVersion` range. Otherwise, the cached entry is preserved.                                                                                                                                                                           |
 | `strict.strictExternalVersion`                  | Throws if a shared external's `version` is missing or not valid semver. When `false`, the external is instead coerced to the smallest version matching its `requiredVersion` range — unless `profile.skipInvalidExternalVersions` is on, in which case it is skipped. This flag takes precedence over `profile.skipInvalidExternalVersions`. |
 | `strict.strictImportMap`                        | Throws when the import-map builder encounters corrupt cache state.                                                                                                                                                                                                                                                                           |
-| `strict.strictEntryPointCoverage`               | Throws when a shared external cannot be served coherently — a remote on _another_ version imports a secondary entrypoint that no copy of the shared version contains ("entrypoint tearing"). When `false`, the entrypoint is served from the consuming remote's own build with a warning, unless `profile.scopeUncoveredEntrypoints` is on. Copies of the shared version itself always merge, so this never fires within one version. See [Version Resolver — Entrypoint coverage and tearing](version-resolver.md#entrypoint-coverage-and-tearing). |
+
+> **Upgrading from 4.7.** Orchestrator 4.8.0 removed `strict.strictEntryPointCoverage` and `profile.scopeUncoveredEntrypoints`. Both are still accepted and ignored: a remote now always runs a package from one build, so there is no tear left to throw on or scope away. See [Version Resolver — One build per package](version-resolver.md#one-build-per-package).
 
 ### <a id="profile"></a> Resolution profile
 
@@ -212,16 +211,15 @@ The profile controls _how_ the resolver picks winners and _whether_ it refreshes
 | ------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `profile.latestSharedExternal`              | `false`       | When `true`, always pick the highest version in the scope. When `false` (default), pick the version that minimizes extra scoped downloads.                                                                                                                              |
 | `profile.skipInvalidExternalVersions`       | `false`       | When `true`, an external whose `version` is missing or not valid semver is skipped (never stored) instead of being coerced to the smallest version of its `requiredVersion` range. Has no effect when `strict.strictExternalVersion` is set — that throws instead.      |
-| `profile.scopeUncoveredEntrypoints`         | `false`       | When `true`, a remote copy on another version whose secondary entrypoints the shared version cannot cover is split off and serves its whole `entries` bunch from its own build, instead of tearing the package across two builds. Sharing continues for the copies the shared version _does_ cover. Only governs tears **between** versions — copies of the shared version always merge. Has no effect when `strict.strictEntryPointCoverage` is set — that throws instead. |
 | `profile.overrideCachedRemotes`             | `'init-only'` | When to refetch a remote that already lives in cache — see below.                                                                                                                                                                                                       |
-| `profile.overrideCachedRemotesIfURLMatches` | `false`       | By default, a cached remote is only overridden when its URL changed. Set this to `true` to force refetch even when the URL is identical.                                                                                                                                |
+| `profile.overrideCachedRemotesIfURLMatches` | `false`       | By default, a cached remote is only overridden when its URL changed. Set this to `true` to force refetch even when the URL is identical. Without it, a remote redeployed at the same URL keeps its stored `remoteEntry.json` over a persisted cache, even with a `cacheTag`; deploy each build at its own URL, or enable this. Has no effect under `overrideCachedRemotes: 'never'`. |
 | `profile.cacheTag`                          | _none_        | When set, appended as a `?cacheTag=<value>` query parameter to **every** remote's `remoteEntry.json` request, letting you bust HTTP caches across all remotes at once. The host's own `hostRemoteEntry.cacheTag` takes precedence for the host entry when both are set. |
 
 `overrideCachedRemotes` values:
 
 - `'never'` — don't touch cached remotes, ever. Strongest cache, slowest pickup of new versions.
-- `'init-only'` (default) — allow overrides during `initFederation`, skip during dynamic init. Good compromise.
-- `'always'` — always check and possibly refetch. Use when cache freshness matters more than bandwidth.
+- `'init-only'` (default) — allow overrides during `initFederation`. Dynamic init never overrides a remote that is already initialized: the committed import map cannot drop its imports.
+- `'always'` — deprecated; behaves like `'init-only'`.
 
 ### Features
 
@@ -241,10 +239,10 @@ import {
 } from "@softarc/native-federation-orchestrator/options";
 
 // defaultProfile
-// { latestSharedExternal: false, skipInvalidExternalVersions: false, scopeUncoveredEntrypoints: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false }
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false }
 
 // cachingProfile
-// { latestSharedExternal: false, skipInvalidExternalVersions: false, scopeUncoveredEntrypoints: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false }
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false }
 
 initFederation("http://example.org/manifest.json", {
   strict: true,
@@ -269,8 +267,8 @@ type StorageOptions = {
 
 | Option                | Default                   | Description                                                                                                                                                                                                  |
 | --------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `storage`             | `globalThisStorageEntry`  | How the cache is persisted. Built-ins: `globalThisStorageEntry`, `sessionStorageEntry`, `localStorageEntry`. Custom implementations are supported.                                                           |
-| `clearStorage`        | `false`                   | When `true`, `initFederation` wipes the namespace before initializing — handy for one-shot cache busts after a deploy.                                                                                       |
+| `storage`             | `globalThisStorageEntry`  | How the cache is persisted. Built-ins: `globalThisStorageEntry`, `sessionStorageEntry`, `localStorageEntry`. Custom implementations are supported; like the built-ins, they must store a copy on `set` and return a fresh copy from `get`. |
+| `clearStorage`        | `false`                   | When `true`, `initFederation` wipes the namespace before initializing — handy for one-shot cache busts after a deploy. A cache written by another orchestrator version is always cleared once, automatically. |
 | `storageNamespace`    | `'__NATIVE_FEDERATION__'` | Namespace prefix for stored keys (e.g. `__NATIVE_FEDERATION__.remotes`). Change it to run multiple orchestrators on the same origin.                                                                         |
 | `exposeStorageGetter` | `true`                    | _Since 4.7.0._ Publishes a read-only `get(key)` on [`globalThis.__NF_ORCHESTRATOR__`](#storage-pointer). Set to `false` to keep the state of a custom storage unreadable for page scripts. |
 
@@ -310,10 +308,10 @@ globalThis.__NF_ORCHESTRATOR__ = {
   storage: {
     // keyed by storageNamespace; every namespace on the page is listed
     __NATIVE_FEDERATION__: {
-      version: "4.7.0", // the orchestrator that published this namespace
+      version: "4.8.0", // the orchestrator that published this namespace
       type: "localStorage", // 'globalThis' | 'localStorage' | 'sessionStorage' | 'custom'
       namespace: "__NATIVE_FEDERATION__",
-      keys: ["remotes", "shared-externals", "scoped-externals", "shared-chunks"],
+      keys: ["remotes", "shared-externals", "scoped-externals", "shared-chunks", "cache-state"],
       get: (key) => {}, // a copy of the stored value; absent when exposeStorageGetter is false
     },
   },

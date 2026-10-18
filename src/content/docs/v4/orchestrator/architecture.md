@@ -93,7 +93,7 @@ The optional `integrity` map (added by `@softarc/native-federation` when built w
 | `packageName`     | The import specifier remotes use (e.g. `'react'`).                                                                                                                 |
 | `outFileName`     | File name, relative to the remote's scope URL.                                                                                                                     |
 | `bundle`          | Optional name of the shared bundle this external belongs to — the key the orchestrator uses to look up sibling chunk files in the shared-chunks cache (v4 opt-in). |
-| `pool`            | Optional tag that groups coupled externals into a pool, so a remote takes the whole family from one build. See [Dependency Pooling](pooling.md).                   |
+| `pool`            | Optional label that groups coupled externals into a pool, so a remote takes the whole family from one build. See [Dependency Pooling](pooling.md).                 |
 | `dev`             | Optional dev-mode metadata (original source path, etc).                                                                                                            |
 
 ## <a id="caches"></a> Internal caches
@@ -174,7 +174,7 @@ Dependencies with `singleton: true` become _shared externals_. The cache groups 
 }
 ```
 
-A shared external in a [pool](pooling.md) also carries the pool's `poolName`, and each of its remote entries may carry the declared `pool` tag, a `servedBy` build and a `poolCause` — see [What pooling stores](pooling.md#what-pooling-stores).
+Each shared external also stores its `servingBuild`: the one remote every specifier of its package is served from in that scope (see [One build per package](version-resolver.md#one-build-per-package)). A shared external in a [pool](pooling.md) also carries the pool's `poolName` and `poolWinner`, and each of its remote entries may carry the declared `pool` label, a `servedBy` build and a `poolCause` — see [What pooling stores](pooling.md#what-pooling-stores).
 
 The three possible actions — `share`, `skip`, `scope` — come out of the resolver. The `dirty` flag marks scopes whose version list changed since the last resolution pass; only dirty scopes get re-resolved, which keeps warm reloads fast.
 
@@ -266,6 +266,8 @@ Resolved metadata is worth keeping around. Between page loads, the orchestrator 
 | **Memory** (`globalThisStorageEntry`, default) | Single page load | SPAs, development, testing                                        |
 | **sessionStorage**                             | Browser session  | Multi-page server-rendered hosts — the main use case              |
 | **localStorage**                               | Until cleared    | Aggressive caching across browser restarts; accept some staleness |
+
+A persisted cache is stamped with the orchestrator version that wrote it; a page running another version clears it once and starts cold.
 
 On top of storage choice, the resolver applies four optimization strategies:
 

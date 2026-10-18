@@ -101,43 +101,49 @@ A package can expose more than one import specifier: a primary entrypoint (`@ang
 }
 ```
 
-The resolver treats the whole `entries` map as **one** shared external: version negotiation happens once per package, and every specifier in `entries` follows the winning version's placement — scoped, share-scope, global, or a skip/override redirect. When a shared version wins, the **union** of everything its copies declare is the surface served to all consumers of that version, so each secondary entrypoint resolves to the same version as its primary.
+The resolver treats the whole `entries` map as **one** shared external: version negotiation happens once per package, and every specifier in `entries` follows the winning version's placement — scoped, share-scope, global, or a skip/override redirect. Every specifier of a shared package is then served from **one build**, so each secondary entrypoint resolves to the same build as its primary.
 
 > **Older/flat remote builds** emit one `SharedInfo` per specifier instead of an `entries` map. Set [`feature.convertFlatSharedInfo`](configuration.md#features) to group them under their parent package (by npm scope) at runtime so they resolve together.
 
-### Copies of one version always merge
+### One build per package
 
-Several remotes can ship the same version of a package, and each bundles only the entrypoints it actually imports — so two copies of `@angular/core@20.0.0` can declare `{ @angular/core }` and `{ @angular/core, @angular/core/testing }`. They built the same tag, so this is not a conflict: the version exposes the **union**, and each specifier is served by the first copy that declares it. Copy order is fixed by the orchestrator:
+Several remotes can ship the same version of a package, and each bundles only the entrypoints it actually imports — so two copies of `@angular/core@20.0.0` can declare `{ @angular/core }` and `{ @angular/core, @angular/core/testing }`. Their files are not interchangeable, though: a file binds its own imports where its build lives. So in every share scope (global and each named one) the orchestrator picks one **serving build** per package, and publishes every specifier of the package from that build alone.
 
-1. **The host's copy** — already loaded in the browser and cannot be repointed.
-2. **An already-served copy** — repointing it would invalidate a committed import map and force a redundant download.
-3. **The widest copy** — the one declaring the most entrypoints, so the fewest builds are needed.
-4. **Arrival order** — ties keep the incumbent, so the generated import map stays byte-stable.
+A package is its primary plus any flat secondary externals (`@angular/core/testing` reported as an external of its own), so a dense `@angular/core` and a flat `@angular/core/testing` at the same tag are served from the same build too.
 
-Merging within a version is unconditional: no copy is pushed out of sharing because it bundles more than the others, and the coverage settings below never apply here.
+The host's build serves every package it ships. Otherwise the orchestrator picks the build that causes the fewest extra downloads, preferring one that ships every entrypoint the other remotes import. A [pooled](pooling.md) package takes its pool's elected build, and in the `strict` scope each version is served from one build of its own.
 
 ### Entrypoint coverage and tearing
 
-What the merged entries do _not_ guarantee is that they cover every specifier a consumer needs. A remote deduped onto the shared version can import a secondary entrypoint that **no copy of that version** contains:
+The serving build does not always ship every specifier a consumer imports. A remote deduped onto the shared version can import a secondary entrypoint the serving build lacks:
 
 ```
 @angular/core  20.0.0  share  mfe-a  entries { @angular/core }
 @angular/core  20.1.0  skip   mfe-b  entries { @angular/core, @angular/core/testing }
 ```
 
-Serving those two specifiers from two _different_ versions is a **tear**. It is harmless for most libraries, but it can break packages whose secondary entrypoints share module-singleton state with the primary. Three behaviours are available, in precedence order:
+Serving those two specifiers from two _different_ builds is a **tear**. It is harmless for most libraries, but it breaks packages whose secondary entrypoints share module-singleton state with the primary, which in Angular surfaces as `NG0203`. The orchestrator never tears a package: mfe-b runs **both** specifiers from its own build, and mfe-a's build keeps serving everyone else. The same holds for a copy of the shared tag that ships an entrypoint the serving build lacks, and for a remote whose flat secondary is scoped because its `strictVersion` range rejects that tag.
 
-| Setting | What happens to an entrypoint the shared version cannot cover |
-| --- | --- |
-| [`strict.strictEntryPointCoverage`](configuration.md#strictness) | **Throws.** The resolver refuses to share a package it cannot serve coherently. |
-| [`profile.scopeUncoveredEntrypoints`](configuration.md#profile) | **Scopes.** The uncovered copy is split off and serves its whole `entries` bunch from its own build. The copies that _are_ covered keep sharing. |
-| neither (default) | **Self-fills.** The specifier is served from the declaring remote's own build and a warning is logged. Nothing is lost; the package tears. |
+Keeping a package whole can cost downloads, and a remote that falls back runs its own instance of that package. Keep fallbacks rare by having every build publish the same entrypoints of tightly coupled packages:
 
-Both settings only govern tears **between** versions — copies of the shared version itself always merge, whatever you set. Scoping is per remote copy, not per version: given a shared surface `{ table, sort }`, a deduped `{ table }` and a deduped `{ table, paginator }`, only the third is split off.
+- Turn on [`denseExternals`](../core/configuration.md#feature-flags) in every build, so each package's entrypoints travel as one entry.
+- Set `includeSecondaries: { keepAll: true }` on tightly coupled packages such as `@angular/*`, so every build ships the same secondaries.
 
-To keep tears rare in the first place, coverage is also a **tiebreaker** when picking the shared version: among candidates that tie on the extra-downloads heuristic, the resolver prefers the one that leaves the fewest specifiers uncovered. A decisive extra-downloads winner is never overridden.
+Coverage is also a **tiebreaker** when picking the shared version: among candidates that tie on extra downloads, the resolver prefers the one that leaves the fewest specifiers uncovered. A decisive extra-downloads winner is never overridden.
 
-> **Inside a pool a tear cannot happen at all**, whichever of the three is configured — [pooling](pooling.md) checks coverage per specifier itself, and a remote that no single build covers takes its whole family from its own build.
+> **Inside a pool the unit is the family.** A remote no single build covers takes its whole family from its own build, not just the one package. See [Dependency Pooling](pooling.md).
+
+### When the host's build lacks an entrypoint
+
+The host is never repointed and never borrows a specifier from another build, so an entrypoint the host's files import but its build never declared does not resolve. Two shapes:
+
+- **The host lacks a secondary a remote ships** (`@fw/core/rxjs-interop` beside the host's `@fw/core`). The global map leaves the specifier unmapped, and the remote that ships it runs the package from its own build.
+- **The host ships a secondary without its root** (`@fw/core/rxjs-interop`, no `@fw/core`). The host can end up running the package from two builds.
+
+The fix is in the host's build:
+
+- Don't `skip` an entrypoint the host's shared packages import: skipping `@angular/common/http` leaves `@angular/platform-browser`'s static import of it unresolved, and the page fails to load.
+- For an entrypoint loaded through a dynamic `import()` that unused-dependency pruning misses, set `features.ignoreUnusedDeps: false`, or keep every secondary with `includeSecondaries: { keepAll: true }`. Angular's `provideAnimationsAsync()` is the known case: `@angular/platform-browser/animations/async` loads `@angular/animations/browser` dynamically, the default build omits it, and the host's animations silently never run.
 
 ## Share scopes
 
@@ -249,7 +255,7 @@ await initFederation(manifest, {
 
 ### Step 2 — Resolve each dirty scope
 
-For every package in every dirty scope:
+For every package in every dirty scope — except members of a [pool](#dependency-pooling), which the pool elects as one family before this step:
 
 1. If the scope contains exactly one version → action `SHARE`. Done.
 2. If the scope is `"strict"` → every version gets action `SHARE`; `requiredVersion` is replaced with the exact `version`.
@@ -261,7 +267,11 @@ For every package in every dirty scope:
 
 > **A verdict belongs to the copy, not the version.** `requiredVersion` and `strictVersion` are per-build settings, so two remotes shipping the same tag can disagree about the winner. When they do, the version is **split**: only the copies that actually reject the shared version get `SCOPE`; the rest stay `SKIP` and keep deduping. The winner itself is never split, and a copy declaring `strictVersion: false` always dedups — that is what the flag asks for.
 
-### Step 3 — Generate the import map
+### Step 3 — Pick each package's serving build
+
+Per share scope, each package gets the one build it is served from — see [One build per package](#one-build-per-package).
+
+### Step 4 — Generate the import map
 
 | Scope | Action | Where it goes |
 | --- | --- | --- |
@@ -271,20 +281,22 @@ For every package in every dirty scope:
 | Any | `SCOPE` | Added to the requesting remote's entry in `scopes` with its own URL. |
 | Any | `SKIP` | Omitted — the remote falls back to the shared URL from a broader scope. |
 
+Each specifier is published from its package's serving build.
+
 ## Dependency Pooling
 
 The algorithm above resolves every shared external **independently**: each one picks its own shared version, sourced from whichever remote contributed the winning tag. Packages that ship as a **family** are not independent, so this can hand a remote a combination nobody built — `@acme/ui@3.4.0` from one remote beside `@acme/tokens@3.2.0` from another, both "compatible" by their declared ranges. The sharper case is transitive: a design system compiled against `@framework/core@15`, shared into a remote running `core@16`, drags a second framework runtime in behind it.
 
-**Pooling** is the opt-in feature that prevents this. A remote groups coupled externals by giving them a `pool` tag in its `remoteEntry.json`, and pooling makes each remote take the whole group from a single build that shipped them together, its own included. It is a re-resolution layered on top of the resolution above: it rewrites the verdicts, but elects no versions of its own and grants no dedup the resolver did not.
+**Pooling** is the opt-in feature that prevents this. A remote groups coupled externals by giving them a `pool` label in its `remoteEntry.json`, and pooling elects the group **as one family**: every remote takes the whole group from one build that shipped it together — the elected one, another remote's, or its own. Pooled externals skip the per-package resolution above.
 
 ```json
 // In remoteEntry.json
 { "packageName": "@framework/core", "version": "22.0.5", "requiredVersion": "^22.0.0", "pool": "framework" }
 ```
 
-Two gates decide, per remote: a remote the resolver marked `scope` on _any_ member is **islanded** onto its own build for the whole family, and every remaining remote must either already be resolving through builds that shipped what it imports, dedup onto one build that covers it whole, or serve its own family. Pooling applies to the global scope and named share scopes; the `strict` scope is never pooled, and a warm init that re-elects nothing does no pooling work.
+The election picks the build that serves the most remotes (always the host's, when the host ships the family); remotes it does not serve share another remote's build where one serves several of them, and the rest run their own family. Pooling applies to the global scope and named share scopes; the `strict` scope is never pooled, and a warm init with nothing dirty in a scope does no pooling work there.
 
-> **Pooling buys coherence, not downloads** — on every portfolio measured it left the download count unchanged or increased it, never reduced it.
+> **Pooling chooses coherence first, then downloads.** Electing the family as a whole can move a pooled family's global version, and a remote that would mix builds always pays for its own family.
 
 > **See [Dependency Pooling](pooling.md)** for the full picture: whether you need it, how membership is decided, both gates in detail, the measured cost, tagging guidance, what pooling stores, and the diagnostics.
 
@@ -296,24 +308,26 @@ Dynamic init lets you load an additional remote _after_ `initFederation` has fin
 
 ### What dynamic init does
 
-For every new external on the newly-loaded remote:
+The loaded remote's shared externals are decided **per package** — a dense root and its flat secondaries together — against what the committed import map serves of that package in its scope:
 
 1. `singleton: false` → straight to scoped externals.
-2. `singleton: true`, package not in scope yet → action `SHARE`, becomes the shared version.
-3. `singleton: true`, already in scope, strict scope → action `SHARE`, added as an extra exact version.
-4. Otherwise, compatible with the existing shared version → `SKIP` (reuse).
-5. Incompatible + `strictVersion: true` → `SCOPE` (download individually). In strict mode (`strictExternalCompatibility`), this path throws instead.
-6. Incompatible + `strictVersion: false` → `SKIP` (reuse the existing shared version). No warning is emitted and strict mode does not throw — the remote opted out of the compatibility check.
+2. `shareScope: "strict"` → `SHARE`, added as an extra exact version.
+3. The map serves none of the package → `SHARE`: the remote's build opens it and becomes its serving build.
+4. A `strictVersion` range rejects the tag the map serves → `SCOPE` with a warning; under `strictExternalCompatibility` the load fails instead. A range without `strictVersion` follows the map's tag silently.
+5. The map serves every entrypoint the remote ships, from one build → `SKIP`: the remote follows that build wholly.
+6. Otherwise (the map lacks an entrypoint the remote ships, or serves the package from two builds) → `SCOPE`: the remote runs the whole package from its own build.
 
-A new partial import map is then appended to the DOM — the existing one is never rewritten.
+Pooled families are judged afterwards: per pool, the loaded remote either resolves through the committed map or serves its own family (see [Dependency Pooling — dynamic init](pooling.md#scope-and-dynamic-init)).
+
+A new partial import map is then appended to the DOM — the existing one is never rewritten. If the load fails, nothing it wrote is kept: the cache returns to its last commit, and a retry by name fetches the remote again.
 
 ### Dynamic init actions, summarized
 
 | Action | Meaning |
 | --- | --- |
-| `SHARE` | No compatible version exists yet — become the shared version for this scope. |
-| `SKIP` | Use the existing shared version. In a shareScope, this is the mechanism that lets additional remotes join. |
-| `SCOPE` | Incompatible and strict — download a private copy. |
+| `SHARE` | The committed map serves none of the package in this scope — the remote becomes its serving build. |
+| `SKIP` | The committed map serves every entrypoint the remote ships, from one build — the remote follows that build. In a share scope, this is the mechanism that lets additional remotes join. |
+| `SCOPE` | A `strictVersion` range rejects the map's tag, or the map can't serve the package whole — the remote runs the whole package from its own build. |
 
 ### Example scenario
 
@@ -373,9 +387,10 @@ New import map appended to the DOM:
 
 ### Dynamic init constraints
 
-- **Cannot replace existing shared versions.** Loading React 17 after React 18 was resolved either reuses React 18 (with a warning) or falls back to a scoped React 17 if `strictVersion`.
+- **Cannot replace existing shared versions.** Loading React 17 after React 18 was resolved either reuses React 18 (`strictVersion: false`, no warning) or falls back to a scoped React 17 with a warning (`strictVersion: true`).
 - **Cannot re-assign scopes.** An external resolved globally cannot move to a share scope, and vice versa.
-- **Never re-resolves.** Dirty flags stay `false`; existing resolutions are preserved exactly.
+- **Never re-resolves.** Existing resolutions are preserved exactly. The one exception is for the next page: a pooled member the loaded remote ships is marked dirty, so the next init re-elects its pool with the remote in it.
+- **Never overrides a known remote.** A remote that is already initialized is not fetched again; a different URL for it is ignored with a warning.
 
 ### Use cases
 
@@ -394,7 +409,7 @@ New import map appended to the DOM:
 
 ## The `dirty` flag
 
-When a remote is processed, every shared dependency it contributes to is marked `dirty: true`. At resolution time, only dirty entries are re-resolved. After resolution, everything is marked clean again. On a warm page load — where most entries are read from `sessionStorage` — nothing is dirty, so resolution is a no-op and the cached import map can be reused directly.
+When a remote is processed, every shared dependency it contributes to is marked `dirty: true`. At resolution time, only dirty entries are re-resolved. After resolution, everything is marked clean again. On a warm page load — where most entries are read from `sessionStorage` — nothing is dirty, so neither resolution nor pooling runs and the cached import map can be reused directly.
 
 ## `strictVersion` in detail
 
@@ -471,14 +486,14 @@ When `sessionStorage` or `localStorage` holds a previously-resolved version, the
 
 When a `remoteEntry.json` is already cached, should the orchestrator refetch it?
 
-Default rule: override only when the remote name is the same but the URL changed (e.g. `.../v0.0.1/remoteEntry.json` → `.../v0.0.2/remoteEntry.json`). Dynamic init always skips by default.
+Default rule: override only when the remote name is the same but the URL changed (e.g. `.../v0.0.1/remoteEntry.json` → `.../v0.0.2/remoteEntry.json`). Dynamic init never overrides a remote that is already initialized, since the committed import map cannot drop its imports.
 
 ```ts
 await initFederation(manifest, {
   profile: {
     overrideCachedRemotes: 'never',     // never refetch cached remotes
     overrideCachedRemotes: 'init-only', // refetch only during initFederation (default)
-    overrideCachedRemotes: 'always',    // refetch on every cycle, including dynamic init
+    overrideCachedRemotes: 'always',    // deprecated: same as 'init-only'
   },
 });
 ```
@@ -488,11 +503,13 @@ To force a refetch even when the URL is identical (e.g. immutable URL with mutat
 ```ts
 await initFederation(manifest, {
   profile: {
-    overrideCachedRemotes: 'always',
+    overrideCachedRemotes: 'init-only',
     overrideCachedRemotesIfURLMatches: true,
   },
 });
 ```
+
+Without `overrideCachedRemotesIfURLMatches`, a remote redeployed at the same URL keeps its stored `remoteEntry.json` over a cache kept across page loads (`localStorage`, `sessionStorage`): the page keeps resolving the old build. A `cacheTag` doesn't help, since it only applies to a `remoteEntry.json` that is fetched. Deploy each build at its own URL (a version or content hash in the path), or set this option. Under `overrideCachedRemotes: 'never'` neither helps.
 
 > **Note:** When a remote _is_ overridden, the orchestrator performs a clean cache purge: old `RemoteInfo`, old [shared chunks](architecture.md#shared-chunks-cache), old scoped externals and old shared externals (in every scope) are removed first, then the fresh `remoteEntry.json` is processed from scratch. Each of those is a whole-remote removal rather than a merge with what the replacement declares — a build that stops chunking a bundle omits the key instead of sending an empty list, so a per-bundle replace would leave the old chunk files mapped and 404-ing. Removing the host's own copy also clears the host flag on that version, so a version the host has moved off can't keep host precedence.
 

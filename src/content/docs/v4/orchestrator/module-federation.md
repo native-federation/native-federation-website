@@ -70,7 +70,7 @@ getShared();
 
 ## Secondary entrypoints
 
-MF's `shared` config is flat — one key per import specifier, with no nested `entries` shape it can consume. So each secondary entrypoint of a shared package is emitted as its own top-level key (`@angular/core/testing` above), resolving to its own file/url alongside the primary entrypoint. See [Secondary entrypoints in the version resolver](version-resolver.md#secondary-entrypoints).
+MF's `shared` config is flat — one key per import specifier, with no nested `entries` shape it can consume. So each secondary entrypoint of a shared package is emitted as its own top-level key (`@angular/core/testing` above), resolving to its own file/url alongside the primary entrypoint. Each specifier is shared from the build the import map serves it from, so MF hands out a package's primary and secondary entrypoints from the same build. In the `strict` scope, every shared version is offered side by side, each with the entrypoints of the build serving that tag. A remote the import map runs from its own build has no place in `getShared`, which offers one location per specifier and version. See [Secondary entrypoints in the version resolver](version-resolver.md#secondary-entrypoints).
 
 ## See also
 

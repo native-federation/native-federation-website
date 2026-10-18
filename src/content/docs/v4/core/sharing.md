@@ -32,7 +32,7 @@ The builder offers four chainable methods, each of which returns the builder so 
 - **`.filter(patterns)`** — share only the `package.json` dependencies matching these patterns (e.g. `['@angular/*', 'rxjs']`). Repeated calls add to the selection; omit it to share every dependency. Packages added through `.override(...)` are unaffected, and patching a package the filter excluded is ignored with a warning.
 - **`.skip(externals)`** — exclude packages from sharing (added on top of the [default skip list](configuration.md#the-default-skip-list)).
 - **`.override(externals)`** — replace the configuration for specific packages entirely. Use this when a package needs a completely different set of options.
-- **`.patch(externals, cfg)`** — merge a partial configuration onto specific shared externals, keeping the base options for everything you don't touch.
+- **`.patch(patterns, cfg)`** — merge a partial configuration onto the shared packages matching these patterns (e.g. `['@angular/*']`), keeping the base options for everything you don't touch. Patterns match `package.json` dependency names, so a secondary entry point takes its package's patch and can't be patched on its own. Patches merge in call order.
 
 ```js
 import {
@@ -312,9 +312,7 @@ Pair this with `includeSecondaries: { resolveGlob: true }` and `ignoreUnusedDeps
 
 `ignoreUnusedDeps` is enabled by default and almost always the right choice — but there is a failure mode to be aware of, especially for core framework libraries.
 
-Imagine two remotes, each sharing `@angular/core`: `mfe1` on `21.0.2` and `mfe2` on `21.0.1`. The orchestrator picks `21.0.2` as the winning version. But if `mfe1` never imports `@angular/core/rxjs-interop`, that secondary is pruned from its `remoteEntry.json`. The orchestrator then falls back to `mfe2`'s copy of `rxjs-interop` — at version `21.0.1`. Now Angular is split across two versions, which is exactly the class of bug shared dependencies are supposed to prevent.
-
-> [!TIP] **See this live in the DevTools.** The [Native Federation DevTools](../devtools.md) Packages tab lists the entries under `@angular/core` with the version each one resolved to, so a `/rxjs-interop` entry at `21.0.1` next to a `21.0.2` main entry stands out immediately — and the Graph tab draws the borrowed copy as a dotted edge.
+Imagine two remotes, each sharing `@angular/core`: `mfe1` on `21.0.2` and `mfe2` on `21.0.1`. The orchestrator picks `mfe1`'s build to serve `@angular/core`. But if `mfe1` never imports `@angular/core/rxjs-interop`, that secondary is pruned from its `remoteEntry.json`, while `mfe2` does import it. The orchestrator never serves one package from two builds, so `mfe2` runs the whole of `@angular/core` from its own build — coherent, but a second Angular instance on the page, and an extra download. Rendering `mfe2`'s components inside the host's tree then fails with `NG0203` (see [One build per package](../orchestrator/version-resolver.md#one-build-per-package)).
 
 Use `keepAll: true` on such packages to publish _all_ their secondaries, regardless of which ones the entry points touch:
 
@@ -447,5 +445,7 @@ sharedMappings: [[['@my-org/ui/*'], { requiredVersion: { range: '^' } }]],
 ```
 
 A mapped path defaults to `~<version>` — an in-workspace library moves in lockstep with nothing, so `~` is the safest bet — and that default also holds for an object that names no `range`. It is the one place mappings differ from a shared package.
+
+Give a mapping an npm-style name (`package` or `@company/package`, lowercase); any other name warns, or fails the build under [`strictImports`](configuration.md#feature-flags). Mapped paths are read from the tsconfig the build compiles with — see [sharedMappings](configuration.md#sharedmappings).
 
 A mapping also honours `build`: by default every mapping lands in one bundle, and `build: 'separate'` or `build: 'package'` gives it a bundle of its own (see [Mapping bundles](configuration.md#mapping-bundles)). `platform`, `chunks` and `packageInfo` are ignored for mappings. See [sharedMappings](configuration.md#sharedmappings) for the builder (`mappingsFromWorkspace`), the `keepAll` / `resolveGlob` interaction with `ignoreUnusedDeps`, and the barrel-import rule.

@@ -277,39 +277,39 @@ export default withNativeFederation({
     "./Component": "./projects/mfe1/src/app/app.component.ts",
   },
 
+  //shareScope: autoShareScope({level: 'minor'}),
+
   shared: fromPackageJson({
     singleton: true,
     strictVersion: true,
     requiredVersion: "auto",
     build: "package",
   })
-    // includeSecondaries is an opt-out of ignoreUnusedDeps, so all of
-    // @angular/core is shared to prevent mismatches.
-    .patch(["@angular/core"], { includeSecondaries: { keepAll: true } }),
+    .patch(["@angular/*"], { includeSecondaries: { keepAll: true } })
+    .get(),
 
-  skip: [
-    "rxjs/ajax",
-    "rxjs/fetch",
-    "rxjs/testing",
-    "rxjs/webSocket",
-    // Add further packages you don't need at runtime
-  ],
+  //sharedMappings: mappingsFromWorkspace({ singleton: true }).filter(['@my-org/*']).get(),
+
+  skip: ["rxjs/ajax", "rxjs/fetch", "rxjs/testing", "rxjs/webSocket"],
+
+  // Please read our docs about configuring native federation:
+  // https://native-federation.com/docs/v4/angular-adapter/configuration/
 
   features: {
-    // ignoreUnusedDeps is enabled by default now
-    // ignoreUnusedDeps: true,
-
-    // Opt-in: groups chunks in remoteEntry.json for smaller metadata file
     denseChunking: true,
+    denseExternals: true,
+    strictImports: false,
   },
 });
 ```
 
-Notable defaults: `build: 'package'` for the per-package build mode (each external gets its own meta file — see [build modes](../core/configuration.md#build-modes-on-a-shared-entry)), `includeSecondaries.keepAll` patched onto `@angular/core` only (see [below](#why-keepall-for-angularcore)), and `denseChunking: true` to compress the `remoteEntry.json`. `.patch()` merges into the entry `fromPackageJson` already built, so `@angular/core` keeps the base options and its installed version. Only `@angular/core` gets the `keepAll` guard out of the box. Configs generated before 22.2.0 spread `shareAll(...)` with an `overrides` entry instead; the resolved config is the same.
+Notable defaults: `build: 'package'` for the per-package build mode (each external gets its own meta file — see [build modes](../core/configuration.md#build-modes-on-a-shared-entry)), `includeSecondaries.keepAll` patched onto every `@angular/*` package (see [below](#why-keepall-for-angularcore)), `denseChunking: true` to compress the `remoteEntry.json`, and [`denseExternals: true`](../core/configuration.md#feature-flags) so each package's entry points travel as one entry. `.patch()` merges into the entries `fromPackageJson` already built, so every Angular package keeps the base options and its installed version. [`strictImports`](../core/configuration.md#unresolvable-bare-imports) is spelled out as `false`; flip it to fail the build on an import nothing resolves. Configs generated before 22.2.0 spread `shareAll(...)` with an `overrides` entry instead; the resolved config is the same.
 
 ### Why `keepAll` for `@angular/core`?
 
-With `ignoreUnusedDeps` on, the core only shares the secondary entry points (e.g. `@angular/core/rxjs-interop`) that this remote actually imports. That's fine for most packages but _dangerous_ for Angular itself: a different remote might rely on a secondary that this remote omits, and the orchestrator would then load that secondary from a different Angular version, splitting Angular across versions. `includeSecondaries: { keepAll: true }` forces every Angular secondary to ship from the same package, keeping the framework versioned as a unit.
+With `ignoreUnusedDeps` on, the core only shares the secondary entry points (e.g. `@angular/core/rxjs-interop`) that this remote actually imports. That's fine for most packages but costly for Angular: the orchestrator serves each package from [one build](../orchestrator/version-resolver.md#one-build-per-package), so a remote that imports a secondary the serving build omitted runs its own copy of that package — a second Angular instance, which fails with `NG0203` when its components render inside the host's tree. `includeSecondaries: { keepAll: true }` makes every build publish the same Angular entry points, so they can all share one.
+
+The builder warns when `denseExternals` is off or an `@angular/*` package is shared without `keepAll`; the template above avoids both.
 
 ## Related
 
