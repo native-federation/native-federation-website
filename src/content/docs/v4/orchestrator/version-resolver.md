@@ -48,7 +48,7 @@ Four fields drive every resolver decision:
 
 - **`requiredVersion`** — the semver range this remote will accept.
 - **`singleton`** — candidate for sharing across remotes (`true`) or scoped to this remote (`false`).
-- **`strictVersion`** — what to do when the shared version falls outside `requiredVersion`: fall back to a scoped download (`true`), or accept the shared version with a warning (`false`).
+- **`strictVersion`** — what to do when the shared version falls outside `requiredVersion`: fall back to a scoped download (`true`), or accept the shared version anyway (`false`).
 - **`version`** — the actual version this remote ships.
 
 ## Import maps, in one minute
@@ -263,7 +263,7 @@ For every package in every dirty scope — except members of a [pool](#dependenc
    - Compatible with the shared version → `SKIP` (reuse the shared URL).
    - Incompatible + `strictVersion: true` + `strictExternalCompatibility` on → throw `NFError`.
    - Incompatible + `strictVersion: true` → `SCOPE` (download individually).
-   - Incompatible + `strictVersion: false` → `SKIP` + warning (use the shared version anyway).
+   - Incompatible + `strictVersion: false` → `SKIP` (use the shared version anyway).
 
 > **A verdict belongs to the copy, not the version.** `requiredVersion` and `strictVersion` are per-build settings, so two remotes shipping the same tag can disagree about the winner. When they do, the version is **split**: only the copies that actually reject the shared version get `SCOPE`; the rest stay `SKIP` and keep deduping. The winner itself is never split, and a copy declaring `strictVersion: false` always dedups — that is what the flag asks for.
 
@@ -422,7 +422,7 @@ When a remote is processed, every shared dependency it contributes to is marked 
 { "packageName": "ui-lib", "version": "4.16.5", "requiredVersion": "~4.16.0",
   "singleton": true, "shareScope": "team-a", "strictVersion": false }
 
-// Result: SKIP + WARNING. Remote uses shared 4.17.0. May break at runtime.
+// Result: SKIP. Remote silently uses shared 4.17.0. May break at runtime.
 ```
 
 ### `strictVersion: true`
@@ -467,20 +467,22 @@ await initFederation(manifest, {
 
 ### <a id="optimal"></a> 3. Optimal version strategy — default
 
-Picks the version that minimizes extra scoped downloads within the scope. For each candidate version, count how many other versions would be forced to `SCOPE` (incompatible + strict) if that candidate were the shared one, then pick the candidate with the lowest cost.
+Picks the version that causes the fewest extra downloads within the scope. The cost of a candidate is the number of **copies** that would have to keep their own build: copies whose own range rejects the candidate while `strictVersion` is set. A copy that accepts the candidate dedups, and so does one declaring `strictVersion: false`. A copy that is already cached from an earlier page load is already downloaded, so it costs nothing — which tends to keep a multi-page host on the version it already loaded.
 
 ```
 // If 18.2.0 is chosen:
-//   18.1.0 compatible → SKIP (0 extra downloads)
-//   17.0.2 incompatible + strict → SCOPE (1 extra download)
+//   18.1.0 (2 remotes, both accept 18.2.0)    → SKIP              (0 extra downloads)
+//   17.0.2 (3 remotes, 1 of them pinning ~17) → split: the pinner
+//                                               SCOPEs, the other
+//                                               two SKIP           (1 extra download)
 //   Total cost: 1
 
 // Picks 18.2.0.
 ```
 
-### 4. Caching strategy
+Ties break toward the candidate that leaves the fewest entrypoints [uncovered](#entrypoint-coverage-and-tearing), and then toward the newest tag.
 
-When `sessionStorage` or `localStorage` holds a previously-resolved version, the resolver prefers it — even if a newer candidate would be technically "better" by the optimal strategy. This is what makes multi-page hosts actually share downloads across navigation.
+> **A large group can outvote a newer version.** Many remotes pinned to an older tag can win over a few on a newer one, since that is what "fewest extra downloads" asks for. Use the [host version](#1-host-version-override) or `latestSharedExternal` when the newest version must win.
 
 ## Remote cache override behavior
 
@@ -519,12 +521,20 @@ Without `overrideCachedRemotesIfURLMatches`, a remote redeployed at the same URL
 
 ### Version conflicts
 
-```
-// Global scope in strict mode
-NFError: [team/mfe1] dep-a@1.2.3 is not compatible with existing dep-a@2.0.0 requiredRange '^1.0.0'
+With `strictExternalCompatibility` on, a copy whose `strictVersion` range rejects the shared version fails init:
 
-// Shared scope in strict mode
-NFError: [custom-scope.dep-a] ShareScope external has multiple shared versions.
+```
+// Logged
+[team/mfe1][dep-a@1.2.3] Is not compatible with requiredRange '^1.0.0' of shared dep-a@2.0.0.
+
+// Thrown
+NFError: External dep-a@1.2.3 could not be shared.
+```
+
+The same conflict during a [dynamic init](#dynamic-init) fails the load instead, or is logged as a warning when the flag is off:
+
+```
+[__GLOBAL__][team/dashboard] dep-a@1.2.3 Is not compatible with existing dep-a@2.0.0 requiredRange '^1.0.0'
 ```
 
 Fixes, in rough order of preference:
@@ -535,21 +545,16 @@ Fixes, in rough order of preference:
 4. Use `shareScope: "strict"` to let multiple exact versions coexist.
 5. Disable `strict` mode (last resort — accepts runtime compat risk).
 
-### Share scope without an override version
+### Import map problems in a share scope
+
+Two share-scope states are reported while the import map is built. With `strictImportMap` on, each logs an error and init throws `NFError: Could not create ImportMap.`:
 
 ```
-Warning: [team-a][dep-a] shareScope has no override version.
+[custom-scope.dep-a] ShareScope external has multiple shared versions.
+[team-a][dep-a] shareScope has no override version.
 ```
 
-Every version in the scope is either incompatible with the others and marked `strictVersion: true`, or the scope contains misconfigured single-remote groups, or the declared ranges genuinely don't overlap. Either widen ranges, split the scope, or accept the individual downloads.
-
-### Strict scope with multiple versions
-
-```
-Info: Strict scope external design-tokens has multiple shared versions: 2.1.0, 2.2.0
-```
-
-That's expected behavior — that is what the strict scope does. Use it sparingly; consolidate versions when you can.
+Without it, the first is a warning and the second a debug message, and the map is built anyway. A scope with no override version means every copy in it was scoped, because the declared ranges don't overlap or each copy is pinned with `strictVersion: true`. Widen the ranges, split the scope, or accept the individual downloads.
 
 ## Semver compatibility
 
