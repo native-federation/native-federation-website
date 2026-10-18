@@ -32,7 +32,7 @@ The builder offers four chainable methods, each of which returns the builder so 
 - **`.filter(patterns)`** — share only the `package.json` dependencies matching these patterns (e.g. `['@angular/*', 'rxjs']`). Repeated calls add to the selection; omit it to share every dependency. Packages added through `.override(...)` are unaffected, and patching a package the filter excluded is ignored with a warning.
 - **`.skip(externals)`** — exclude packages from sharing (added on top of the [default skip list](configuration.md#the-default-skip-list)).
 - **`.override(externals)`** — replace the configuration for specific packages entirely. Use this when a package needs a completely different set of options.
-- **`.patch(patterns, cfg)`** — merge a partial configuration onto the shared packages matching these patterns (e.g. `['@angular/*']`), keeping the base options for everything you don't touch. Patterns match `package.json` dependency names, so a secondary entry point takes its package's patch and can't be patched on its own. Patches merge field by field in call order, and a pattern that matches nothing is ignored with a warning.
+- **`.patch(patterns, cfg)`** — merge a partial configuration onto the shared packages matching these patterns (e.g. `['@angular/*']`), keeping the base options for everything you don't touch. Patterns match `package.json` dependency names, so a secondary entry point takes its package's patch and can't be patched on its own. Patches merge in call order.
 
 ```js
 import {

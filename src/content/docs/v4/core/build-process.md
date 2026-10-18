@@ -50,7 +50,7 @@ await federationBuilder.close();
 | `outputPath` | `string` | yes | Directory for federation artifacts (shared bundles, `remoteEntry.json`, import map). Relative to `workspaceRoot`, or absolute. |
 | `federationConfig` | `string` | yes | Path (relative to `workspaceRoot`) to `federation.config.js`. |
 | `projectName` | `string` | no | Overrides the project name used for cache isolation. Defaults to the `name` field of the federation config. |
-| `tsConfig` | `string` | no | Path to `tsconfig.json`, relative to `workspaceRoot`. Shared mappings are read from its `paths`, following `extends`; a missing file warns and falls back to the workspace root tsconfig. |
+| `tsConfig` | `string` | no | Path to `tsconfig.json`, relative to `workspaceRoot`. Shared mappings are read from its `paths`, following `extends`. |
 | `packageJson` | `string` | no | Override the `package.json` used by `shareAll` for dependency discovery. |
 | `entryPoints` | `string[]` | no | Additional entry points considered when `ignoreUnusedDeps` is enabled. Defaults to the values of `exposes`. |
 | `dev` | `boolean` | no | Development mode — influences bundling and enables the build-notifications endpoint. |

@@ -111,17 +111,7 @@ Several remotes can ship the same version of a package, and each bundles only th
 
 A package is its primary plus any flat secondary externals (`@angular/core/testing` reported as an external of its own), so a dense `@angular/core` and a flat `@angular/core/testing` at the same tag are served from the same build too.
 
-For an unpooled package, the serving build is the first candidate by:
-
-1. **The host** — the shell's build is already loaded in the browser and cannot be repointed.
-2. **Fewest extra downloads** — the build itself, unless already cached, plus every other remote that would have to run its own build of the package.
-3. **Fewest fallbacks** — remotes that ship a specifier the candidate lacks; each of those runs the whole package from its own build (see below).
-4. **The version's basis** — the copy already served, else the copy declaring the most entrypoints.
-5. **Name** — so the choice never depends on the order remotes register in.
-
-A [pooled](pooling.md) package takes its pool's elected build. The `strict` scope picks no serving build: each tag is served from one build of its own.
-
-The serving build is decided again only in a share scope that changed since it was last decided. A warm init that changes no remote decides nothing.
+The host's build serves every package it ships. Otherwise the orchestrator picks the build that causes the fewest extra downloads, preferring one that ships every entrypoint the other remotes import. A [pooled](pooling.md) package takes its pool's elected build, and in the `strict` scope each version is served from one build of its own.
 
 ### Entrypoint coverage and tearing
 
@@ -275,7 +265,7 @@ For every package in every dirty scope — except members of a [pool](#dependenc
    - Incompatible + `strictVersion: true` → `SCOPE` (download individually).
    - Incompatible + `strictVersion: false` → `SKIP` + warning (use the shared version anyway).
 
-> **A verdict belongs to the copy, not the version.** `requiredVersion` and `strictVersion` are per-build settings, so two remotes shipping the same tag can disagree about the winner. When they do, the version is **split**: only the copies that actually reject the shared version get `SCOPE`; the rest stay `SKIP` and keep deduping. The winner itself is never split, and a copy declaring `strictVersion: false` always dedups — that is what the flag asks for. A copy also always accepts its own version: a range drifted from the lockfile (`~19.1.0` shipping `19.2.15`) never rejects the build it ships, and the drift is logged as a warning when the remote is stored.
+> **A verdict belongs to the copy, not the version.** `requiredVersion` and `strictVersion` are per-build settings, so two remotes shipping the same tag can disagree about the winner. When they do, the version is **split**: only the copies that actually reject the shared version get `SCOPE`; the rest stay `SKIP` and keep deduping. The winner itself is never split, and a copy declaring `strictVersion: false` always dedups — that is what the flag asks for.
 
 ### Step 3 — Pick each package's serving build
 
@@ -325,7 +315,7 @@ The loaded remote's shared externals are decided **per package** — a dense roo
 3. The map serves none of the package → `SHARE`: the remote's build opens it and becomes its serving build.
 4. A `strictVersion` range rejects the tag the map serves → `SCOPE` with a warning; under `strictExternalCompatibility` the load fails instead. A range without `strictVersion` follows the map's tag silently.
 5. The map serves every entrypoint the remote ships, from one build → `SKIP`: the remote follows that build wholly.
-6. Otherwise (the map lacks an entrypoint the remote ships, or serves the package from two builds) → `SCOPE`: the remote runs the whole package from its own build. Such a remote then opens no other package either, so no consumer reaches its build through an opened package.
+6. Otherwise (the map lacks an entrypoint the remote ships, or serves the package from two builds) → `SCOPE`: the remote runs the whole package from its own build.
 
 Pooled families are judged afterwards: per pool, the loaded remote either resolves through the committed map or serves its own family (see [Dependency Pooling — dynamic init](pooling.md#scope-and-dynamic-init)).
 

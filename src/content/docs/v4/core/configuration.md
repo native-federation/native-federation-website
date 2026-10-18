@@ -176,8 +176,8 @@ Notes:
 
 - `sharedMappings` is optional. Omit it and **all** mapped paths are shared.
 - `skip` still applies on top. For wildcard mappings it is matched against each resolved import (`@my-org/ui/button`), not against the pattern.
-- Mapped paths are read from the tsconfig the build compiles with (the adapter's `tsConfig`, resolved against the workspace root), so sharing and compiling see the same `paths`. They are parsed the way TypeScript does it: `extends` is followed, and targets resolve against `baseUrl` or the file that defines `paths`. A missing `extends` target fails the build, since it would otherwise drop the inherited `paths` silently. Only the first target of each key is used.
-- If that tsconfig doesn't exist, the build warns and falls back to the workspace root tsconfig — `tsconfig.base.json` if present, otherwise `tsconfig.json`. A config loaded outside a build uses that fallback too.
+- Mapped paths are read from the tsconfig the build compiles with (the adapter's `tsConfig`, resolved against the workspace root), so sharing and compiling see the same `paths`. They are parsed the way TypeScript does it: `extends` is followed, and targets resolve against `baseUrl` or the file that defines `paths`.
+- Without one, mapped paths come from the workspace root tsconfig — `tsconfig.base.json` if present, otherwise `tsconfig.json`.
 - Name mappings like npm packages: `package` or `@company/package`, lowercase. A published mapping with another name warns once per package, or fails the build under [`strictImports`](#feature-flags). Subpaths and wildcards (`@company/package/*`) are fine, but they belong to the package their name implies: `build: 'package'`, pruning and `denseExternals` group them under it.
 
 ### Per-mapping configuration
@@ -389,7 +389,7 @@ The feature is on by default because most builds benefit from it: unused seconda
 
 The bundler keeps every subpath of an external as a bare import, but the import map only has the exact keys `remoteEntry.json` declares. A secondary entry point of a shared package that `ignoreUnusedDeps` pruned, or that is in `skip`, therefore stays an import nothing resolves, and the page fails at runtime.
 
-After writing `remoteEntry.json`, the build reads every published file (shared externals, mappings, exposed modules, chunks) and reports each bare specifier that is neither declared in `remoteEntry.json`, a published chunk, nor listed in [`externals`](#top-level-options). Node built-ins only pass in `platform: 'node'` bundles. It warns by default; turn on `strictImports` to fail the build instead:
+After writing `remoteEntry.json`, the build reads every published file (shared externals, mappings, exposed modules, chunks) and reports each bare specifier that is neither declared in `remoteEntry.json`, a published chunk, nor listed in [`externals`](#top-level-options). It warns by default; turn on `strictImports` to fail the build instead:
 
 ```js
 features: { strictImports: true },

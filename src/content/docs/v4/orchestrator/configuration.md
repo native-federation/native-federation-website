@@ -330,7 +330,7 @@ There are two ways to read the state:
 | `sessionStorage` | `` sessionStorage.getItem(`${namespace}.${key}`) `` (JSON) |
 | `custom`         | Not directly readable — use `get(key)`                      |
 
-`cache-state` holds `{ version, undecidedScopes }`: the orchestrator version that wrote the cache, and the share scopes a runtime load wrote since their [serving builds](version-resolver.md#one-build-per-package) were last decided. Each namespace carries its own `version`, because separate orchestrator bundles on one page can publish side by side. Publishing never fails `initFederation`: if the global can't be written, the descriptor is simply missing.
+Each namespace carries its own `version`, because separate orchestrator bundles on one page can publish side by side. Publishing never fails `initFederation`: if the global can't be written, the descriptor is simply missing.
 
 A custom `StorageEntryCreator` reports `'custom'` unless you tag it with a `type` property — e.g. `myStorage.type = 'localStorage'` when it wraps `localStorage` with the same key layout. The published object is typed as `NFOrchestratorGlobal`, exported from `@softarc/native-federation-orchestrator/options`.
 

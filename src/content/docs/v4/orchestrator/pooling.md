@@ -405,7 +405,7 @@ flowchart TD
     W -->|"no"| X2["Serve its own family<br/>+ warning"]
 ```
 
-Per pool, the loaded remote either resolves through the committed global map or serves its own family; it never joins a committed subpool. Every file it would reach must also resolve each specifier the way it would itself, so it never runs one specifier from two files.
+Per pool, the loaded remote either resolves through the committed global map or serves its own family; it never joins a committed subpool.
 
 **Membership comes from the committed record**, not from the entry being loaded. A remote loaded at runtime is subject to every pool the portfolio has — including one formed by another remote's `pool` label. Otherwise a remote loaded later is exactly the consumer that would bridge two builds the portfolio had deliberately pooled apart.
 
