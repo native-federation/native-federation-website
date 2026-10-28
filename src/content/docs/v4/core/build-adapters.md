@@ -6,11 +6,12 @@ The core library doesn't ship a bundler. Instead, it defines a contract — `NFB
 
 ## The Contract
 
-A build adapter is an object implementing three methods, plus an optional cache key:
+A build adapter is an object implementing three methods, plus a few optional members:
 
 ```ts
 export interface NFBuildAdapter {
   readonly externalsCacheKey?: ExternalsCacheKey; // { adapter: string; options?: Record<string, string | number | boolean> }
+  readonly externals?: readonly string[];
 
   setup(name: string, options: NFBuildAdapterOptions): Promise<void>;
 
@@ -20,12 +21,14 @@ export interface NFBuildAdapter {
   ): Promise<NFBuildAdapterResult[]>;
 
   dispose(name?: string): Promise<void>;
+
+  cacheData?(name: string): unknown | Promise<unknown>;
 }
 ```
 
 The core calls these in phases. Each phase uses a unique `name` — for example `'browser-shared'`, `'node-shared'`, `'browser-<pkg>'`, or `'exposed'` — so an adapter can maintain one persistent context per phase (useful for watch mode and incremental compile).
 
-`externalsCacheKey` names the adapter and the options that change its shared bundles, and takes part in the [externals cache](caching.md#the-checksum) checksum — see [Build Your Own Adapter](../adapters/build-your-own.md#1-the-contract).
+`externalsCacheKey` names the adapter and the options that change its shared bundles, and takes part in the [externals cache](caching.md#the-checksum) checksum. `externals` lists imports the adapter adds itself (a dev client, a polyfill), so users don't have to list them, and `cacheData` stores data alongside a cached shared bundle — see [Build Your Own Adapter](../adapters/build-your-own.md#1-the-contract).
 
 ## `NFBuildAdapterOptions`
 
@@ -34,28 +37,32 @@ The options object tells the adapter exactly what to compile in a given phase:
 | Field | Type | Description |
 | --- | --- | --- |
 | `entryPoints` | `EntryPoint[]` | Entries to compile. Each entry has a `fileName`, an `outName` and an optional `key`. |
-| `external` | `string[]` | Packages that must be left as external imports. |
+| `external` | `string[]` | Packages that must be left as external imports. A name also covers its subpaths and `*` is a wildcard. |
 | `outdir` | `string` | Absolute output directory. |
 | `mappedPaths` | `PathToImport` | Resolved tsconfig path mappings relevant to this build. |
-| `isMappingOrExposed` | `boolean` | `true` when compiling exposed modules or shared mapped paths; `false` when bundling shared npm externals. |
+| `kind` | `'shared' \| 'mapping' \| 'exposed'` | Which kind of bundle this is: shared npm externals, shared mapped paths or exposed modules. |
+| `isMappingOrExposed` | `boolean` | Deprecated — read `kind`. `true` when compiling exposed modules or shared mapped paths. Removed in v5. |
 | `platform` | `'browser' \| 'node'` | Target platform. |
 | `tsConfigPath` | `string` | Path to the `tsconfig.json` to use, as configured. A relative path is relative to `workspaceRoot`. |
 | `dev` | `boolean` | Development build (source maps, no minify). |
 | `watch` | `boolean` | Opt in to watch-mode behavior. |
 | `chunks` | `boolean` | Enable code-splitting. |
-| `optimizedMappings` | `boolean` | Hint for incremental compile of mapped paths. |
+| `optimizedMappings` | `boolean` | Deprecated and unused; removed in v5. |
 | `hash` | `boolean` | Append a content hash to output filenames. |
 | `cache` | `FederationCache` | Shared federation cache — adapters may store bundler-specific state on its `bundlerCache` slot. |
 
 ## `NFBuildAdapterResult`
 
-`build()` returns one result per entry point:
+`build()` returns one result per file it wrote — entries, chunks, source maps and assets — on a rebuild too:
 
 ```ts
 export interface NFBuildAdapterResult {
   fileName: string;  // absolute path to the emitted file
+  entry?: string;    // the EntryPoint.outName this file was built from, on the entry's own script
 }
 ```
+
+Files go flat into `outdir`. Setting `entry` tells the core which entry each output belongs to, instead of having it match file names.
 
 ## Registering an Adapter
 
@@ -75,7 +82,9 @@ import { setBuildAdapter, buildForFederation, normalizeFederationOptions, getExt
 
 setBuildAdapter(myAdapter);
 
-const { config, options } = await normalizeFederationOptions(fedOptions);
+const { config, options } = await normalizeFederationOptions(fedOptions, undefined, {
+  externals: myAdapter.externals,
+});
 const externals = getExternals(config);
 await buildForFederation(config, options, externals);
 ```
@@ -135,4 +144,4 @@ const myAdapter: NFBuildAdapter = {
 };
 ```
 
-> **Note:** When implementing an adapter, look carefully at the `platform` and `isMappingOrExposed` flags — shared npm externals and exposed modules often need different bundler settings (e.g. different `format` or `resolve.extensions`).
+> **Note:** When implementing an adapter, look carefully at `platform` and `kind` — shared npm externals and exposed modules often need different bundler settings (e.g. different `format` or `resolve.extensions`).

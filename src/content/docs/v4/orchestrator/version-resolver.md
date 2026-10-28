@@ -111,6 +111,10 @@ Several remotes can ship the same version of a package, and each bundles only th
 
 A package is its primary plus any flat secondary externals (`@angular/core/testing` reported as an external of its own), so a dense `@angular/core` and a flat `@angular/core/testing` at the same tag are served from the same build too.
 
+Which specifiers make up a package follows the records the builds publish. A dense record — its name and every specifier it lists — is one package, and so is a flat entry together with its npm name; records that share a name or a specifier merge, named after the shortest name among them. So a build that [declares](../core/configuration.md#declaring-mapping-packages) `.package('@shared/components/table')` and `.package('@shared/components/collapse')` with `denseExternals` on publishes two packages, each served from its own build, while a build that ships them together under `@shared/components` merges both into one. Each build declares for itself, so remotes can move to declared packages one at a time.
+
+Declared packages that import each other run from one build only when they share a [`pool`](pooling.md) label; without one, one of them can load twice. Code two packages share through a chunk runs once per build they are taken from, so keep state shared between packages in a mapping of its own.
+
 The host's build serves every package it ships. Otherwise the orchestrator picks the build that causes the fewest extra downloads, preferring one that ships every entrypoint the other remotes import. A [pooled](pooling.md) package takes its pool's elected build, and in the `strict` scope each version is served from one build of its own.
 
 ### Entrypoint coverage and tearing
@@ -135,10 +139,10 @@ Coverage is also a **tiebreaker** when picking the shared version: among candida
 
 ### When the host's build lacks an entrypoint
 
-The host is never repointed and never borrows a specifier from another build, so an entrypoint the host's files import but its build never declared does not resolve. Two shapes:
+An entrypoint the host's files import but its build never declared can't be read from the build, so whether the import resolves depends on the shape:
 
 - **The host lacks a secondary a remote ships** (`@fw/core/rxjs-interop` beside the host's `@fw/core`). The global map leaves the specifier unmapped, and the remote that ships it runs the package from its own build.
-- **The host ships a secondary without its root** (`@fw/core/rxjs-interop`, no `@fw/core`). The host can end up running the package from two builds.
+- **The host ships a secondary without its root** (`@fw/core/rxjs-interop`, no `@fw/core`). A remote that ships the root serves the package. If that build also ships the host's secondary, the host runs the whole package from that build; otherwise the host runs the package from two builds, or, in a named shareScope or the `strict` scope, its import of the root does not resolve.
 
 The fix is in the host's build:
 
@@ -407,9 +411,13 @@ New import map appended to the DOM:
 | **Strict scope** | `singleton: true`, `shareScope: "strict"` | Each exact version added per-remote in `scopes` | Compiled frameworks, breaking-change-heavy packages, binary modules. |
 | **Individual scope** | `singleton: false` or incompatible + strict | Per-remote entry in `scopes` with its own URL | Incompatibilities, remote-private dependencies. |
 
+> **Don't serve a remote under the host's URL path when the host has scopes of its own** (a named share scope, the `strict` scope or a `singleton: false` external). Import-map scopes match by URL prefix, so a specifier the remote's own scope doesn't map falls back to the host's scope before the global imports, and the remote binds the host's copy.
+
 ## The `dirty` flag
 
 When a remote is processed, every shared dependency it contributes to is marked `dirty: true`. At resolution time, only dirty entries are re-resolved. After resolution, everything is marked clean again. On a warm page load — where most entries are read from `sessionStorage` — nothing is dirty, so neither resolution nor pooling runs and the cached import map can be reused directly.
+
+A warm page also keeps what it has downloaded: when a runtime load gave a remote its own copy of a package, later pages keep that copy rather than deciding the package again the way a cold init would. Clearing storage (`clearStorage`, an orchestrator upgrade or, with `sessionStorage`, a new tab) lets the next init decide from scratch.
 
 ## `strictVersion` in detail
 
@@ -480,7 +488,7 @@ Picks the version that causes the fewest extra downloads within the scope. The c
 // Picks 18.2.0.
 ```
 
-Ties break toward the candidate that leaves the fewest entrypoints [uncovered](#entrypoint-coverage-and-tearing), and then toward the newest tag.
+Ties break toward the version a warm page already shares (keeping it saves a download), then toward the candidate that leaves the fewest entrypoints [uncovered](#entrypoint-coverage-and-tearing), and then toward the newest tag. So a newer non-strict version that an added remote ships is adopted on the next cold init — after `clearStorage`, an orchestrator upgrade or, with `sessionStorage`, in a new tab.
 
 > **A large group can outvote a newer version.** Many remotes pinned to an older tag can win over a few on a newer one, since that is what "fewest extra downloads" asks for. Use the [host version](#1-host-version-override) or `latestSharedExternal` when the newest version must win.
 
@@ -512,6 +520,12 @@ await initFederation(manifest, {
 ```
 
 Without `overrideCachedRemotesIfURLMatches`, a remote redeployed at the same URL keeps its stored `remoteEntry.json` over a cache kept across page loads (`localStorage`, `sessionStorage`): the page keeps resolving the old build. A `cacheTag` doesn't help, since it only applies to a `remoteEntry.json` that is fetched. Deploy each build at its own URL (a version or content hash in the path), or set this option. Under `overrideCachedRemotes: 'never'` neither helps.
+
+### Remotes a manifest no longer lists
+
+By default (`profile.mergeManifests: true`) storage keeps what every page's init stored: pages may pass their own manifests, and a remote loaded through `initRemoteEntry` stays stored for the next page. A remote removed from every manifest therefore stays stored, and served, until `clearStorage`, an orchestrator upgrade or, with `sessionStorage`, the end of the tab.
+
+With `profile.mergeManifests: false`, an init removes every stored remote its manifest doesn't list — remotes loaded through `initRemoteEntry` included — and re-resolves the shared versions they took part in. Use it only when every page passes the same complete manifest. With per-page manifests, each page removes the other pages' remotes and fetches them again on the next navigation, and tabs on different manifests remove each other's remotes from a shared `localStorage`.
 
 > **Note:** When a remote _is_ overridden, the orchestrator performs a clean cache purge: old `RemoteInfo`, old [shared chunks](architecture.md#shared-chunks-cache), old scoped externals and old shared externals (in every scope) are removed first, then the fresh `remoteEntry.json` is processed from scratch. Each of those is a whole-remote removal rather than a merge with what the replacement declares — a build that stops chunking a bundle omits the key instead of sending an empty list, so a per-bundle replace would leave the old chunk files mapped and 404-ing. Removing the host's own copy also clears the host flag on that version, so a version the host has moved off can't keep host precedence.
 

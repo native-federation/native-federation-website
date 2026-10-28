@@ -12,10 +12,10 @@ This page walks through the minimum setup needed to use the core builder directl
 npm i @softarc/native-federation
 ```
 
-The core is tooling-agnostic. To actually run a bundle, you also need a build adapter. For most stacks the esbuild adapter is a good starting point:
+The core is tooling-agnostic and brings no bundler. To actually run a bundle, you also need a build adapter, plus the bundler your build script imports. For most stacks the esbuild adapter is a good starting point:
 
 ```bash
-npm i @softarc/native-federation-esbuild
+npm i @softarc/native-federation-esbuild esbuild
 ```
 
 For Angular, use [the Angular adapter](../angular-adapter/index.md) instead, which brings its own builder.

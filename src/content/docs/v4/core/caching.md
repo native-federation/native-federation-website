@@ -65,6 +65,7 @@ A cache hit is decided by a SHA-256 checksum over everything that affects a bund
 
 - the packages in the bundle and their **installed** versions — the version actually resolved from `node_modules`, not the range declared in your config,
 - their sharing metadata: `requiredVersion`, `singleton`, `strictVersion`, `shareScope` and `pool`,
+- the bundle's `chunks` setting,
 - the [feature flags](configuration.md#feature-flags), the builder version, and whether it's a dev or a prod build,
 - the build adapter's identity and the adapter options that change shared bundles, when the adapter declares them (see [`externalsCacheKey`](../adapters/build-your-own.md#1-the-contract)).
 
@@ -183,7 +184,7 @@ Adapters use the `bundlerCache` slot on `FederationCache` to persist bundler-spe
 
 ## Invalidation & recovery
 
-The checksum covers the packages in a bundle, their installed versions, their sharing metadata, the feature flags and the adapter's options — so most edits that change the output invalidate the cache on their own. Code-splitting is the notable exception: `chunks` is not part of the key, so toggling it on a `build: 'package'` external keeps serving the previously bundled output.
+The checksum covers the packages in a bundle, their installed versions, their sharing metadata, its `chunks` setting, the feature flags and the adapter's options — so most edits that change the output invalidate the cache on their own.
 
 If a build ever produces surprising output and you suspect a stale entry, wipe the cache folder and let the next build recreate it:
 

@@ -127,7 +127,7 @@ Labelling every package of an npm scope with that scope (`@framework/core`, `@fr
 
 - every shared external is a node, and so is every label;
 - a remote that labels an external links the two;
-- a secondary entrypoint is always linked to its package (`@framework/core/testing` → `@framework/core`), labelled or not.
+- a secondary entrypoint is always linked to its package (`@framework/core/testing` → `@framework/core`), labelled or not. The package is the one [One build per package](version-resolver.md#one-build-per-package) groups it into, so a library served as its own [declared package](../core/configuration.md#declaring-mapping-packages) joins no sibling under the same npm name: a label on `@shared/components/table` pulls in no `@shared/components/collapse`.
 
 For example, mfe-a labels `@framework/core` and `@framework/router` with `framework`, mfe-b labels `@framework/forms` and `@design-system/ui` with `framework`, mfe-c labels `@framework/core` with `ng`, and mfe-d labels `react` and `react-dom` with `react`:
 

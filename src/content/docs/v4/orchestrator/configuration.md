@@ -181,6 +181,7 @@ type ModeOptions = {
     overrideCachedRemotes?: "always" | "never" | "init-only";
     overrideCachedRemotesIfURLMatches?: boolean;
     cacheTag?: string;
+    mergeManifests?: boolean;
   };
   feature?: {
     convertFlatSharedInfo?: boolean;
@@ -214,6 +215,7 @@ The profile controls _how_ the resolver picks winners and _whether_ it refreshes
 | `profile.overrideCachedRemotes`             | `'init-only'` | When to refetch a remote that already lives in cache — see below.                                                                                                                                                                                                       |
 | `profile.overrideCachedRemotesIfURLMatches` | `false`       | By default, a cached remote is only overridden when its URL changed. Set this to `true` to force refetch even when the URL is identical. Without it, a remote redeployed at the same URL keeps its stored `remoteEntry.json` over a persisted cache, even with a `cacheTag`; deploy each build at its own URL, or enable this. Has no effect under `overrideCachedRemotes: 'never'`. |
 | `profile.cacheTag`                          | _none_        | When set, appended as a `?cacheTag=<value>` query parameter to **every** remote's `remoteEntry.json` request, letting you bust HTTP caches across all remotes at once. The host's own `hostRemoteEntry.cacheTag` takes precedence for the host entry when both are set. |
+| `profile.mergeManifests`                    | `true`        | When `true`, every page's manifest adds to what storage keeps, so remotes from other pages (and ones loaded through `initRemoteEntry`) stay available. Set `false` only when every page passes the same complete manifest: an init then drops the stored remotes its manifest doesn't list, so a remote removed from the manifest stops being served on the next page. See [Remotes a manifest no longer lists](version-resolver.md#remotes-a-manifest-no-longer-lists). |
 
 `overrideCachedRemotes` values:
 
@@ -239,10 +241,10 @@ import {
 } from "@softarc/native-federation-orchestrator/options";
 
 // defaultProfile
-// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false }
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false, mergeManifests: true }
 
 // cachingProfile
-// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false }
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false, mergeManifests: true }
 
 initFederation("http://example.org/manifest.json", {
   strict: true,
@@ -271,6 +273,8 @@ type StorageOptions = {
 | `clearStorage`        | `false`                   | When `true`, `initFederation` wipes the namespace before initializing — handy for one-shot cache busts after a deploy. A cache written by another orchestrator version is always cleared once, automatically. |
 | `storageNamespace`    | `'__NATIVE_FEDERATION__'` | Namespace prefix for stored keys (e.g. `__NATIVE_FEDERATION__.remotes`). Change it to run multiple orchestrators on the same origin.                                                                         |
 | `exposeStorageGetter` | `true`                    | _Since 4.7.0._ Publishes a read-only `get(key)` on [`globalThis.__NF_ORCHESTRATOR__`](#storage-pointer). Set to `false` to keep the state of a custom storage unreadable for page scripts. |
+
+A write the storage rejects — a full `localStorage` or `sessionStorage`, for example — is logged as a warning. That page keeps its cache in memory from then on, and the next page starts without one.
 
 ### Example
 

@@ -11,6 +11,7 @@ Native Federation Core doesn't ship a bundler. Every adapter — esbuild, Angula
 - Read [Build Process](../core/build-process.md) to understand the lifecycle the core drives (`setup` → `build` → `dispose`, once per phase).
 - Read [Build Adapters](../core/build-adapters.md) for the contract surface itself.
 - Read [Build Artifacts](../core/artifacts.md) so you know exactly which files the core expects you to emit and what it does with them.
+- Core doesn't bring a bundler along. If your adapter uses esbuild, add it to your adapter's own `dependencies`.
 
 ## 1. The contract
 
@@ -19,6 +20,7 @@ An adapter is any object that implements `NFBuildAdapter` from `@softarc/native-
 ```ts
 interface NFBuildAdapter {
   readonly externalsCacheKey?: ExternalsCacheKey;
+  readonly externals?: readonly string[];
 
   setup(name: string, options: NFBuildAdapterOptions): Promise<void>;
 
@@ -28,6 +30,8 @@ interface NFBuildAdapter {
   ): Promise<NFBuildAdapterResult[]>;
 
   dispose(name?: string): Promise<void>;
+
+  cacheData?(name: string): unknown | Promise<unknown>;
 }
 ```
 
@@ -39,6 +43,10 @@ interface ExternalsCacheKey {
 ```
 
 `externalsCacheKey` feeds the [externals cache](../core/caching.md#the-checksum) checksum. The core's checksum knows its own version, but your adapter produces the bytes, so declare its identity (package name and version, e.g. `'my-adapter@1.2.0'`) and every option that changes the shared bundles. A change to any of them then rebuilds the cached externals instead of serving output from the old settings. Set it when the adapter is created: the core reads it before the first `setup()`. Join list-valued options into a string yourself — only you know whether their order matters. The property is optional for now and becomes required in the next major.
+
+`externals` lists the imports your adapter adds to the output itself — a dev client, a polyfill — so users don't have to list them in their own [`externals`](../core/configuration.md#top-level-options). They become ordinary externals: left as bare imports in every bundle and accepted by the bare-import check. Keep them exact or scoped; one that covers a shared package hides that package's pruned entry points. `federationBuilder.init` picks them up; if you call `normalizeFederationOptions` yourself, pass them in its third argument (see [§14](#14-wiring-it-into-a-watch-mode-builder)).
+
+`cacheData(name)` is for an adapter that needs something from a shared bundle's build — the Angular adapter keeps the packages it inlined, for `3rdpartylicenses.txt`. A shared bundle served from the [externals cache](../core/caching.md) runs no build, so the core calls `cacheData` right after `build` and stores the result with the cache entry. Read it back from `federationBuilder.adapterData[bundleName]` (or `cache.adapterData`), on a cache hit too. Keep it small, JSON-serialisable and free of absolute paths — the cache may be restored into another checkout — and change `externalsCacheKey` when its shape changes. The stored value is frozen.
 
 The core calls these in phases. Each phase has a unique `name` — use it as the key for a bundler context you keep alive between rebuilds. One persistent bundler context per `name` is the pattern you want: it's what makes incremental rebuilds cheap and is exactly how the esbuild adapter uses `esbuild.context()`.
 
@@ -53,16 +61,17 @@ During a full build the core will call your adapter for up to four families of p
 
 The source-code phases (the last two families) are special: the core keeps their contexts alive across incremental rebuilds. `setup` is called once per phase, then `build` is called again (with `modifiedFiles` populated) for every subsequent rebuild, and `dispose` is only called when the whole federation builder shuts down. Key your bundler contexts on `name` rather than on the literal `mapping-or-exposed`: a phase is skipped when it has no entry points, and the set of mapping phases follows the config.
 
-The `options.isMappingOrExposed` flag tells you which family you're in. Shared externals and source-code exposed modules usually need different bundler settings — different `resolveExtensions`, different plugins (externals are often CommonJS), different `platform` handling. The esbuild adapter splits this into `createSourceCodeEsbuildContext` vs `createNodeModulesEsbuildContext`; yours probably wants the same split.
+`options.kind` tells you which family you're in: `'shared'`, `'mapping'` or `'exposed'`. Shared externals and source-code exposed modules usually need different bundler settings — different `resolveExtensions`, different plugins (externals are often CommonJS), different `platform` handling. The esbuild adapter splits this into `createSourceCodeEsbuildContext` vs `createNodeModulesEsbuildContext`; yours probably wants the same split.
 
 ## 3. `NFBuildAdapterOptions`
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `entryPoints` | `EntryPoint[]` | `{ fileName, outName, key? }`. Use `fileName` as the bundler's entry source and `outName` as the basename of the emitted file (without hash placeholders — the core handles hashing via `options.hash`). |
-| `external` | `string[]` | Modules the bundler must _not_ inline. Pass through as-is to your bundler's externals setting. |
+| `entryPoints` | `EntryPoint[]` | `{ fileName, outName, key? }`. Use `fileName` as the bundler's entry source and `outName` as the basename of the emitted file — as given, or as `<outName>-<hash>` when `options.hash` is set. The core keeps every `outName` in a bundle unique (`./a/Cmp` and `./b/Cmp` become `Cmp` and `Cmp_2`). Keep the order: it decides how shared code is split into chunks. |
+| `external` | `string[]` | Modules the bundler must _not_ inline. A name also covers its subpaths and `*` is a wildcard, matched against the specifier as written; a match stays as written. A bundler whose externals match exactly has to widen them — `matchesExternal` from `@softarc/native-federation/internal` implements the core's rule. |
 | `outdir` | `string` | Absolute target directory for emitted files. For externals it points at that bundle's folder in the cache directory; for the source-code phases it's the project's resolved `outputPath`. |
-| `isMappingOrExposed` | `boolean` | `true` for the source-code phases (mapping bundles and `mapping-or-exposed`), `false` for externals. |
+| `kind` | `'shared' \| 'mapping' \| 'exposed'` | Which family of phases this is (see §2). |
+| `isMappingOrExposed` | `boolean` | Deprecated — read `kind`. `true` for the source-code phases. Removed in v5. |
 | `platform` | `'browser' \| 'node'` | Forwarded to the bundler's platform setting. |
 | `hash` | `boolean` | If `true`, append a content hash to emitted filenames. The core uses the filename you emit to populate `remoteEntry.json`. |
 | `dev` | `boolean` | Enable sourcemaps, disable minification, set `process.env.NODE_ENV` to `"development"`. |
@@ -70,12 +79,22 @@ The `options.isMappingOrExposed` flag tells you which family you're in. Shared e
 | `chunks` | `boolean` | Informational. The core decides how to wire chunks into `remoteEntry.json`; your job is to emit them and return them in `NFBuildAdapterResult[]`. |
 | `tsConfigPath` | `string?` | Passed through as the user configured it; resolve a relative path against `workspaceRoot`. Wire into your TypeScript pipeline (esbuild: `tsconfig`; swc: its config; Vite: forward to its esbuild options). |
 | `mappedPaths` | `PathToImport` | Resolved `tsconfig` path aliases. Honor these so shared-mapping entries resolve to the same file your app resolves them to. |
-| `optimizedMappings` | `boolean?` | `true` when `features.ignoreUnusedDeps` is on. Usually means you can skip the default Node-lib externals list. |
+| `optimizedMappings` | `boolean?` | Deprecated and unused; removed in v5. |
 | `cache` | `FederationCache<TBundlerCache>` | Shared cache object. `cache.bundlerCache` is the only field adapters should touch — see §6. The bundler cache. |
 
 ## 4. What `build()` must return
 
-Every emitted file — entry, chunk, `.map` — goes into the returned `NFBuildAdapterResult[]` with an _absolute_ `fileName`. Don't try to filter chunks or sourcemaps yourself: the core does that and matches entries by basename against `outName`, so filtering on your side breaks chunk tracking.
+Every emitted file — entry, chunk, `.map`, assets such as an extracted `.css` — goes into the returned `NFBuildAdapterResult[]` with an _absolute_ `fileName`, on every rebuild too, not only the files that changed. Don't try to filter chunks or sourcemaps yourself: the core hashes, scans and lists exactly what you return ([`federationBuilder.outputFiles`](../core/build-process.md#accessors-on-federationbuilder)), so a file left out goes unchecked.
+
+Write every file flat into `outdir`. The core knows each file by its base name there, so one written into a subfolder fails the build as missing.
+
+Set `entry` on an entry's own script to the `outName` it was built from:
+
+```ts
+return written.map(fileName => ({ fileName, entry: entryOf(fileName) }));
+```
+
+Without it the core matches entries by file name, cutting the hash at the last `-` — which can't tell an exposed `./chunk` from a bundler's `chunk-<hash>` chunks.
 
 The esbuild adapter writes files to disk inside `build()` and returns the paths it wrote. If your bundler already writes to disk, hand the paths back. If it returns in-memory buffers, write them first — the core reads the files back to hash them and to rewrite chunk imports.
 
@@ -250,9 +269,9 @@ export function createMyAdapter(): NFBuildAdapter {
     async setup(name, options: NFBuildAdapterOptions<BundlerCache>) {
       if (contexts.has(name)) return;
 
-      const ctx = options.isMappingOrExposed
-        ? await createSourceContext(options)
-        : await createExternalsContext(options);
+      const ctx = options.kind === 'shared'
+        ? await createExternalsContext(options)
+        : await createSourceContext(options);
 
       contexts.set(name, {
         ctx,
@@ -360,6 +379,7 @@ export async function runMyBuilder(federationConfigPath: string, options: MyOpti
   const { config, options: fedOptions } = await normalizeFederationOptions(
     { /* ... */ },
     createFederationCache(options.cachePath, bundlerCache),
+    { externals: adapter.externals },
   );
   const externals = getExternals(config);
 
@@ -419,7 +439,8 @@ That's the whole watch-mode machinery. If you squint it's 40 lines of glue: `cre
 
 ## 15. Things that frequently bite
 
-- **Relative paths in results.** The core matches by basename but reads files by absolute path. Return absolute paths.
+- **Relative paths in results.** The core matches by basename but reads files by absolute path. A relative `fileName` fails the build.
+- **Returning only the changed files on a rebuild.** Return the full set every time; a file missing from the result drops out of `outputFiles` and integrity.
 - **Not forwarding `signal`.** Without this, `RebuildQueue` will still fire the next rebuild, but the previous one runs to completion in parallel and wastes CPU — and in the worst case overwrites the newer output.
 - **Skipping `syncNfFileWatcher` after rebuild.** New dynamic imports that land in the source graph after the first build won't be watched until you re-sync. Symptom: edits to a newly-imported file don't trigger a rebuild.
 - **Keeping state on the adapter instance instead of the cache.** The core can recreate the adapter between builds; long-lived state belongs in `options.cache.bundlerCache`.

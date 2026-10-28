@@ -57,10 +57,11 @@ export const NG_SKIP_LIST: SkipList = [
   "@angular/localize",
   "@angular/localize/init",
   "@angular/localize/tools",
-  "@angular/router/upgrade",
-  "@angular/common/upgrade",
   /^@nx\/angular/,
   (pkg) => pkg.startsWith("@angular/") && !!pkg.match(/\/testing(\/|$)/),
+  // only when the optional peer is not installed:
+  (pkg) => pkg.startsWith("@angular/platform-browser/animations") && !isInstalled("@angular/animations"),
+  (pkg) => /^@angular\/(router|common)\/upgrade$/.test(pkg) && !isInstalled("@angular/upgrade"),
 ];
 ```
 
@@ -68,7 +69,7 @@ Why these:
 
 - **`zone.js`** patches global APIs and must run once per realm — sharing across remotes corrupts patching.
 - **`@angular/localize`** entries inject globals at boot and aren't safe to load lazily.
-- **`*/upgrade`** packages are AngularJS interop and only matter in the host.
+- **`@angular/platform-browser/animations*`** and **`@angular/{router,common}/upgrade`** import an optional peer (`@angular/animations`, `@angular/upgrade`) and can't be built without it. _Since 22.2.4_ they are skipped only when that peer isn't installed; with it installed they are shared like any other entry point.
 - **`@nx/angular`** is dev-only.
 - **Any `@angular/.../testing`** entry — these are not part of the runtime.
 
@@ -257,6 +258,8 @@ export default withNativeFederation({
     .patch(["@my-org/ui/*"], { singleton: false }),
 });
 ```
+
+_Since 22.2.4_ the builder also has `.package(prefix, cfg?)`, which declares where a mapped library begins and ends when slashes in your workspace mark a domain rather than a package (`@shared/components/table` vs `@shared/components/collapse`). See [core configuration → Declaring mapping packages](../core/configuration.md#declaring-mapping-packages).
 
 See [core configuration → sharedMappings](../core/configuration.md#sharedmappings) for the builder methods, which `ExternalConfig` properties a mapping honours, how `includeSecondaries: { keepAll: true, resolveGlob: true }` keeps mappings nothing imports, and why only barrel imports can be shared as a mapped path.
 
