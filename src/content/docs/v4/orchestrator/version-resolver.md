@@ -411,9 +411,13 @@ New import map appended to the DOM:
 | **Strict scope** | `singleton: true`, `shareScope: "strict"` | Each exact version added per-remote in `scopes` | Compiled frameworks, breaking-change-heavy packages, binary modules. |
 | **Individual scope** | `singleton: false` or incompatible + strict | Per-remote entry in `scopes` with its own URL | Incompatibilities, remote-private dependencies. |
 
+> **Don't serve a remote under the host's URL path when the host has scopes of its own** (a named share scope, the `strict` scope or a `singleton: false` external). Import-map scopes match by URL prefix, so a specifier the remote's own scope doesn't map falls back to the host's scope before the global imports, and the remote binds the host's copy.
+
 ## The `dirty` flag
 
 When a remote is processed, every shared dependency it contributes to is marked `dirty: true`. At resolution time, only dirty entries are re-resolved. After resolution, everything is marked clean again. On a warm page load — where most entries are read from `sessionStorage` — nothing is dirty, so neither resolution nor pooling runs and the cached import map can be reused directly.
+
+A warm page also keeps what it has downloaded: when a runtime load gave a remote its own copy of a package, later pages keep that copy rather than deciding the package again the way a cold init would. Clearing storage (`clearStorage`, an orchestrator upgrade or, with `sessionStorage`, a new tab) lets the next init decide from scratch.
 
 ## `strictVersion` in detail
 
