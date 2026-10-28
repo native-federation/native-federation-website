@@ -27,7 +27,7 @@ await import('./server.mjs');
 
 That's the whole integration. The first call:
 
-1. Loads the manifest (from disk, http, or an inline object).
+2. Loads each remote's `remoteEntry.json` (from disk or http) and normalizes it the way the browser does, flat or dense, honouring [`feature.convertFlatSharedInfo`](configuration.md#features).
 2. Loads each remote's `remoteEntry.json` (from disk or http).
 3. Builds a W3C-spec import map exactly as the browser orchestrator does — running the same version resolver, integrity checks, and shared-scope logic.
 4. Installs a Node loader hook (`module.register`) and hands it the resolved import map over a `MessageChannel`.
@@ -163,8 +163,8 @@ Set it in `options.hostInstances`:
 
 | Form | Meaning |
 |---|---|
-| `'all'` | Every singleton in the host remote entry. Reads `hostRemoteEntry`, takes each shared dep marked `singleton`, and `await import(...)`s it in the orchestrator's realm. Used by the Angular adapter's prod preload. |
-| `{ include?, exclude?, load? }` | Same auto-derivation, optionally filtered, with a custom `load`. Dev passes `{ load: (s) => import(s) }` so capture happens through the *host* realm (e.g. Vite's SSR graph), not the orchestrator's. |
+| `'all'` | Every singleton in the host remote entry. Reads `hostRemoteEntry`, takes every entry point of each shared dep marked `singleton` (e.g. `@angular/core/rxjs-interop` beside `@angular/core`), and `await import(...)`s it in the orchestrator's realm. Used by the Angular adapter's prod preload. |
+| `{ include?, exclude?, load? }` | Same auto-derivation, optionally filtered per entry point, with a custom `load`. Dev passes `{ load: (s) => import(s) }` so capture happens through the *host* realm (e.g. Vite's SSR graph), not the orchestrator's. |
 | explicit map | A `Record<specifier, namespace>` you supply directly. |
 
 What `initNodeFederation` does when `hostInstances` is set (before the main init flow):
