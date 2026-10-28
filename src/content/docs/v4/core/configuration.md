@@ -178,7 +178,7 @@ Notes:
 - `skip` still applies on top. For wildcard mappings it is matched against each resolved import (`@my-org/ui/button`), not against the pattern.
 - Mapped paths are read from the tsconfig the build compiles with (the adapter's `tsConfig`, resolved against the workspace root), so sharing and compiling see the same `paths`. They are parsed the way TypeScript does it: `extends` is followed, and targets resolve against `baseUrl` or the file that defines `paths`.
 - Without one, mapped paths come from the workspace root tsconfig — `tsconfig.base.json` if present, otherwise `tsconfig.json`.
-- Name mappings like npm packages: `package` or `@company/package`, lowercase. A published mapping with another name warns once per package, or fails the build under [`strictImports`](#feature-flags). Subpaths and wildcards (`@company/package/*`) are fine, but they belong to the package their name implies: `build: 'package'`, pruning and `denseExternals` group them under it.
+- Name mappings like npm packages: `package` or `@company/package`, lowercase. A published mapping with another name warns once per package, or fails the build under [`strictImports`](#feature-flags). Subpaths and wildcards (`@company/package/*`) are fine, but they belong to the package their name implies: `build: 'package'`, pruning and `denseExternals` group them under it. To draw the package boundaries yourself, [declare the packages](#declaring-mapping-packages).
 
 ### Per-mapping configuration
 
@@ -193,7 +193,7 @@ sharedMappings: [
 
 Plain strings and annotated pairs mix freely. When several entries match the same mapped path **the first one wins**, so put specific entries before general ones.
 
-The honoured properties are `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool`, `includeSecondaries` and [`build`](#mapping-bundles). Anything you omit keeps its default: `singleton: true`, `strictVersion` following the [`mappingVersion`](#feature-flags) flag, and the version read from the mapped library's nearest `package.json`. Setting `version` explicitly also drives `requiredVersion` unless you set that too.
+The honoured properties are `singleton`, `strictVersion`, `requiredVersion`, `version`, `shareScope`, `pool`, `includeSecondaries`, [`build`](#mapping-bundles) and [`chunks`](#mapping-bundles). Anything you omit keeps its default: `singleton: true`, `strictVersion` following the [`mappingVersion`](#feature-flags) flag, and the version read from the mapped library's nearest `package.json`. Setting `version` explicitly also drives `requiredVersion` unless you set that too.
 
 `requiredVersion` also accepts the [object form](sharing.md#choosing-the-emitted-range) a shared package takes, so a mapping can follow its library's version and still choose the range it emits:
 
@@ -203,7 +203,7 @@ sharedMappings: [[['@my-org/ui/*'], { requiredVersion: { range: '^' } }]],
 
 A mapping defaults to `~<version>`, and that default holds for an object that names no `range` — the one place mappings differ from a shared package, where a detected version is emitted the way `package.json` spells it.
 
-`platform`, `chunks` and `packageInfo` are **not** honoured for mapped paths. Setting one logs a warning and is ignored.
+A mapping config takes no `platform` or `packageInfo`: a mapped path has nothing for them to select.
 
 ### Mapping bundles
 
@@ -220,6 +220,14 @@ sharedMappings: [
 
 - **`'separate'`** — one bundle per mapped entry point.
 - **`'package'`** — one bundle per mapped package, so every expansion of a wildcard mapping stays together.
+
+`chunks` applies to the bundle a mapping is built in. A mapping that leaves it out follows the global [`chunks`](#chunks); two mappings in one bundle that set different values fail the build, so give a mapping that needs its own setting its own bundle with `build`:
+
+```js
+sharedMappings: [
+  [['@my-org/charts'], { build: 'separate', chunks: false }],
+],
+```
 
 The exposed modules always build as `mapping-or-exposed`. With [`denseChunking`](#feature-flags) on, each of these bundles gets its own list in the `chunks` map of `remoteEntry.json` and each mapping carries its bundle's name.
 
@@ -240,9 +248,32 @@ export default withNativeFederation({
 
 - **`.filter(patterns)`** — narrow the selection. Omit it to select every mapped path, the same default as omitting `sharedMappings`.
 - **`.patch(patterns, cfg)`** — annotate a subset. It never *widens* the selection: patching a pattern that `.filter()` excluded is ignored with a warning.
+- **`.package(prefix, cfg?)`** — declare a package boundary. See [Declaring mapping packages](#declaring-mapping-packages).
 - **`.get()`** — materialize the `sharedMappings` array. It is optional: `sharedMappings` also accepts the builder itself.
 
 Patches are emitted ahead of the base selection, so first-match-wins resolves them first.
+
+### Declaring mapping packages
+
+A mapping's package normally comes from its name: `@shared/components/table` and `@shared/components/collapse` are two entry points of one package, `@shared/components`. In a workspace where slashes mark a domain rather than a package, that groups independent libraries together. `.package()` lets you declare the boundaries yourself:
+
+```js
+sharedMappings: mappingsFromWorkspace({ singleton: true })
+  .package('@shared/components/table')
+  .package('@shared/components/collapse', { singleton: false })
+  .package('@my-org/ui'),
+```
+
+- Every mapping that equals the prefix or sits under it at a `/` belongs to that package, so a declaration can be finer or coarser than the name rule. When declarations nest, the longest prefix wins.
+- Mappings outside every declaration keep the name rule.
+- A declared package has exactly one config: the builder's base config (minus `build`) merged with `cfg`. A `.patch()` or pattern config that targets a mapping inside a declared package fails the build — set it on the `.package()` call instead. `build` isn't accepted on a declaration.
+- A declaration selects nothing on its own; `.filter()` still decides which mappings are shared.
+- The entry points of one declared package must read the same version from their `package.json`; the build checks this before anything is bundled.
+- A prefix is a package name — `package` or `@company/package`, optionally with subpaths (`@company/package/ui`) — without a `*`. A prefix that no tsconfig `paths` key reaches logs a warning.
+
+The declared package is what `build: 'package'`, [pruning](#keeping-mappings-that-nothing-imports) and [`denseExternals`](#feature-flags) group by. Declared mappings bundle like any other mapping, into `mapping-bundle`.
+
+> **Note:** Every remote that shares a library has to publish it the same way. Keep the declarations in one module that every remote's `federation.config.js` imports.
 
 ### Keeping mappings that nothing imports
 
@@ -355,7 +386,9 @@ shared: {
 },
 ```
 
-> **Note:** Per-package `chunks` is ignored when `build` is `'default'` — all default-mode externals share one build step, so they share one `chunks` setting. Switch the package to `build: 'package'` (or `'separate'`) to get an isolated bundle with its own chunk configuration.
+> **Note:** Per-package `chunks` only applies when the package has a bundle of its own — `build: 'package'` or `'separate'`. Default-mode externals share one build step and take the global `chunks`; one that sets a different value logs a warning. Entries built in one bundle that set different values also warn, and the first one listed in `shared` wins.
+
+Shared mappings take `chunks` too — see [Mapping bundles](#mapping-bundles).
 
 ## Build modes on a shared entry
 
@@ -389,7 +422,7 @@ The feature is on by default because most builds benefit from it: unused seconda
 
 The bundler keeps every subpath of an external as a bare import, but the import map only has the exact keys `remoteEntry.json` declares. A secondary entry point of a shared package that `ignoreUnusedDeps` pruned, or that is in `skip`, therefore stays an import nothing resolves, and the page fails at runtime.
 
-After writing `remoteEntry.json`, the build reads every published file (shared externals, mappings, exposed modules, chunks) and reports each bare specifier that is neither declared in `remoteEntry.json`, a published chunk, nor listed in [`externals`](#top-level-options). It warns by default; turn on `strictImports` to fail the build instead:
+After writing `remoteEntry.json`, the build reads every script it wrote (shared externals, mappings, exposed modules and all chunks, including the ones `remoteEntry.json` doesn't name) and reports each bare specifier that is neither declared in `remoteEntry.json`, a published chunk, nor listed in [`externals`](#top-level-options). It warns by default; turn on `strictImports` to fail the build instead:
 
 ```js
 features: { strictImports: true },

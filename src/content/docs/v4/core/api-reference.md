@@ -10,14 +10,14 @@ Build-time API — everything you need to drive a federation build.
 
 | Export | Kind | Summary |
 | --- | --- | --- |
-| `federationBuilder` | object | High-level builder with `init`, `build`, `close` and the `externals` / `config` / `federationInfo` accessors. See [Build Process](build-process.md). |
+| `federationBuilder` | object | High-level builder with `init`, `build`, `close` and the `externals` / `config` / `federationInfo` / `outputFiles` / `adapterData` accessors. See [Build Process](build-process.md). |
 | `setBuildAdapter(adapter)` | function | Register a bundler adapter imperatively. `federationBuilder.init` calls this for you. |
 | `buildForFederation(config, options, externals, signal?)` | function | Full build — bundles shared externals, mapped paths and exposed modules, then writes `remoteEntry.json` and the import map. |
 | `rebuildForFederation(config, options, externals, modifiedFiles, signal?)` | function | Incremental rebuild. `federationBuilder.build` dispatches to this after the first full build. |
 | `bundleExposedAndMappings(config, options, externals, ...)` | function | Bundles just the exposed modules and shared mapped paths. |
 | `createFederationCache(cachePath, bundlerCache?)` | function | Construct a `FederationCache` — use this to share cache state across multiple builds. |
 | `getExternals(config)` | function | Derive the list of externals (package names) from a normalized config. |
-| `normalizeFederationOptions(options, cache?)` | function | Load and normalize the federation config and options, returning both. The low-level entry the `federationBuilder` calls internally. |
+| `normalizeFederationOptions(options, cache?, fromAdapter?)` | function | Load and normalize the federation config and options, returning both. The low-level entry the `federationBuilder` calls internally. `fromAdapter.externals` merges an adapter's own [externals](../adapters/build-your-own.md#1-the-contract) into `config.externals`. |
 | `writeFederationInfo(info, options)` | function | Write a `FederationInfo` object to `remoteEntry.json`. |
 | `BuildHelperParams` | type | Argument type for `federationBuilder.init`. |
 
@@ -31,7 +31,7 @@ Configuration DSL used inside `federation.config.js`.
 | `fromPackageJson(baseCfg, projectPath?)` | function | Recommended dep-sharing builder. Shares all `package.json` deps and returns a fluent builder (`.filter` / `.skip` / `.override` / `.patch` / `.get`). `shared` also accepts the builder without `.get()`. |
 | `shareAll(options, opts?)` | function | Share every dependency found in `package.json`. Accepts `overrides` for per-package deviation. |
 | `share(entries, projectPath?, skipList?)` | function | Share a hand-picked set of packages with per-entry options. |
-| `mappingsFromWorkspace(baseCfg?)` | function | Builder for `sharedMappings` — `.filter()` narrows the selection, `.patch()` annotates a subset, `.get()` returns the entry array (optional). See [sharedMappings](configuration.md#mappingsfromworkspace). |
+| `mappingsFromWorkspace(baseCfg?)` | function | Builder for `sharedMappings` — `.filter()` narrows the selection, `.patch()` annotates a subset, `.package()` declares a package boundary, `.get()` returns the entry array (optional). See [sharedMappings](configuration.md#mappingsfromworkspace). |
 | `setInferVersion(fn)` | function | Override how shared-dependency versions are inferred for `requiredVersion: 'auto'`. |
 | `findRootTsConfigJson()` | function | Locate the root `tsconfig.base.json` or `tsconfig.json` — the fallback for mapped-path resolution when no build `tsConfig` is given. |
 | `DEFAULT_SKIP_LIST` | const | The baseline skip list `withNativeFederation` merges with your `skip`. |
@@ -40,12 +40,12 @@ Configuration DSL used inside `federation.config.js`.
 
 TypeScript contracts — types only. Useful when authoring an adapter or integrating at the type level.
 
-- `FederationConfig`, `SharedMappingEntry`
+- `FederationConfig`, `SharedMappingEntry`, `SharedMappingPackageEntry`, `MappingConfigInput` — the config a shared mapping takes
 - `ConfigBuilder`, `PackageJsonExternalsBuilder`, `WorkspaceMappingsBuilder` — the builder types `fromPackageJson` and `mappingsFromWorkspace` return. `shared` and `sharedMappings` accept any `ConfigBuilder` in place of its value
 - `ExternalConfig`, `SharedExternalsConfig`, `ShareExternalsOptions`, `ShareAllExternalsOptions`, `IncludeSecondariesOptions` — the two `Share*Options` input types accept the [object form of `requiredVersion`](sharing.md#choosing-the-emitted-range)
 - `FederationOptions`, `NormalizedFederationOptions`
-- `NFBuildAdapter`, `NFBuildAdapterOptions`, `NFBuildAdapterContext`, `NFBuildAdapterResult`, `EntryPoint`, `ExternalsCacheKey`
-- `FederationInfo`, `SharedInfo`, `ExposesInfo`, `ChunkInfo`, `ArtifactInfo`, `IntegrityMap`
+- `NFBuildAdapter`, `NFBuildAdapterOptions`, `NFBuildAdapterContext`, `NFBuildAdapterResult`, `NFBundleKind`, `NFAdapterInput`, `EntryPoint`, `ExternalsCacheKey`
+- `FederationInfo`, `SharedInfo`, `ExposesInfo`, `ChunkInfo`, `ArtifactInfo`, `IntegrityMap`, `OutputFile`
 - `FederationManifest` — the host manifest shape: `Record<string, string | { url; integrity?; main? }>`
 - `FederationCache`
 - `SkipList`, `SkipListEntry`, `SkipFn`, `PreparedSkipList`
@@ -57,6 +57,8 @@ Utility exports intended for adapter authors. Treated as semi-public; breaking c
 
 - error types and `AbortedError`,
 - the `hashFile` checksum helper and `getChecksum` / `getDefaultCachePath` cache helpers,
+- `collectOutputFiles(federationCache)`, the list behind `federationBuilder.outputFiles`,
+- `matchesExternal`, the rule core reads `external` by — for a bundler whose own externals matching differs,
 - the `logger` and `setLogLevel`,
 - the `RebuildQueue` plus the `createBuildResultMap` / `lookupInResultMap` / `popFromResultMap` helpers,
 - the `NfFileWatcher` contract and the `createNfWatcher` / `syncNfFileWatcher` implementations, plus `linkedSharedDirs` / `sharedMappingDirs` for deciding what to watch. `createNfWatcher` also takes a `watch` option — the `WatchPort['watch']` signature, exported alongside `WatchPort` / `WatchHandle` — so a host that already ships a watcher can hand its own in,

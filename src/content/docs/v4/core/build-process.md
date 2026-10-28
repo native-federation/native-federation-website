@@ -77,7 +77,7 @@ The [content signal](caching.md#symlinked-npm-link-packages) that keeps the cach
 
 ## Incremental Builds
 
-The first call to `federationBuilder.build()` performs a full build. Every subsequent call on the same builder instance is treated as a rebuild and only re-runs what has changed:
+The first call to `federationBuilder.build()` after `init` performs a full build. Every subsequent call on the same builder instance is treated as a rebuild and only re-runs what has changed:
 
 ```js
 // initial build
@@ -108,6 +108,8 @@ For the full mechanics — what counts as a cache hit, the checksum format, the 
 | `externals` | `init` | Array of package names to pass as `external` to your bundler. |
 | `config` | `init` | The normalized federation config. |
 | `federationInfo` | `build` | The last `FederationInfo` object that was written to `remoteEntry.json`. |
+| `outputFiles` | `build` | Every file the federation build wrote into `outputPath` — entries, chunks, source maps and assets — as `{ fileName, platform }`. Use it to post-process federation output instead of globbing the folder, which also holds your app's own files. |
+| `adapterData` | `build` | Per shared bundle, the data the adapter stored with it through [`cacheData`](../adapters/build-your-own.md#1-the-contract), on a cache hit too. |
 
 ## Dev-mode Build Notifications
 
