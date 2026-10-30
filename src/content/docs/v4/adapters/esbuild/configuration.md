@@ -37,47 +37,29 @@ Plugins contributed by a [framework preset](#frameworks) (via its `esbuildPlugin
 
 ## `fileReplacements`
 
-Rewrites the _entry-point path_ of a shared dependency before esbuild sees it. The key is a string that will be matched as a regex against the end of the path; the value is either a target path string, or a `{ file: string }` object (the two forms are equivalent — strings are normalized to the object form internally).
+Swaps the _entry-point file_ of a shared npm package before esbuild sees it. Imports in your own source are left alone. The key is matched against the end of the entry's path, on whole path segments, and only that end is replaced. The value is either a target path string or a `{ file: string }` object; the two forms are equivalent.
 
 ```ts
 adapterConfig: {
   plugins: [],
   fileReplacements: {
-    'node_modules/react/index.js':
-      'node_modules/react/cjs/react.production.min.js',
+    'node_modules/some-lib/index.js': 'node_modules/some-lib/dist/browser.js',
   },
 }
 ```
 
-Path separators are normalized to forward slashes before matching, so the same config works on Windows.
+Because keys match whole segments, `react/index.js` matches `node_modules/react/index.js` but not `node_modules/preact/index.js`. When several keys match the same file, the last one wins, so your keys always beat those of a [framework preset](#frameworks). Path separators are normalized to forward slashes before matching, so the same config works on Windows.
 
 Typical uses:
 
-- Swap a CJS wrapper for the pre-bundled variant it re-exports from — the canonical React example is on the [React & CommonJS Interop](react-interop.md) page.
 - Point a library at a browser-only build when its `main` field resolves to a Node-only file.
 - Feed esbuild a shim when a dependency's entry point does something esbuild cannot bundle (dynamic require on a directory, etc.).
 
 ## `frameworks`
 
-A list of **framework presets** (`NfFrameworkPlugin[]`). Each preset bundles the esbuild settings a framework needs — file replacements, extra `resolveExtensions`, loaders, esbuild plugins, and whether the CommonJS interop plugin is required for the node-modules bundle.
+A list of **framework presets** (`NfFrameworkPlugin[]`). Each preset bundles the esbuild settings a framework needs — file replacements, extra `resolveExtensions`, loaders and esbuild plugins — into one value you can reuse across projects. It defaults to an empty list.
 
-If you omit `frameworks` entirely, the adapter applies the built-in **React preset** (`reactFrameworkPlugin()`) by default, so existing React setups keep working unchanged. Pass an empty array to opt out of all presets:
-
-```ts
-import { reactFrameworkPlugin } from '@softarc/native-federation-esbuild/frameworks/react';
-
-adapterConfig: {
-  plugins: [],
-  frameworks: [reactFrameworkPlugin()], // optional — this is the default
-}
-```
-
-```ts
-adapterConfig: {
-  plugins: [],
-  frameworks: [], // disable the default React preset
-}
-```
+React needs no preset: [CommonJS interop](react-interop.md#the-commonjs-plugin) is always on and the `process.env.NODE_ENV` define picks React's development or production build. `reactFrameworkPlugin()` is deprecated and returns an empty preset, so drop it from `frameworks`.
 
 A preset is a plain object implementing `NfFrameworkPlugin`:
 
@@ -88,7 +70,6 @@ A preset is a plain object implementing `NfFrameworkPlugin`:
 | `resolveExtensions` | `string[]` | Extra esbuild `resolveExtensions` (e.g. `['.vue']`). Merged with the adapter's defaults. |
 | `loader` | `Record<string, esbuild.Loader>` | esbuild loader overrides. Merged with `config.loader`; your own entries win. |
 | `esbuildPlugins` | `esbuild.Plugin[]` | Framework-specific esbuild plugins. Prepended to `config.plugins`. |
-| `needsCommonJsPlugin` | `boolean` | Set `true` when the framework's runtime ships CommonJS (React). Adds the adapter's [CommonJS plugin](react-interop.md#the-commonjs-plugin) to the node-modules bundle. |
 
 A minimal custom preset:
 
@@ -101,12 +82,11 @@ export function vueFrameworkPlugin(): NfFrameworkPlugin {
     name: 'vue',
     esbuildPlugins: [vuePlugin()],
     resolveExtensions: ['.vue'],
-    needsCommonJsPlugin: false,
   };
 }
 ```
 
-When you supply multiple presets their contributions are merged. Your own top-level `EsBuildAdapterConfig` keys (`plugins`, `fileReplacements`, `loader`) take precedence over what a preset supplies. See [React & CommonJS Interop](react-interop.md) for how the React preset works in practice.
+When you supply multiple presets their contributions are merged. Your own top-level `EsBuildAdapterConfig` keys (`plugins`, `fileReplacements`, `loader`) take precedence over what a preset supplies.
 
 ## `loader`
 
@@ -142,7 +122,11 @@ adapterConfig: {
 }
 ```
 
-> [!WARNING] **Changing `target` or `sourcemap` needs a cleared cache.** Shared npm packages are [cached](../../core/caching.md), so a new value only reaches them once the cache is rebuilt — delete the cache directory or run one build with `cacheExternalArtifacts: false`.
+## Shared Packages and the Cache
+
+Shared npm packages are [cached](../../core/caching.md) across builds. The adapter keys that cache on the options its shared bundles are built with: `target`, `sourcemap`, `loader`, `fileReplacements`, the framework presets, and the adapter and esbuild versions. Changing any of them re-bundles the shared packages on the next build.
+
+esbuild plugins take part by name only. If you change the options of a plugin that affects shared packages, delete the cache directory or run one build with `cacheExternalArtifacts: false`.
 
 ## What the Adapter Sets for You
 
@@ -152,6 +136,7 @@ The remaining esbuild options are fixed by the adapter:
 | --- | --- | --- |
 | `bundle` | `true` | Federation artifacts must be self-contained. |
 | `format` | `'esm'` | The runtime loads remotes as ES modules via the import map. |
+| `absWorkingDir` | `workspaceRoot` | Relative paths and output hashes resolve against the workspace root, whatever directory the build starts from. |
 | `platform` | `'browser'` or `'node'` | Derived from the core's platform detection (see [Build Process](../../core/build-process.md)). |
 | `splitting` | from `chunks` | Follows the core's [`chunks`](../../core/configuration.md#chunks) setting for the bundle being built — on by default. The chunks are written next to their entries and reported back to the core, which records them in `remoteEntry.json`. |
 | `write` | `false` | The adapter writes files itself, so it can hash names and feed them to the federation cache. |

@@ -32,8 +32,8 @@ Everything else has a sensible default. The only required field is `outputPath` 
 | Option | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `outputPath` | `string` | **required** | Directory that receives `remoteEntry.json` and the bundled artifacts. |
-| `workspaceRoot` | `string` | `process.cwd()` | Resolved against `cwd()`. Useful when the build script runs from a monorepo root. |
-| `tsConfig` | `string` | `'tsconfig.json'` | Forwarded to esbuild's `tsconfig` option for the source-code bundle. |
+| `workspaceRoot` | `string` | `process.cwd()` | Resolved against `cwd()`. esbuild runs from this directory, and relative `tsConfig`, `cachePath`, `outputPath` and `fileReplacements` paths resolve against it. Useful when the build script runs from a monorepo root. |
+| `tsConfig` | `string` | `<workspaceRoot>/tsconfig.json` if it exists | Resolved against `workspaceRoot`. Forwarded to esbuild's `tsconfig` option for the source-code bundle, and the core reads its `paths` for [shared mappings](../../core/configuration.md#sharedmappings). Without one, esbuild finds the nearest `tsconfig.json` per file. Point it at `tsconfig.base.json` when your `paths` only live there. |
 | `cachePath` | `string` | core default | A relative path is resolved against `workspaceRoot`; an absolute path is used as-is. Otherwise the core's `getDefaultCachePath` is used. See [Caching](../../core/caching.md). |
 | `projectName` | `string` | — | Forwarded to the core; used for logging and cache scoping in multi-project workspaces. |
 | `entryPoints` | `string[]` | — | Source entries for the federation build. Usually the files referenced by `exposes` in `federation.config.js`. |
@@ -61,14 +61,14 @@ interface EsBuildBuilder {
 - **`federationInfo`** — the result of the last successful build (remote name, exposed modules, shared descriptors, ...). In watch mode this is a live getter — read it whenever you need a fresh snapshot.
 - **`externals`** — the list of module names the core marked as shared/external, forwarded to esbuild's `external`.
 - **`options`** — the normalized, fully-defaulted options that were actually used. Handy for logging.
-- **`close()`** — tears everything down: cancels any pending rebuild, stops the watcher, disposes all esbuild contexts, and calls `esbuild.stop()`. _Always_ call it before exit, even in non-watch mode, so esbuild's daemon shuts down cleanly.
+- **`close()`** — tears everything down: cancels any pending rebuild and waits for a running one, stops the watcher, and disposes all esbuild contexts. Calling it more than once is safe. _Always_ call it before exit, even in non-watch mode, so the process can shut down cleanly.
 
 ## Watch Mode
 
 When `watch: true`, the adapter:
 
 1. Creates an [NF file watcher](../../core/caching.md) that observes every source file the initial build touched, plus the source directories of your [shared mappings](../../core/configuration.md#sharedmappings) — so a file added to a mapped library after the last build is picked up too.
-2. Queues a rebuild on change. Rebuilds are debounced by `rebuildDelay` and serialized through a `RebuildQueue` — a new change mid-build cancels the in-flight rebuild via `AbortSignal` rather than racing it.
+2. Queues a rebuild on change. Rebuilds are debounced by `rebuildDelay` and serialized through a `RebuildQueue` — a new change mid-build cancels the in-flight rebuild via `AbortSignal` rather than racing it. The changes of a cancelled or failed rebuild carry over into the next one.
 3. Calls `rebuildForFederation` on the core, which only re-bundles the entry points whose inputs changed.
 
 A shared package you are developing through `npm link` sits outside the watched sources. Set `watchLinkedDeps: true` to have the watcher poll its real directory as well. See [Watching npm-linked shared dependencies](../../core/build-process.md#watching-npm-linked-shared-dependencies).
@@ -87,17 +87,19 @@ If you drive `buildForFederation` / `rebuildForFederation` yourself (e.g. integr
 import { createEsBuildAdapter } from '@softarc/native-federation-esbuild';
 import { setBuildAdapter, buildForFederation } from '@softarc/native-federation';
 
-const adapter = createEsBuildAdapter({ plugins: [] });
+const adapter = createEsBuildAdapter({ plugins: [] }, { workspaceRoot: process.cwd() });
 setBuildAdapter(adapter);
 
 await buildForFederation(config, normalizedOptions, externals);
 await adapter.dispose();
 ```
 
-`createEsBuildAdapter` returns an [`NFBuildAdapter`](../../core/build-adapters.md) with three methods:
+The first argument is the [`EsBuildAdapterConfig`](configuration.md). The optional second argument takes `workspaceRoot`, the directory esbuild runs from; it defaults to the working directory. `runEsBuildBuilder` passes its own `workspaceRoot` here.
 
-- **`setup(name, options)`** — creates an esbuild context for a single bundle entry. Picks the source-code bundler or the node-modules bundler based on `options.isMappingOrExposed`.
-- **`build(name, { modifiedFiles?, signal? })`** — rebuilds, writes output files, and returns an `NFBuildAdapterResult[]` with file names. Aborts cleanly when `signal` fires.
-- **`dispose(name?)`** — disposes a single context by name, or all contexts (plus `esbuild.stop()`) when called without arguments.
+`createEsBuildAdapter` returns an [`NFBuildAdapter`](../../core/build-adapters.md) with three methods and an `externalsCacheKey` (see [Shared Packages and the Cache](configuration.md#shared-packages-and-the-cache)):
+
+- **`setup(name, options)`** — creates an esbuild context for a single bundle entry, replacing any existing context of that name. Shared packages (`options.kind === 'shared'`) get the node-modules settings; exposed modules and shared mappings get the source-code settings.
+- **`build(name, { modifiedFiles?, signal? })`** — rebuilds, writes output files, and returns an `NFBuildAdapterResult[]` naming each file and the entry it was built from. Aborts cleanly when `signal` fires.
+- **`dispose(name?)`** — disposes a single context by name, or all contexts when called without arguments.
 
 > **Note:** For 99% of projects, `runEsBuildBuilder` is the right call. Reach for `createEsBuildAdapter` only when the core's built-in build loop doesn't fit your workflow.

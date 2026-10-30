@@ -61,7 +61,7 @@ During a full build the core will call your adapter for up to four families of p
 
 The source-code phases (the last two families) are special: the core keeps their contexts alive across incremental rebuilds. `setup` is called once per phase, then `build` is called again (with `modifiedFiles` populated) for every subsequent rebuild, and `dispose` is only called when the whole federation builder shuts down. Key your bundler contexts on `name` rather than on the literal `mapping-or-exposed`: a phase is skipped when it has no entry points, and the set of mapping phases follows the config.
 
-`options.kind` tells you which family you're in: `'shared'`, `'mapping'` or `'exposed'`. Shared externals and source-code exposed modules usually need different bundler settings — different `resolveExtensions`, different plugins (externals are often CommonJS), different `platform` handling. The esbuild adapter splits this into `createSourceCodeEsbuildContext` vs `createNodeModulesEsbuildContext`; yours probably wants the same split.
+`options.kind` tells you which family you're in: `'shared'`, `'mapping'` or `'exposed'`. Shared externals and source-code exposed modules usually need different bundler settings — different `resolveExtensions`, different plugins (externals are often CommonJS), different `platform` handling. The esbuild adapter splits this into `sourceBuildOptions` vs `sharedBuildOptions`; yours probably wants the same split.
 
 ## 3. `NFBuildAdapterOptions`
 
@@ -238,7 +238,7 @@ The externals phases don't pass `modifiedFiles` — they run once per federation
 Real-world externals are frequently CommonJS with dynamic `exports` tricks (React is the canonical offender). Bundlers that default to ESM will trip over these. The esbuild adapter solves this in two places and you'll likely want to mirror both:
 
 - A **CommonJS plugin** applied to the externals phase only, which turns a CJS `require()` of another external into a real ESM `import`, so the import map can resolve it instead of esbuild's throwing `__require` shim.
-- A **`fileReplacements`** / **`compensateExports`** layer that swaps the resolved entry for a hand-written shim when the package's own `exports` field points at something unbundlable. See [esbuild adapter configuration](esbuild/configuration.md) for how this is exposed to users.
+- A **`fileReplacements`** layer that swaps the resolved entry for another file when the package's own `exports` field points at something unbundlable. See [esbuild adapter configuration](esbuild/configuration.md) for how this is exposed to users.
 
 ## 11. Build notifications (optional)
 
