@@ -25,7 +25,7 @@ The core defines two contracts — a [federation config](configuration.md) (what
 
 - [Getting Started](getting-started.md) — install the package and wire it into a build script.
 - [`federation.config.js`](configuration.md) — the complete reference for every field, feature flag and tweak.
-- [Sharing Dependencies](sharing.md) — `share`, `shareAll`, secondary entry points, pseudo-treeshaking and the downsides of sharing.
+- [Sharing Dependencies](sharing.md) — `fromPackageJson`, `shareAll`, secondary entry points, pseudo-treeshaking and the downsides of sharing.
 - [Build Process](build-process.md) — the `federationBuilder` lifecycle.
 - [Caching](caching.md) — the content-addressed cache that keeps warm builds fast.
 - [Build Adapters](build-adapters.md) — the `NFBuildAdapter` contract, plus [Build Your Own Adapter](../adapters/build-your-own.md).

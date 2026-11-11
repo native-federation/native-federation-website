@@ -97,14 +97,13 @@ An external joins a pool through an optional `pool` label on a shared package in
 
 ```js
 // federation.config.mjs
-import { withNativeFederation, share } from "@softarc/native-federation/config";
+import { withNativeFederation, fromPackageJson } from "@softarc/native-federation/config";
 
 export default withNativeFederation({
   name: "team/mfe1",
-  shared: share({
-    react: { singleton: true, requiredVersion: "auto", pool: "react" },
-    "react-dom": { singleton: true, requiredVersion: "auto", pool: "react" },
-  }),
+  shared: fromPackageJson({ singleton: true, requiredVersion: "auto" })
+    .only(["react", "react-dom"])
+    .patch(["react", "react-dom"], { pool: "react" }),
 });
 ```
 

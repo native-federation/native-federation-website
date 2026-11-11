@@ -304,7 +304,7 @@ initRemoteEntry(
 
 > **Note:** A failing `initRemoteEntry` does **not** reject by default: the orchestrator logs `Failed to initialize remote entry, continuing anyway` and the error only surfaces at the subsequent `loadRemoteModule`. Set `strict: { strictRemoteEntry: true }` to have registration failures reject instead — see [Configuration → Modes](../orchestrator/configuration.md#modes).
 
-> **Note:** This is the one path that needs **shim mode** (`useShimImportMap`, the adapter's default). A late remote appends a second import map to the DOM, and a native import map can be committed only once per document — so `shimMode: false` rules out `initRemoteEntry`. See [Configuration → Import-map implementation](../orchestrator/configuration.md#import-map).
+> **Note:** A late remote appends a second import map to the DOM. Shim mode (`useShimImportMap`, the adapter's default) handles that everywhere; with `shimMode: false`, `initRemoteEntry` needs a browser that supports multiple import maps (Chrome/Edge 133+, Safari 18.4+). See [Configuration → Import-map implementation](../orchestrator/configuration.md#import-map).
 
 In a lazy route, that turns "init the remote" and "load the component" into a single `loadComponent`:
 

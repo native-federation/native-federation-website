@@ -21,11 +21,6 @@ The simplest integration uses the pre-built `quickstart.mjs` runtime and a decla
   <head>
     <title>My Application</title>
 
-    <!-- Enable shim-mode for optimal browser support (optional) -->
-    <script type="esms-options">
-      { "shimMode": true }
-    </script>
-
     <!-- Define your remotes -->
     <script type="application/json" id="mfe-manifest">
       {
@@ -47,7 +42,7 @@ The simplest integration uses the pre-built `quickstart.mjs` runtime and a decla
     </script>
 
     <!-- Include the orchestrator -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.8.0/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.10.0/quickstart.mjs"></script>
   </head>
   <body>
     <my-header></my-header>
@@ -97,9 +92,7 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
     <title>My Application</title>
 
     <!-- 1. Init the registry BEFORE any consumers -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.8.0/init-registry.mjs"></script>
-
-    <script type="esms-options">{ "shimMode": true }</script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.10.0/init-registry.mjs"></script>
 
     <!-- 2. Manifest -->
     <script type="application/json" id="mfe-manifest">
@@ -118,7 +111,7 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
     </script>
 
     <!-- 4. The orchestrator -->
-    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.8.0/quickstart.mjs"></script>
+    <script src="https://unpkg.com/@softarc/native-federation-orchestrator@4.10.0/quickstart.mjs"></script>
   </head>
   <body>
     <my-header></my-header>
@@ -224,13 +217,14 @@ await esbuild.build({
 
 ## <a id="load-remote-module"></a> Loading remote modules
 
-`initFederation` resolves with a `NativeFederationResult` that exposes six properties. `loadRemoteModule`, `load`, and both functions inside `as<T>()` all delegate to the same underlying loader — they only differ in their TypeScript types.
+`initFederation` resolves with a `NativeFederationResult` that exposes seven properties. `loadRemoteModule`, `load`, and both functions inside `as<T>()` all delegate to the same underlying loader — they only differ in their TypeScript types.
 
 ```ts
 const {
   loadRemoteModule,   // <T = unknown>(remoteName, exposedModule) => Promise<T>
   load,               // alias of loadRemoteModule
   as,                 // typed-loader factory: <T>() => { loadRemoteModule, load }
+  preloadRemoteModule, // (remoteName, exposedModule) => void — fetch a module and its chunks ahead of its load
   config,             // resolved ConfigContract (logger, storage, import-map fns)
   adapters,           // DrivingContract — the cache repos + providers + browser/sse
   initRemoteEntry,    // (url, name?) => Promise<NativeFederationResult> — dynamic init
@@ -276,6 +270,8 @@ The two forms compile to the same runtime function; pick whichever reads better 
 `config` is the `ConfigContract` — the merged result of your options and the library defaults. It exposes the active logger, storage handle and import-map functions, so you can reach the orchestrator's internals from anywhere without re-creating them.
 
 `adapters` is the `DrivingContract` — a hexagonal-architecture concept (see [Hexagonal Architecture: there are always two sides to every story](https://medium.com/ssense-tech/hexagonal-architecture-there-are-always-two-sides-to-every-story-bc0780ed7d9c)) giving direct handles to `remoteInfoRepo`, `sharedExternalsRepo`, `scopedExternalsRepo`, `sharedChunksRepo`, the manifest and remote-entry providers, and the browser/SSE adapters. Use it to introspect the caches described in [Architecture — caches](architecture.md#caches).
+
+`preloadRemoteModule(remoteName, exposedModule)` fetches an exposed module and its static chunks ahead of its load, for example on hover or when a route is about to open. It never throws. See [Configuration — Preloading](configuration.md#preloading).
 
 `initRemoteEntry(remoteEntryUrl, remote?)` adds a remote after the initial load and resolves with the same `NativeFederationResult` shape (so the chain can continue). The second argument can be either a remote name string or a `RemoteRef` object — the same shape used inside the manifest:
 
