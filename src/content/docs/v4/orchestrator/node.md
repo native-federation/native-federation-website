@@ -112,12 +112,13 @@ export type InitNodeFederationOptions = NFOptions & {
 | `setImportMapFn`      | Posts the map to the loader thread over a `MessageChannel` — no DOM mutation.         |
 | `loadModuleFn`        | `(url) => import(url)` — Node's native dynamic import.                                |
 | `reloadBrowserFn`     | No-op.                                                                                |
+| `preloadModulesFn`    | `noPreload`: `import()` would evaluate the module, so nothing is fetched ahead.       |
 | Storage               | In-memory (`globalThisStorageEntry`) — the SSR process is long-lived; no disk needed. |
 | SSE (build watching)  | Disabled and stubbed out — HMR is a browser concern.                                  |
 | Manifest provider     | fs-aware (`file://` or bare path), falls back to `fetch` for http(s).                 |
 | Remote-entry provider | fs-aware, same fallback to `fetch`.                                                   |
 
-Anything in `options` overrides the default. The returned `NativeFederationResult` is identical to the browser one — `loadRemoteModule`, `load`, `initRemoteEntry`, `as<T>()`, `config`, and `adapters`.
+Anything in `options` overrides the default. The returned `NativeFederationResult` is identical to the browser one — `loadRemoteModule`, `load`, `preloadRemoteModule` (a no-op unless you pass a `preloadModulesFn`), `initRemoteEntry`, `as<T>()`, `config`, and `adapters`.
 
 ## How the loader works
 
@@ -193,11 +194,11 @@ The synthesized module re-exports every captured key (named exports plus `defaul
 These are deliberately omitted because they make no sense server-side:
 
 - **SSE (`buildNotificationsEndpoint`).** The hook is wired to a no-op; setting `sse: true` on the Node entry has no effect.
-- **`localStorageEntry` / `sessionStorageEntry`.** Storage is always in-memory.
+- **`localStorageEntry` / `sessionStorageEntry`.** Storage defaults to in-memory; the browser storages don't exist on Node.
 - **Trusted Types.** Node has no Trusted Types — the import-map config simply skips that pipeline.
 - **`es-module-shims` / `useShimImportMap`.** No need; Node loader hooks resolve everything.
 
-If you pass a custom `setImportMapFn` or `loadModuleFn` you take over from the defaults and the Node loader client will not be exercised.
+If you pass a custom `setImportMapFn` or `loadModuleFn` you take over from the defaults. The loader hook is still registered (and `hostInstances` still uses it), but with a custom `setImportMapFn` it never receives an import map.
 
 ## <a id="migrating"></a> Migrating from `@softarc/native-federation-node`
 

@@ -1,12 +1,12 @@
 # Sharing Dependencies
 
-> How to share dependencies with Native Federation — share, shareAll, secondary entry points, code-splitting and the build mode.
+> How to share dependencies with Native Federation — fromPackageJson, shareAll, secondary entry points, code-splitting, preloading and the build mode.
 
-Shared dependencies are the mechanism that lets hosts and remotes load the same library once and reuse it at runtime. This page covers the `fromPackageJson`, `share` and `shareAll` helpers and the options that govern each shared entry.
+Shared dependencies are the mechanism that lets hosts and remotes load the same library once and reuse it at runtime. This page covers the `fromPackageJson` and `shareAll` helpers and the options that govern each shared entry.
 
 ## `fromPackageJson` (recommended)
 
-`fromPackageJson` is the recommended way to share your dependencies. It shares **all** dependencies found in your `package.json` and returns a small fluent builder so you can fine-tune the result. The base options you pass are applied to every shared dependency; you then chain `.filter(...)`, `.skip(...)`, `.override(...)` and `.patch(...)` as needed and hand the builder to `shared`:
+`fromPackageJson` is the recommended way to share your dependencies. It shares **all** dependencies found in your `package.json` and returns a small fluent builder so you can fine-tune the result. The base options you pass are applied to every shared dependency; you then chain `.only(...)`, `.skip(...)`, `.override(...)` and `.patch(...)` as needed and hand the builder to `shared`:
 
 ```js
 import {
@@ -29,7 +29,7 @@ export default withNativeFederation({
 
 The builder offers four chainable methods, each of which returns the builder so you can combine them:
 
-- **`.filter(patterns)`** — share only the `package.json` dependencies matching these patterns (e.g. `['@angular/*', 'rxjs']`). Repeated calls add to the selection; omit it to share every dependency. Packages added through `.override(...)` are unaffected, and patching a package the filter excluded is ignored with a warning.
+- **`.only(patterns)`** — share only the `package.json` dependencies matching these patterns (e.g. `['@angular/*', 'rxjs']`). Repeated calls add to the selection; omit it to share every dependency. Packages added through `.override(...)` are unaffected, and patching a package `.only()` excluded is ignored with a warning. `.filter()` is the same method under its older name.
 - **`.skip(externals)`** — exclude packages from sharing (added on top of the [default skip list](configuration.md#the-default-skip-list)).
 - **`.override(externals)`** — replace the configuration for specific packages entirely. Use this when a package needs a completely different set of options.
 - **`.patch(patterns, cfg)`** — merge a partial configuration onto the shared packages matching these patterns (e.g. `['@angular/*']`), keeping the base options for everything you don't touch. Patterns match `package.json` dependency names, so a secondary entry point takes its package's patch and can't be patched on its own. Patches merge in call order.
@@ -68,7 +68,7 @@ export default withNativeFederation({
 });
 ```
 
-`withNativeFederation` resolves the builder for you. Call `.get()` yourself only when you need the resolved object, for instance to spread it or inspect it.
+Pass the builder itself to `shared`; `withNativeFederation` resolves it for you. Its `.get()` is deprecated: put extra packages in `.override()` instead of spreading the resolved object.
 
 By default the closest `package.json` (relative to your `federation.config.mjs`) is used. You can point at a different one by passing its path as the second argument: `fromPackageJson(baseCfg, projectPath)`.
 
@@ -123,24 +123,28 @@ export default withNativeFederation({
 )
 ```
 
-## `share`
+## Hand-picking packages
 
-Use `share` when you want to hand-pick which dependencies are shared and configure each one individually:
+To share a hand-picked set of dependencies, select them with `.only()` and give a package a configuration of its own with `.override()`. Each override is a complete config:
 
 ```js
-import { share } from "@softarc/native-federation/config";
-
-shared: share({
-  "package-a": {
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: "auto",
-    includeSecondaries: true,
-  },
-});
+shared: fromPackageJson({ singleton: true, strictVersion: true, requiredVersion: "auto" })
+  .only(["package-a", "package-b"])
+  .override({
+    "package-a": {
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: "auto",
+      includeSecondaries: true,
+    },
+  }),
 ```
 
+This replaces the `share` helper, which is deprecated.
+
 ## Per-Package Options
+
+The examples below patch one package onto the base options every dependency gets; `base` stands for `{ singleton: true, strictVersion: true, requiredVersion: "auto" }`.
 
 | Option               | Type                                           | Default        | Description                                                                                                                                                                                                                                                                                                 |
 | -------------------- | ---------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -154,6 +158,7 @@ shared: share({
 | `chunks`             | `boolean`                                      | config default | Enable or disable code-splitting for this specific package. Only applies with `build: 'separate'` or `'package'`.                                                                                                                                                                                          |
 | `shareScope`         | `string`                                       | config default | Optional share-scope override for this package.                                                                                                                                                                                                                                                             |
 | `pool`               | `string`                                       | –              | Optional resource-pool hint for this shared external. Passed through to `remoteEntry.json` and consumed by the orchestrator; the core build does not act on it.                                                                                                                                 |
+| `preload`            | `boolean`                                      | `false`        | Ask the runtime to fetch the package, with every chunk of its bundle, as soon as the import map is in place. See [Preloading a shared package](#preloading-a-shared-package).                                                                                                                 |
 
 ### `requiredVersion: 'auto'`
 
@@ -164,9 +169,7 @@ With `'auto'`, the helper looks up the version in the closest `package.json`. Th
 A detected version is emitted exactly as your `package.json` spells it — `^1.2.3` stays `^1.2.3`. Passing an object instead lets you pick the format:
 
 ```js
-shared: share({
-  "@my-org/lib": { singleton: true, requiredVersion: { range: "^" } },
-});
+shared: fromPackageJson(base).patch(["@my-org/lib"], { requiredVersion: { range: "^" } }),
 ```
 
 | `range`   | `1.2.3` becomes |
@@ -179,7 +182,7 @@ shared: share({
 
 Any prefix already on the detected version is replaced, and a prerelease tag is kept (`2.0.0-next.1` becomes `^2.0.0-next.1`). A multi-comparator range such as `>=1.0.0 <2.0.0` has no single prefix to rewrite, so it is passed through untouched.
 
-Set `version` alongside `range` to format a version of your own instead of the detected one. `version: 'auto'` means "look the version up", so inside `share()` it takes precedence over a `version` set next to it and falls back to the `package.json` lookup — which fails if the package is not declared there.
+Set `version` alongside `range` to format a version of your own instead of the detected one. `version: 'auto'` means "look the version up", so in a package's config it takes precedence over a `version` set next to it and falls back to the `package.json` lookup — which fails if the package is not declared there.
 
 ## Secondary Entry Points
 
@@ -190,44 +193,23 @@ Many packages expose more than one entry point (e.g. `@angular/common` also ship
 Every directory under the package that contains a `package.json` or that is listed in `exports` becomes its own shared entry:
 
 ```js
-shared: share({
-  "@angular/common": {
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: "auto",
-    includeSecondaries: true,
-  },
-});
+shared: fromPackageJson(base).patch(["@angular/common"], { includeSecondaries: true }),
 ```
 
 ### `{ skip: ... }` — include but filter
 
 ```js
-shared: share({
-  "@angular/common": {
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: "auto",
-    includeSecondaries: {
-      skip: ["@angular/common/http/testing"],
-    },
-  },
-});
+shared: fromPackageJson(base).patch(["@angular/common"], {
+  includeSecondaries: { skip: ["@angular/common/http/testing"] },
+}),
 ```
 
 ### `{ resolveGlob: true }` — expand glob exports
 
-Some packages declare wildcard exports in their `package.json` — for example RxJS exposes `./internal/*`. By default, the `share` helper only emits a bundle for _exact_ entry points, so an import like `rxjs/internal/observable/of` crashes at runtime (the import map only resolves exact matches, never glob paths). You can opt in to glob resolution:
+Some packages declare wildcard exports in their `package.json` — for example RxJS exposes `./internal/*`. By default, the share helpers only emit a bundle for _exact_ entry points, so an import like `rxjs/internal/observable/of` crashes at runtime (the import map only resolves exact matches, never glob paths). You can opt in to glob resolution:
 
 ```js
-shared: share({
-  rxjs: {
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: "auto",
-    includeSecondaries: { resolveGlob: true },
-  },
-});
+shared: fromPackageJson(base).patch(["rxjs"], { includeSecondaries: { resolveGlob: true } }),
 ```
 
 The helper walks the glob and produces a shared bundle for every file it matches — that's _every_ valid file under the glob, recursively. For RxJS this can easily add 300+ entries to `remoteEntry.json`. **Only use `resolveGlob` together with the `ignoreUnusedDeps` feature flag** so the builder prunes anything the entry points don't actually import. You can also narrow the scope yourself with `skip`, which accepts wildcards:
@@ -246,14 +228,7 @@ includeSecondaries: {
 When `ignoreUnusedDeps` is active and you want _all_ secondaries of a package to survive — to guarantee a single, consistent version across every remote — use `keepAll`:
 
 ```js
-shared: share({
-  "@angular/core": {
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: "auto",
-    includeSecondaries: { keepAll: true },
-  },
-});
+shared: fromPackageJson(base).patch(["@angular/core"], { includeSecondaries: { keepAll: true } }),
 ```
 
 `keepAll` is read per **package family** rather than per entry point: every entry point of `@angular/core` is published as long as _something_ still reaches `@angular/core`, while a family nothing imports at all is pruned anyway. That is what keeps the flag meaningful when it is applied to every package at once — it exempts the secondaries from reachability, not the package itself. For a package without secondaries the family is the package, so the flag is a no-op there. To publish everything unconditionally, turn [`ignoreUnusedDeps`](configuration.md#feature-flags) off instead — wildcard `sharedMappings` then still need [`resolveGlob: true`](configuration.md#keeping-mappings-that-nothing-imports).
@@ -317,14 +292,7 @@ Imagine two remotes, each sharing `@angular/core`: `mfe1` on `21.0.2` and `mfe2`
 Use `keepAll: true` on such packages to publish _all_ their secondaries, regardless of which ones the entry points touch:
 
 ```js
-shared: share({
-  "@angular/core": {
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: "auto",
-    includeSecondaries: { keepAll: true },
-  },
-});
+shared: fromPackageJson(base).patch(["@angular/core"], { includeSecondaries: { keepAll: true } }),
 ```
 
 The package itself still has to be reached from an entry point — `keepAll` covers the spread across a package's entry points, and [`ignoreUnusedDeps: false`](configuration.md#feature-flags) covers a package nothing imports at all.
@@ -400,6 +368,21 @@ When enabled, instead of one flat entry per entrypoint, each package becomes one
 > **Note:** The array is uniformly dense — bundler chunks (`@nf-internal/chunk-…`) are emitted in the same `entries` shape, so a consumer only has to handle one entry shape. A chunk is never grouped with anything: it gets its own single-key `entries` map.
 
 The flag is opt-in and fully backward compatible: the runtime auto-detects each entry by shape, so both old and new `remoteEntry.json` load. It is orthogonal to `denseChunking` — the two can be combined. See [Build Artifacts](artifacts.md#dense-externals) for the resulting `remoteEntry.json` shape.
+
+## Preloading a shared package
+
+A browser finds a module's imports only after it has fetched it, so a heavy package can arrive late in a chain of requests. Mark a package that what the remote exposes always needs with `preload: true`, and the orchestrator [fetches it](../orchestrator/configuration.md#preloading) as soon as the import map is in place, before anything imports it:
+
+```js
+shared: fromPackageJson(base).patch(["@my-org/charts"], { preload: true, build: "package" }),
+```
+
+Once one entry point of a package sets it, every entry point of that package does. The package brings every chunk of the bundle it is built in, which has two costs the build warns about:
+
+- In the combined shared bundle (`build: 'default'`) that is the chunks of every package in it, so give a preloaded package `build: 'package'`.
+- Without [`features.denseChunking`](#dense-chunking) there is no list per bundle, so only its entry files are preloaded.
+
+A bundle's list also holds the chunks the package loads lazily, so a library that splits languages, themes or diagrams into lazy chunks preloads all of them.
 
 ## CommonJS externals
 

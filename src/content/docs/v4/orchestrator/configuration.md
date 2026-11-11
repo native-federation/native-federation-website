@@ -77,6 +77,7 @@ type ImportMapOptions = {
     opts?: { override?: boolean },
   ) => Promise<ImportMap>;
   reloadBrowserFn?: () => void;
+  preloadModulesFn?: (urls: string[]) => void;
   trustedTypesPolicyName?: string | false;
 };
 ```
@@ -86,6 +87,7 @@ type ImportMapOptions = {
 | `setImportMapFn`         | `replaceInDOM('importmap')`      | How to commit an import map — by default, replaces any existing `<script type="importmap">` in the DOM.                                                                                                                                                                                                                                                                   |
 | `loadModuleFn`           | `url => import(url)`             | How a module is actually imported. Override when you need the shim loader or custom instrumentation.                                                                                                                                                                                                                                                                      |
 | `reloadBrowserFn`        | `() => window.location.reload()` | Called when the SSE dev feature detects a rebuilt remote. Override for custom reload UX.                                                                                                                                                                                                                                                                                  |
+| `preloadModulesFn`       | `preloadInDOM('modulepreload')`  | Receives the URLs to fetch ahead of their import — see [Preloading](#preloading). Supplying `loadModuleFn` turns the default off; pass `preloadModulesFn` as well to keep it.                                                                                                                                                                                       |
 | `trustedTypesPolicyName` | `'nfo'`                          | Name of the [Trusted Types](security.md#trusted-types) policy that wraps import-map content and dynamic-import URLs in the default `setImportMapFn` and `loadModuleFn`. Pass `false` to opt out (e.g. when the host owns its own Trusted Types pipeline). No effect on browsers that do not support Trusted Types — the wrapper falls back to a transparent pass-through. |
 
 ### Two ready-made presets
@@ -110,14 +112,45 @@ initFederation("http://example.org/manifest.json", {
   loadModuleFn: (url) => customImport(url),
   setImportMapFn: replaceInDOM("importmap"),
 
-  // Option 4 — rename the Trusted Types policy to match a stricter CSP allowlist
+  // Option 4 — rename the Trusted Types policy to match a stricter CSP allowlist.
+  // This reaches the default import map only; pass it to a preset instead: useShimImportMap(cfg, 'my-app-nfo')
   trustedTypesPolicyName: "my-app-nfo",
 });
 ```
 
 > See [Security — Trusted Types](security.md#trusted-types) for the recommended CSP header and how the orchestrator interacts with a host-defined policy.
 
-> **Note:** `useShimImportMap` is required for dynamic init — native import maps can be committed to the DOM only once, while es-module-shims accepts additional maps at runtime.
+> **Note:** With native import maps (`useDefaultImportMap()`), the orchestrator usually adds its import map after module loading has started, and [dynamic init](version-resolver.md#dynamic-init) adds more maps later. That needs a browser that supports multiple import maps: Chrome/Edge 133+ and Safari 18.4+; Firefox only behind the `dom.multiple_import_maps.enabled` preference. There is no feature test for it, so for browsers without support use `useShimImportMap({ shimMode: true })`. See [caniuse](https://caniuse.com/mdn-html_elements_script_type_importmap_multiple_import_maps).
+
+### <a id="preloading"></a> Preloading
+
+A browser finds a module's imports only after it has fetched and parsed it, so a first load is a chain of requests. The orchestrator shortens it by handing `preloadModulesFn` the files that are certain to be needed:
+
+- **On `loadRemoteModule`** — the chunks the exposed module imports statically, in the same tick as its import.
+- **On `preloadRemoteModule(remote, exposedModule)`** — called by the app, for example on hover or when a route is about to open: the exposed module and its chunks. It never rejects; a module it cannot find is logged at debug level.
+- **After the import map is committed**, at init and after `initRemoteEntry` — every shared external whose served copy was built with [`preload: true`](../core/sharing.md#per-package-options): its entry files, and every chunk of the bundle it was built in. Only the copy the import map serves counts. A non-singleton package keeps a copy per remote, and each is served, so marking it fetches every remote's copy at init.
+
+```ts
+const { loadRemoteModule, preloadRemoteModule } = await initFederation(manifest);
+
+button.addEventListener("mouseenter", () => preloadRemoteModule("team/mfe1", "./Dashboard"));
+```
+
+The lists come from `remoteEntry.json`: the `initial` rows of [`exposes[].chunks`](../core/artifacts.md#remoteentryjson), `shared[].preload`, and the chunks per bundle in the top-level `chunks`. A remote built without those fields is not preloaded. A marked package in the combined shared bundle brings the chunks of every package in it (give it `build: 'package'`), and without `features.denseChunking` only its entry files are preloaded. A bundle's list also holds the chunks the package loads lazily, so a library that splits languages, themes or diagrams into lazy chunks preloads all of them.
+
+Call `preloadRemoteModule` under the same rule as `loadRemoteModule`: once every remote the module imports is initialized. The browser fixes a preloaded file's imports at that moment, so a module preloaded before `initRemoteEntry` adds a remote it imports fails to load later.
+
+A custom `preloadModulesFn` may receive the same URLs more than once, for example on every visit to a route. A preload that throws is logged at debug level and never fails the load. In shim mode, es-module-shims reports a failed `modulepreload-shim` fetch as an unhandled rejection, so a missing file (after a partial deploy, say) shows up in error trackers even when the page never imports it.
+
+| Preset                                 | `preloadModulesFn`                                                                       |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `useDefaultImportMap()`                | `preloadInDOM('modulepreload')`: one `<link>` per URL in `document.head`.                |
+| `useShimImportMap({ shimMode: true })` | `preloadInDOM('modulepreload-shim')`, the link type es-module-shims reuses in shim mode. |
+| `useShimImportMap()` (polyfill mode)   | `preloadInDOM('modulepreload')`.                                                         |
+| A custom `loadModuleFn`                | `noPreload`: a custom loader would not reuse the `<link>` fetches.                       |
+| Node (`initNodeFederation`)            | `noPreload`.                                                                             |
+
+To turn preloading off, pass `preloadModulesFn: noPreload` (exported from `/options`, like `preloadInDOM`).
 
 ## <a id="logging"></a> 3. Logging
 
@@ -182,6 +215,7 @@ type ModeOptions = {
     overrideCachedRemotesIfURLMatches?: boolean;
     cacheTag?: string;
     mergeManifests?: boolean;
+    enableDebugging?: boolean;
   };
   feature?: {
     convertFlatSharedInfo?: boolean;
@@ -216,6 +250,7 @@ The profile controls _how_ the resolver picks winners and _whether_ it refreshes
 | `profile.overrideCachedRemotesIfURLMatches` | `false`       | By default, a cached remote is only overridden when its URL changed. Set this to `true` to force refetch even when the URL is identical. Without it, a remote redeployed at the same URL keeps its stored `remoteEntry.json` over a persisted cache, even with a `cacheTag`; deploy each build at its own URL, or enable this. Has no effect under `overrideCachedRemotes: 'never'`. |
 | `profile.cacheTag`                          | _none_        | When set, appended as a `?cacheTag=<value>` query parameter to **every** remote's `remoteEntry.json` request, letting you bust HTTP caches across all remotes at once. The host's own `hostRemoteEntry.cacheTag` takes precedence for the host entry when both are set. |
 | `profile.mergeManifests`                    | `true`        | When `true`, every page's manifest adds to what storage keeps, so remotes from other pages (and ones loaded through `initRemoteEntry`) stay available. Set `false` only when every page passes the same complete manifest: an init then drops the stored remotes its manifest doesn't list, so a remote removed from the manifest stops being served on the next page. See [Remotes a manifest no longer lists](version-resolver.md#remotes-a-manifest-no-longer-lists). |
+| `profile.enableDebugging`                   | `false`       | Development only. When `true`, `initFederation` ranks a copy built in dev mode right after the host when it picks the basis of a shared version, so the remote you are working on serves a package a static sibling of the same version would otherwise serve. On a reload the dev build serves only when the remotes are refetched (`overrideCachedRemotesIfURLMatches`) or storage is in `globalThis`. See [Preferring a dev build while debugging](version-resolver.md#preferring-a-dev-build-while-debugging). |
 
 `overrideCachedRemotes` values:
 
@@ -241,10 +276,10 @@ import {
 } from "@softarc/native-federation-orchestrator/options";
 
 // defaultProfile
-// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false, mergeManifests: true }
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'init-only', overrideCachedRemotesIfURLMatches: false, mergeManifests: true, enableDebugging: false }
 
 // cachingProfile
-// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false, mergeManifests: true }
+// { latestSharedExternal: false, skipInvalidExternalVersions: false, overrideCachedRemotes: 'never',     overrideCachedRemotesIfURLMatches: false, mergeManifests: true, enableDebugging: false }
 
 initFederation("http://example.org/manifest.json", {
   strict: true,
@@ -312,7 +347,7 @@ globalThis.__NF_ORCHESTRATOR__ = {
   storage: {
     // keyed by storageNamespace; every namespace on the page is listed
     __NATIVE_FEDERATION__: {
-      version: "4.8.0", // the orchestrator that published this namespace
+      version: "4.10.0", // the orchestrator that published this namespace
       type: "localStorage", // 'globalThis' | 'localStorage' | 'sessionStorage' | 'custom'
       namespace: "__NATIVE_FEDERATION__",
       keys: ["remotes", "shared-externals", "scoped-externals", "shared-chunks", "cache-state"],

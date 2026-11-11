@@ -100,7 +100,7 @@ exposes: {
 
 ## shared & the share helpers
 
-The `shared` object lists every npm package that should be extracted into its own ESM bundle and reused between host and remotes. Declare each entry by hand with `share`, or share everything in your `package.json` with the `fromPackageJson` builder (recommended) or the older `shareAll` helper. If the property is omitted, `withNativeFederation` falls back to the equivalent of `fromPackageJson({ singleton: true, strictVersion: true, requiredVersion: 'auto', platform: 'browser' })`.
+The `shared` object lists every npm package that should be extracted into its own ESM bundle and reused between host and remotes. Share the dependencies in your `package.json` with the `fromPackageJson` builder (recommended) or the older `shareAll` helper. If the property is omitted, `withNativeFederation` falls back to the equivalent of `fromPackageJson({ singleton: true, strictVersion: true, requiredVersion: 'auto', platform: 'browser' })`.
 
 ```js
 import { withNativeFederation, fromPackageJson } from '@softarc/native-federation/config';
@@ -116,9 +116,9 @@ export default withNativeFederation({
 });
 ```
 
-`fromPackageJson` returns a fluent builder (`.filter()`, `.skip()`, `.override()`, `.patch()`, `.get()`); `shareAll` is the older object-spread equivalent. `shared` also accepts the builder itself, so the trailing `.get()` is optional. Both are covered in full on [Sharing Dependencies](sharing.md).
+`fromPackageJson` returns a fluent builder (`.only()`, `.skip()`, `.override()`, `.patch()`) that you pass to `shared` as is; `shareAll` is the older object-spread equivalent. To hand-pick packages, select them with `.only([...])` and give any of them a config of their own with `.override({...})`. The `share` helper and the builder's `.get()` are deprecated. Both builders are covered in full on [Sharing Dependencies](sharing.md).
 
-Every per-package option (`singleton`, `strictVersion`, `requiredVersion`, `includeSecondaries`, `build`, `chunks`, `platform`, `shareScope`, `pool`) is documented on [Sharing Dependencies](sharing.md).
+Every per-package option (`singleton`, `strictVersion`, `requiredVersion`, `includeSecondaries`, `build`, `chunks`, `platform`, `shareScope`, `pool`, `preload`) is documented on [Sharing Dependencies](sharing.md).
 
 ### Empty vs. populated `shared`
 
@@ -178,6 +178,7 @@ Notes:
 - `skip` still applies on top. For wildcard mappings it is matched against each resolved import (`@my-org/ui/button`), not against the pattern.
 - Mapped paths are read from the tsconfig the build compiles with (the adapter's `tsConfig`, resolved against the workspace root), so sharing and compiling see the same `paths`. They are parsed the way TypeScript does it: `extends` is followed, and targets resolve against `baseUrl` or the file that defines `paths`.
 - Without one, mapped paths come from the workspace root tsconfig — `tsconfig.base.json` if present, otherwise `tsconfig.json`.
+- A remote without any tsconfig builds with no shared mappings. The unused-dependency scan still needs a tsconfig, so such a remote that shares packages also sets [`ignoreUnusedDeps: false`](#feature-flags).
 - Name mappings like npm packages: `package` or `@company/package`, lowercase. A published mapping with another name warns once per package, or fails the build under [`strictImports`](#feature-flags). Subpaths and wildcards (`@company/package/*`) are fine, but they belong to the package their name implies: `build: 'package'`, pruning and `denseExternals` group them under it. To draw the package boundaries yourself, [declare the packages](#declaring-mapping-packages).
 
 ### Per-mapping configuration
@@ -241,13 +242,13 @@ import { withNativeFederation, mappingsFromWorkspace } from '@softarc/native-fed
 export default withNativeFederation({
   name: 'shell',
   sharedMappings: mappingsFromWorkspace({ singleton: true, strictVersion: true })
-    .filter(['@my-org/ui/*', '@my-org/auth-lib'])
+    .only(['@my-org/ui/*', '@my-org/auth-lib'])
     .patch(['@my-org/ui/*'], { singleton: false }),
 });
 ```
 
-- **`.filter(patterns)`** — narrow the selection. Omit it to select every mapped path, the same default as omitting `sharedMappings`.
-- **`.patch(patterns, cfg)`** — annotate a subset. It never *widens* the selection: patching a pattern that `.filter()` excluded is ignored with a warning.
+- **`.only(patterns)`** — narrow the selection. Repeated calls add to it; omit it to select every mapped path, the same default as omitting `sharedMappings`. `.filter()` is the same method under its older name.
+- **`.patch(patterns, cfg)`** — annotate a subset. It never *widens* the selection: patching a pattern that `.only()` excluded is ignored with a warning.
 - **`.package(prefix, cfg?)`** — declare a package boundary. See [Declaring mapping packages](#declaring-mapping-packages).
 - **`.get()`** — materialize the `sharedMappings` array. It is optional: `sharedMappings` also accepts the builder itself.
 
@@ -267,7 +268,7 @@ sharedMappings: mappingsFromWorkspace({ singleton: true })
 - Every mapping that equals the prefix or sits under it at a `/` belongs to that package, so a declaration can be finer or coarser than the name rule. When declarations nest, the longest prefix wins.
 - Mappings outside every declaration keep the name rule.
 - A declared package has exactly one config: the builder's base config (minus `build`) merged with `cfg`. A `.patch()` or pattern config that targets a mapping inside a declared package fails the build — set it on the `.package()` call instead. `build` isn't accepted on a declaration.
-- A declaration selects nothing on its own; `.filter()` still decides which mappings are shared.
+- A declaration selects nothing on its own; `.only()` still decides which mappings are shared.
 - The entry points of one declared package must read the same version from their `package.json`; the build checks this before anything is bundled.
 - A prefix is a package name — `package` or `@company/package`, optionally with subpaths (`@company/package/ui`) — without a `*`. A prefix that no tsconfig `paths` key reaches logs a warning.
 
@@ -460,38 +461,27 @@ features: { ignoreUnusedDeps: true },
 ### Hand-pick a small set of shared packages
 
 ```js
-shared: {
-  ...share({
-    '@angular/core': {
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: 'auto',
-      includeSecondaries: { keepAll: true },
-    },
-    'rxjs': {
+shared: fromPackageJson({ singleton: true, strictVersion: true, requiredVersion: 'auto' })
+  .only(['@angular/core', 'rxjs'])
+  .patch(['@angular/core'], { includeSecondaries: { keepAll: true } })
+  .override({
+    rxjs: {
       singleton: true,
       strictVersion: true,
       requiredVersion: 'auto',
       includeSecondaries: { resolveGlob: true, skip: 'rxjs/internal/testing/*' },
     },
   }),
-},
 features: { ignoreUnusedDeps: true },
 ```
+
+`.only()` picks the packages from `package.json`, which then take the base options (plus any `.patch()`); a package in `.override()` takes the complete config given there instead.
 
 ### Keep every build on the same framework entry points
 
 ```js
-shared: {
-  ...share({
-    '@angular/core': {
-      singleton: true,
-      strictVersion: true,
-      requiredVersion: 'auto',
-      includeSecondaries: { keepAll: true },
-    },
-  }),
-},
+shared: fromPackageJson({ singleton: true, strictVersion: true, requiredVersion: 'auto' })
+  .patch(['@angular/*'], { includeSecondaries: { keepAll: true } }),
 features: { ignoreUnusedDeps: true },
 ```
 

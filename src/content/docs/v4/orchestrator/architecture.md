@@ -46,7 +46,16 @@ Every remote publishes one `remoteEntry.json`. It lists the modules the remote e
 ```json
 {
   "name": "team/remote1",
-  "exposes": [{ "key": "./comp-a", "outFileName": "component-a.js" }],
+  "exposes": [
+    {
+      "key": "./comp-a",
+      "outFileName": "component-a.js",
+      "chunks": {
+        "@nf-internal/chunk-EFGH5678": { "file": "chunk-EFGH5678.js", "initial": true },
+        "@nf-internal/chunk-IJKL9012": { "file": "chunk-IJKL9012.js" }
+      }
+    }
+  ],
   "shared": [
     {
       "packageName": "dep-a",
@@ -55,7 +64,8 @@ Every remote publishes one `remoteEntry.json`. It lists the modules the remote e
       "requiredVersion": "~1.2.1",
       "strictVersion": false,
       "singleton": true,
-      "bundle": "browser-dep-a"
+      "bundle": "browser-dep-a",
+      "preload": true
     },
     {
       "packageName": "dep-b",
@@ -79,6 +89,8 @@ Every remote publishes one `remoteEntry.json`. It lists the modules the remote e
 }
 ```
 
+An exposed module's optional `chunks` map lists the files of its own build it reaches, keyed by import name; `initial` marks the ones it imports statically, which `loadRemoteModule` [preloads](configuration.md#preloading) next to the module.
+
 The optional `integrity` map (added by `@softarc/native-federation` when built with `features.integrityHashes: true`) carries an SRI hash per emitted file, keyed by `outFileName`. The orchestrator resolves these to absolute URLs and emits them under the `integrity` block of the generated import map — see [Security — Subresource Integrity](security.md#subresource-integrity) for the end-to-end trust chain.
 
 #### Shared external properties
@@ -94,6 +106,7 @@ The optional `integrity` map (added by `@softarc/native-federation` when built w
 | `outFileName`     | File name, relative to the remote's scope URL.                                                                                                                     |
 | `bundle`          | Optional name of the shared bundle this external belongs to — the key the orchestrator uses to look up sibling chunk files in the shared-chunks cache (v4 opt-in). |
 | `pool`            | Optional label that groups coupled externals into a pool, so a remote takes the whole family from one build. See [Dependency Pooling](pooling.md).                 |
+| `preload`         | Optional: fetch this external's files, with every chunk of its bundle, once the import map is committed. See [Preloading](configuration.md#preloading).            |
 | `dev`             | Optional dev-mode metadata (original source path, etc).                                                                                                            |
 
 ## <a id="caches"></a> Internal caches
@@ -102,7 +115,7 @@ After fetching metadata, the orchestrator keeps four caches in memory (and optio
 
 ### Remote information cache
 
-A plain map of remote name → scope URL + exposed modules:
+A plain map of remote name → scope URL + exposed modules (each with the `initial` chunk files it preloads, when the build published any):
 
 ```json
 {
@@ -135,14 +148,14 @@ Dependencies with `singleton: true` become _shared externals_. The cache groups 
             "action": "share",
             "remotes": [
               {
-                "file": "dep-a.js",
+                "entries": { "dep-a": "dep-a.js" },
                 "name": "team/mfe1",
                 "requiredVersion": "~1.2.1",
                 "strictVersion": false,
                 "cached": true
               },
               {
-                "file": "dep-a.js",
+                "entries": { "dep-a": "dep-a.js" },
                 "name": "team/mfe2",
                 "requiredVersion": "~1.2.1",
                 "strictVersion": false,
@@ -156,7 +169,7 @@ Dependencies with `singleton: true` become _shared externals_. The cache groups 
             "action": "skip",
             "remotes": [
               {
-                "file": "dep-a.js",
+                "entries": { "dep-a": "dep-a.js" },
                 "name": "team/mfe2",
                 "requiredVersion": "^1.2.1",
                 "strictVersion": true,
@@ -174,19 +187,19 @@ Dependencies with `singleton: true` become _shared externals_. The cache groups 
 }
 ```
 
-Each shared external also stores its `servingBuild`: the one remote every specifier of its package is served from in that scope (see [One build per package](version-resolver.md#one-build-per-package)). A shared external in a [pool](pooling.md) also carries the pool's `poolName` and `poolWinner`, and each of its remote entries may carry the declared `pool` label, a `servedBy` build and a `poolCause` — see [What pooling stores](pooling.md#what-pooling-stores).
+`entries` maps every specifier a copy ships to its file. Each shared external also stores its `servingBuild`: the one remote every specifier of its package is served from in that scope (see [One build per package](version-resolver.md#one-build-per-package)). A shared external in a [pool](pooling.md) also carries the pool's `poolName` and `poolWinner`, and each of its remote entries may carry the declared `pool` label, a `servedBy` build and a `poolCause` — see [What pooling stores](pooling.md#what-pooling-stores).
 
 The three possible actions — `share`, `skip`, `scope` — come out of the resolver. The `dirty` flag marks scopes whose version list changed since the last resolution pass; only dirty scopes get re-resolved, which keeps warm reloads fast.
 
 ### Scoped externals cache
 
-Dependencies with `singleton: false` are always scoped to their remote. The cache is a simple map `remoteName → packageName → { tag, file, bundle? }`; the import-map builder later joins each `file` to the owning remote's `scopeUrl`:
+Dependencies with `singleton: false` are always scoped to their remote. The cache is a simple map `remoteName → packageName → { tag, entries, bundle?, preload? }`; the import-map builder later joins each file in `entries` to the owning remote's `scopeUrl`:
 
 ```json
 {
   "scoped-externals": {
     "team/mfe1": {
-      "dep-b": { "tag": "4.5.6", "file": "dep-b.js" }
+      "dep-b": { "tag": "4.5.6", "entries": { "dep-b": "dep-b.js" } }
     }
   }
 }

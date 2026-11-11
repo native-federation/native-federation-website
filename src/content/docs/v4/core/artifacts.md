@@ -35,6 +35,7 @@ interface FederationInfo {
 interface ExposesInfo {
   key: string; // e.g. './component'
   outFileName: string; // path relative to remoteEntry.json
+  chunks?: ChunkMap; // the chunks of this build the module reaches
   element?: string; // custom-element tag name, when set on the exposes entry
   dev?: { entryPoint: string };
 }
@@ -49,8 +50,11 @@ type SharedInfo = {
   bundle?: string; // present when denseChunking is enabled
   shareScope?: string;
   pool?: string; // orchestrator resource-pool hint
+  preload?: true; // set when the package opts into preloading
   dev?: { entryPoint: string };
 };
+
+type ChunkMap = Record<string, { file: string; initial?: true }>; // keyed by import name
 ```
 
 ### Example
@@ -122,6 +126,23 @@ When `features.denseChunking` is enabled, chunks move off the `shared` array and
 ```
 
 Each shared entry gets a `bundle` property pointing at its chunk bundle by name. Shared mappings build apart from the exposed modules, so their chunks list under their own bundle (`mapping-bundle`, or `mapping-<name>` for a mapping with [`build`](configuration.md#mapping-bundles) set), and each mapping carries that bundle's name. The result is a smaller, more cache-friendly `remoteEntry.json` — and the runtime can skip entire chunk groups whose dependencies aren't part of the final import map.
+
+### Exposed module chunks
+
+Each exposed module lists in `chunks` every file of its own build it reaches, directly or through each other: relative imports and the build's own `@nf-internal` chunks, static or through a literal `import()`. A row is keyed by the file's import name. `initial: true` marks the files reached by static imports alone; chunks reached only through `import()` are listed without it. A module that reaches no chunk has no `chunks`.
+
+```json
+{
+  "key": "./component",
+  "outFileName": "component-Q4XS7K1T.js",
+  "chunks": {
+    "@nf-internal/chunk-AB23CD45": { "file": "chunk-AB23CD45.js", "initial": true },
+    "@nf-internal/chunk-EF67GH23": { "file": "chunk-EF67GH23.js" }
+  }
+}
+```
+
+The orchestrator [preloads](../orchestrator/configuration.md#preloading) the `initial` rows next to the module. A shared package marked [`preload: true`](sharing.md#preloading-a-shared-package) carries `preload` on its record and preloads every chunk of the bundle it is built in, as the top-level `chunks` lists it.
 
 ## Dense Externals
 

@@ -117,6 +117,17 @@ Declared packages that import each other run from one build only when they share
 
 The host's build serves every package it ships. Otherwise the orchestrator picks the build that causes the fewest extra downloads, preferring one that ships every entrypoint the other remotes import. A [pooled](pooling.md) package takes its pool's elected build, and in the `strict` scope each version is served from one build of its own.
 
+A served file binds its bare imports through the scope of the build that serves it, whoever imports it. When that build scopes one of those imports, a consumer of the file can bind the serving build's copy rather than the one it runs itself.
+
+### <a id="preferring-a-dev-build-while-debugging"></a> Preferring a dev build while debugging
+
+In development, a statically served remote can win over the one you are working on, for instance on the name when both ship the same version, so a library edit never shows up. With [`profile.enableDebugging`](configuration.md#profile) on, `initFederation` ranks a **dev** copy right after the host when it picks which copy of a version serves it: host > dev > cached > widest coverage > name. A copy is dev when its `remoteEntry.json` marks the external with `dev`, which a build in dev mode does.
+
+- Dev means built in dev mode, not served live: an `ng build -c development` served statically counts too. Two dev copies rank on the usual rules.
+- The rule applies to page-load init only. A runtime load (`initRemoteEntry`) and pooling keep the usual order, so a committed copy is never displaced, and the host still always wins.
+- A warm page does not refetch a remote at an unchanged URL, and a cached static copy then keeps serving because it costs no download. To pick up the dev build on a reload, set [`profile.overrideCachedRemotesIfURLMatches`](configuration.md#profile) or keep storage in `globalThis`, which a reload clears.
+- Turning the flag off does not repoint a dev copy stored while it was on: it keeps serving until its remote is refetched.
+
 ### Entrypoint coverage and tearing
 
 The serving build does not always ship every specifier a consumer imports. A remote deduped onto the shared version can import a secondary entrypoint the serving build lacks:
@@ -306,7 +317,7 @@ The election picks the build that serves the most remotes (always the host's, wh
 
 ## <a id="dynamic-init"></a> Dynamic init — adding remotes after the fact
 
-> **Note:** Dynamic init currently requires `useShimImportMap({ shimMode: true })` — native import maps can only be committed to the DOM once.
+> **Note:** With native import maps (`useDefaultImportMap()`), dynamic init needs a browser that supports multiple import maps; otherwise use `useShimImportMap({ shimMode: true })`. See [Configuration — Import-map implementation](configuration.md#import-map).
 
 Dynamic init lets you load an additional remote _after_ `initFederation` has finished. It is **additive only**: it can add new dependencies to existing scopes, but it cannot replace, modify or remove anything the initial pass resolved.
 

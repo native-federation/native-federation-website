@@ -108,6 +108,6 @@ After a successful build you'll find a `remoteEntry.json` alongside the bundled 
 ## Next Steps
 
 - [Configuration](configuration.md) — every option on `withNativeFederation`.
-- [Sharing Dependencies](sharing.md) — `share`, `shareAll`, secondary entry points.
+- [Sharing Dependencies](sharing.md) — `fromPackageJson`, `shareAll`, secondary entry points.
 - [Build Process](build-process.md) — the full `federationBuilder` lifecycle, including watch-mode rebuilds.
 - [Build Adapters](build-adapters.md) — implement `NFBuildAdapter` to support a new bundler.

@@ -25,7 +25,7 @@ Include `init-registry.mjs` **before** the rest of your scripts (including the o
 
 ```html
 <script
-  src="https://unpkg.com/@softarc/native-federation-orchestrator@4.8.0/init-registry.mjs"
+  src="https://unpkg.com/@softarc/native-federation-orchestrator@4.10.0/init-registry.mjs"
   data-max-streams="50"
   data-max-events="50"
   data-remove-percentage="50"
@@ -222,7 +222,7 @@ __NF_REGISTRY__.on('analytics.click', ({ data }) => track(data), { replay: 0 });
 
 ```js
 __NF_REGISTRY__.on(
-  'orch.module-loaded',
+  'app.diagnostics',
   ({ data, timestamp }) => debugPanel.append({ ...data, at: timestamp }),
   { replay: 50 }
 );

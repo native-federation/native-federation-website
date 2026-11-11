@@ -64,7 +64,7 @@ Because the cache is scoped by project name, two remotes in the same monorepo do
 A cache hit is decided by a SHA-256 checksum over everything that affects a bundle's output:
 
 - the packages in the bundle and their **installed** versions — the version actually resolved from `node_modules`, not the range declared in your config,
-- their sharing metadata: `requiredVersion`, `singleton`, `strictVersion`, `shareScope` and `pool`,
+- their sharing metadata: `requiredVersion`, `singleton`, `strictVersion`, `shareScope`, `pool` and `preload`,
 - the bundle's `chunks` setting,
 - the [feature flags](configuration.md#feature-flags), the builder version, and whether it's a dev or a prod build,
 - the build adapter's identity and the adapter options that change shared bundles, when the adapter declares them (see [`externalsCacheKey`](../adapters/build-your-own.md#1-the-contract)).
