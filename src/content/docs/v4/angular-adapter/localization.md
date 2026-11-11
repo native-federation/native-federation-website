@@ -19,7 +19,7 @@ export default withNativeFederation({
 
 The core scans your entry points and only ships the locale files you actually import — no manual list, no surprises. New v4 projects get this enabled by default.
 
-How does it work? `withNativeFederation` in the Angular adapter strips every `@angular/common/locales/*` entry from the _shared_ map when `ignoreUnusedDeps` is off. With the flag on, locale entries are kept and the unused-deps shaking does the right thing on a per-entry basis.
+How does it work? With `ignoreUnusedDeps` off, `withNativeFederation` in the Angular adapter strips the `@angular/common/locales/*` entries from the _shared_ map, except the ones you list with `shareAngularLocales`. With the flag on, locale entries are kept and the unused-deps shaking does the right thing on a per-entry basis.
 
 ## Fallback: `shareAngularLocales`
 
@@ -41,7 +41,7 @@ export default withNativeFederation({
 });
 ```
 
-`shareAngularLocales` generates one shared entry per locale, pre-wiring its package info to `node_modules/@angular/common/locales/<locale>.js`.
+`shareAngularLocales` generates one shared entry per locale, published at the installed `@angular/common` version.
 
 ### Options
 
@@ -49,12 +49,15 @@ export default withNativeFederation({
 shareAngularLocales(keys: string[], opts?: {
   config?: ExternalConfig;
   legacy?: boolean;
+  pool?: string;
+  build?: ExternalConfig['build'];
 })
 ```
 
 - **`keys`** — locale codes to share. Anything available under `@angular/common/locales`.
 - **`opts.config`** — overrides the per-entry shared config. Defaults to `{ singleton: true, strictVersion: true, requiredVersion: 'auto' }`.
 - **`opts.legacy`** — use the old `.mjs` filenames instead of `.js`. Only relevant for older `@angular/common` versions.
+- **`opts.pool`**, **`opts.build`** — _Since 22.2.5._ Win over the same fields in `config`. Match how `@angular/common` is shared, or the locales end up in a second bundle and a second `@angular/common` record. See [Angular Config → shareAngularLocales](configuration.md#shareangularlocales--locale-handling).
 
 ## Automatic Shell Reloading
 

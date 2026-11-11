@@ -105,7 +105,7 @@ export default withNativeFederation({
 });
 ```
 
-Unlike the core's `fromPackageJson`, this adapter's version pre-seeds `NG_SKIP_LIST` — the same list `shareAll` uses — so Angular-internal and localization packages are skipped out of the box and `.skip()` only lists what is specific to your app. The builder methods (`.filter`, `.skip`, `.override`, `.patch`, `.get`) are otherwise identical, and `shared` accepts the builder without a trailing `.get()`; see [core configuration → shared](../core/configuration.md#shared--the-share-helpers).
+Unlike the core's `fromPackageJson`, this adapter's version pre-seeds `NG_SKIP_LIST` — the same list `shareAll` uses — so Angular-internal and localization packages are skipped out of the box and `.skip()` only lists what is specific to your app. The builder methods (`.only`, `.skip`, `.override`, `.patch`) are otherwise identical, and `shared` takes the builder as is; `.get()` and the `share` helper are deprecated, as in the core. See [core configuration → shared](../core/configuration.md#shared--the-share-helpers).
 
 ## Platform Inference
 
@@ -164,7 +164,18 @@ export default withNativeFederation({
 });
 ```
 
-`shareAngularLocales(keys, opts?)` generates one shared entry per locale key, pre-wiring the `packageInfo.entryPoint` at `node_modules/@angular/common/locales/<key>.js`. Pass `opts.config` to override the default `{ singleton: true, strictVersion: true, requiredVersion: 'auto' }`; pass `opts.legacy: true` to use the old `.mjs` filenames if your `@angular/common` still ships them.
+`shareAngularLocales(keys, opts?)` generates one shared entry per locale key (`@angular/common/locales/<key>`), published at the installed `@angular/common` version. Pass `opts.config` to override the default `{ singleton: true, strictVersion: true, requiredVersion: 'auto' }`; pass `opts.legacy: true` to use the old `.mjs` filenames if your `@angular/common` still ships them.
+
+_Since 22.2.5_ it also takes `opts.pool` and `opts.build`, which win over the same fields in `config`. Set them the way `@angular/common` is shared, so the locales join its pool and its bundle. With a different `build`, the locale lands in a second bundle and the remote publishes a second `@angular/common` record:
+
+```ts
+shared: {
+  ...shareAll({ singleton: true, strictVersion: true, requiredVersion: "auto", build: "package" }),
+  ...shareAngularLocales(["en", "de", "fr"], { build: "package" }),
+},
+```
+
+When `@angular/common` is in a [pool](../orchestrator/pooling.md), pass the same label as `pool`.
 
 See [Localization](localization.md) for the wider context.
 
@@ -254,7 +265,7 @@ export default withNativeFederation({
     singleton: true,
     strictVersion: true,
   })
-    .filter(["@my-org/ui/*", "@my-org/auth-lib"])
+    .only(["@my-org/ui/*", "@my-org/auth-lib"])
     .patch(["@my-org/ui/*"], { singleton: false }),
 });
 ```
@@ -288,8 +299,7 @@ export default withNativeFederation({
     requiredVersion: "auto",
     build: "package",
   })
-    .patch(["@angular/*"], { includeSecondaries: { keepAll: true } })
-    .get(),
+    .patch(["@angular/*"], { includeSecondaries: { keepAll: true } }),
 
   //sharedMappings: mappingsFromWorkspace({ singleton: true }).filter(['@my-org/*']).get(),
 
