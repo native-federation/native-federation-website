@@ -122,6 +122,8 @@ Native DOM events are fire-and-forget: a listener attached after the event fires
 
 > **Note:** The registry is also a clean channel for remote-to-remote communication after initialization — any module can `emit` and any other can `onReady`. See the [Event Registry](event-registry.md) reference for the full API.
 
+> [!WARNING] **The event registry is deprecated** and removed in v5. For communication between micro frontends, use the [Communication](../communication/index.md) bus instead. From orchestrator 4.10.1 on, the quickstart also announces `orch.init-ready` on that bus — see [Migrating from the Registry](../communication/migrating-from-registry.md).
+
 > **Important:** `window.__NF_REGISTRY__` only exists after `init-registry.mjs` runs (or after you call `createRegistry` yourself in a custom orchestrator setup). If the script tag is missing, the orchestrator quietly falls back to the legacy `mfe-loader-available` `CustomEvent` and any consumer that calls `__NF_REGISTRY__.onReady(...)` will throw. See [Event Registry — Installation](event-registry.md#installation).
 
 ## <a id="custom-implementation"></a> 3. Custom orchestrator — production builds

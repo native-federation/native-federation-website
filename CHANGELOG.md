@@ -25,6 +25,14 @@ Repo: https://github.com/native-federation/orchestrator
 | 2026-06-01 | `4.2.2` | `4c9f8cc` |
 | 2026-05-26 | `4.2.1` | `3da79c8` |
 
+## `@softarc/native-federation-communication`
+
+Repo: https://github.com/native-federation/communication
+
+| Date       | Version        | Commit    |
+| ---------- | -------------- | --------- |
+| 2026-11-14 | `4.0.0-next.1` | `64154bf` |
+
 ## `@softarc/native-federation-esbuild`
 
 Repo: https://github.com/native-federation/esbuild-adapter

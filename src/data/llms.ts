@@ -7,12 +7,13 @@ const INTRO = `> Native Federation is a browser-native implementation of Module 
 
 This file indexes the Native Federation documentation for LLMs and AI coding tools. Each link points to a standalone markdown version of the corresponding docs page, mirroring the site's folder structure.`;
 
-const LAYERS_V4 = `The ecosystem is split into four layers:
+const LAYERS_V4 = `The ecosystem is split into four layers, plus a communication package:
 
 - **Core** (\`@softarc/native-federation\`) — the tooling-agnostic builder that consumes a \`federation.config.mjs\` and produces a \`remoteEntry.json\` plus an import map.
 - **Orchestrator** (\`@softarc/native-federation-orchestrator\`) — the host-side runtime: version negotiation across many remotes, caching, and SRI verification.
 - **Adapters** — wire the core into a specific build tool (esbuild, Vite, Angular CLI).
-- **Runtime** (\`@softarc/native-federation-runtime\`) — the classic host runtime the Orchestrator replaces; end-of-life.`;
+- **Runtime** (\`@softarc/native-federation-runtime\`) — the classic host runtime the Orchestrator replaces; end-of-life.
+- **Communication** (\`@softarc/native-federation-communication\`) — a page-wide channel bus (\`globalThis.__NF_BUS__\`) shared by every micro frontend; supersedes the Orchestrator's event registry.`;
 
 const LAYERS_V3 = `The v3 ecosystem is split into three layers:
 
@@ -57,12 +58,20 @@ const DESCRIPTIONS: Record<string, string> = {
 	'orchestrator/version-resolver': 'how shared-dependency version conflicts are resolved',
 	'orchestrator/pooling': 'isolating shared dependencies into separate pools',
 	'orchestrator/event-registry':
-		'`window.__NF_REGISTRY__` — race-free init, cross-MFE resources and event streams',
+		'`window.__NF_REGISTRY__` — race-free init, cross-MFE resources and event streams; deprecated in favour of the communication bus',
 	'orchestrator/node': '`initNodeFederation` and the `module.register()` loader hook',
 	'orchestrator/module-federation':
 		"`createGetShared` — bridge resolved singletons into webpack Module Federation's `shared` config",
 	'orchestrator/security': 'subresource integrity for remote entries and their chunks',
 	runtime: 'the end-of-life classic runtime and the gaps that motivated the Orchestrator',
+
+	communication: 'the page-wide channel bus for micro frontends — what it solves and a quick start',
+	'communication/getting-started': 'install with a bundler or a script tag, state channels and commands',
+	'communication/api': '`emit`, `on`, `peek`, delivery rules and pitfalls',
+	'communication/typing': 'checked channels via the `Channels` interface, typed handles, strict names',
+	'communication/recipes': 'Angular, React, RxJS, `firstValue`, custom elements, SSR and testing',
+	'communication/multiple-copies': 'how every copy shares one `__NF_BUS__`, the protocol, Node and other runtimes',
+	'communication/migrating-from-registry': 'moving from the orchestrator\'s `__NF_REGISTRY__` to the bus',
 
 	core: 'what the core package does and its public surface',
 	'core/getting-started': 'install, minimal config, wire the builder',

@@ -1,0 +1,123 @@
+# Typing
+
+> Checked channel values in TypeScript and JavaScript: declare each channel once, then use typed handles or a strict view to catch mistakes at build time.
+
+> [!INFO] **Beta — feedback wanted.** The communication package is in pre-release (`4.0.0-next.1`), and its API may still change before 4.0.0. Tried it? Tell us what works and what doesn't in the [GitHub issues](https://github.com/native-federation/communication/issues).
+
+Types are optional: plain JavaScript gets the full API. To check channel values, declare each channel
+once in the package's `Channels` interface:
+
+```ts
+// channels.d.ts
+export {}; // keeps the file a module, so this adds to the package's types instead of replacing them
+
+declare module '@softarc/native-federation-communication' {
+  interface Channels {
+    'cart:changed': { count: number };
+    // command: emit with { retain: false }
+    'ui:toast': { text: string };
+  }
+}
+```
+
+```ts
+bus.emit('cart:changed', { count: 3 }); // ok
+bus.emit('cart:changed', { cnt: 3 }); // error
+bus.on('cart:changed', ({ count }) => {}); // count: number
+```
+
+Types apply to `bus` and `createBus()`. `globalThis.__NF_BUS__` stays untyped, because every copy of the
+package declares it.
+
+## In JavaScript
+
+Keep the same `channels.d.ts` and start a `.js` file with `// @ts-check` (or set `checkJs` in
+`jsconfig.json`). Your editor then completes channel names and flags wrong values. In JSDoc, name a
+value type as `import('@softarc/native-federation-communication').ChannelValue<'cart:changed'>`.
+
+## What the types don't catch
+
+- **A misspelt name is just another channel.** It compiles, with an `unknown` value. Export the names as
+  constants from your contracts module.
+- **Augment the package name, never `'./domain'`.** Mixing the two in one app can silently drop
+  declarations.
+- **An undeclared channel is `unknown`**, not `any`: narrow the value before you use it, or cast it
+  where you can see it: `bus.peek('legacy:cart') as Cart | undefined`.
+- **A union of names takes a union of values.** With `name: 'cart:changed' | 'ui:toast'`,
+  `bus.emit(name, value)` accepts either channel's value. Emit with a literal name.
+- **Commands.** Mark them in the declaration, as above, and emit them through one typed helper:
+
+  ```ts
+  export const showToast = (toast: ChannelValue<'ui:toast'>): void =>
+    bus.emit('ui:toast', toast, { retain: false });
+  ```
+
+- **Other deploys.** A deployed producer can still send a shape a deployed consumer doesn't expect.
+
+## Typed handles
+
+To name a channel once and get its value type from `Channels`, wrap it in a handle:
+
+```ts
+import {
+  bus,
+  type ChannelName,
+  type ChannelValue,
+  type EmitOptions,
+  type OnOptions,
+} from '@softarc/native-federation-communication';
+
+export const channel = <K extends ChannelName>(name: K) => ({
+  emit: (value: ChannelValue<K>, options?: EmitOptions) => bus.emit(name, value, options),
+  on: (listener: (value: ChannelValue<K>) => void, options?: OnOptions) =>
+    bus.on(name, listener, options),
+  peek: () => bus.peek(name),
+});
+```
+
+```ts
+export const cartChanged = channel('cart:changed');
+cartChanged.emit({ count: 3 });
+cartChanged.on(({ count }) => {});
+```
+
+## Strict channel names
+
+`bus` accepts any name, so a typo becomes a new channel. To make it a compile error, use a view that
+only takes declared names:
+
+```ts
+import {
+  bus,
+  type Channels,
+  type EmitOptions,
+  type OnOptions,
+  type Unsubscribe,
+} from '@softarc/native-federation-communication';
+
+// Accepts declared channels only, so a misspelt name is a compile error.
+export type StrictBus = {
+  emit<K extends keyof Channels>(channel: K, value: Channels[K], options?: EmitOptions): void;
+  on<K extends keyof Channels>(
+    channel: K,
+    listener: (value: Channels[K]) => void,
+    options?: OnOptions
+  ): Unsubscribe;
+  peek<K extends keyof Channels>(channel: K): Channels[K] | undefined;
+};
+
+export const strictBus = bus as StrictBus;
+```
+
+## Sharing the declarations
+
+Every producer and consumer must see the declaration: put it in a types-only contracts package that
+each remote includes, or copy the `.d.ts` into each repo (simpler, but copies drift). Two different
+types for one channel are a compile error, which shows the drift at build time.
+
+## Evolving a channel
+
+- Name channels `team:subject:verb`, such as `checkout:cart:changed`, so ownership is clear.
+- Use object values, even for one field, so you can add fields later.
+- Make a breaking change under a new name, such as `cart:changed.v2`, and emit both until every
+  consumer has moved.

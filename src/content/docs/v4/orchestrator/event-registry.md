@@ -15,6 +15,8 @@ The registry distinguishes two concepts:
 - **Resources** — fire-and-latch values, delivered through `register` / `onReady`. Once registered, every future `onReady` consumer fires immediately. Use these for one-shot readiness signals (the orchestrator itself uses this for `orch.init-ready`).
 - **Event streams** — append-only buffers, delivered through `emit` / `update` / `on`. Streams are bounded by `maxEvents` and (optionally) `maxStreams`, and subscribers get configurable history replay.
 
+> [!WARNING] **Deprecated.** The event registry is superseded by [Communication](../communication/index.md) (`@softarc/native-federation-communication`), a page-wide channel bus that every copy on the page shares. The registry keeps working in 4.x, but gets no new features or fixes, and is removed in v5. See [Migrating from the Registry](../communication/migrating-from-registry.md).
+
 ## Installation
 
 There are two supported ways to make `window.__NF_REGISTRY__` available; pick the one that matches how you ship the orchestrator.
