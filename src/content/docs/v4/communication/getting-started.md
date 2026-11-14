@@ -11,7 +11,7 @@ TypeScript is optional; to check channel values, see [Typing](typing.md).
 ### With a bundler
 
 ```bash
-npm install @softarc/native-federation-communication@next
+npm install @softarc/native-federation-communication
 ```
 
 ```js

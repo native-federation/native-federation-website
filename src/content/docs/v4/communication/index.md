@@ -9,7 +9,7 @@ Micro frontends that ship on their own schedules can't hold references to each o
 ## Quick start
 
 ```bash
-npm install @softarc/native-federation-communication@next
+npm install @softarc/native-federation-communication
 ```
 
 ```js
