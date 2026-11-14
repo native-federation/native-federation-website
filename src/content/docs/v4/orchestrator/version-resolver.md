@@ -542,7 +542,7 @@ With `profile.mergeManifests: false`, an init removes every stored remote its ma
 
 ## Troubleshooting
 
-> [!TIP] **See the outcome before decoding error messages.** The [Native Federation DevTools](../devtools.md) Packages tab shows, per package, which version was shared, who provides it, and every participant's declared range and `strictVersion` flag next to whether its own copy was selected. The **Conflicts** filter narrows the list to packages that resolved to more than one version.
+> [!TIP] **See the outcome before decoding error messages.** The [Native Federation DevTools](../devtools.md) Packages tab shows, per package, which version was shared, whose build serves it, and which declared range accepts which version. The **Multiple versions**, **Out of range** and **Isolated** filters narrow the list to the packages the resolver could not settle on one shared copy.
 
 ### Version conflicts
 

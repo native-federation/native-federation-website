@@ -19,7 +19,7 @@ If preparation fails, it's typically because:
 
 ## How do I see which version of a shared package was actually picked — and why?
 
-Install the [Native Federation DevTools](devtools.md) Chrome extension and open its panel on the running application. The Packages tab lists every shared package with the version that won, the participant that provides it, and every other participant's declared range and whether its own copy was selected; the Remotes tab shows the same from one remote's point of view. The panel is read-only and needs no permissions.
+Install the [Native Federation DevTools](devtools.md) extension for Chrome or Firefox and open its panel on the running application. The Packages tab lists every shared package with the version that won, whose build serves it, and who ships and uses it, with each declared range checked against it; the Remotes tab shows the same from one remote's point of view, and the Pools tab explains why a remote left its pool. The panel is read-only and needs no permissions.
 
 ## How do I deal with CommonJS packages?
 
