@@ -367,6 +367,13 @@ p, li {
   transform: translateY(-1px);
 }
 
+/* A row of buttons inside a docs page: left-aligned, wraps with a gap on narrow screens. */
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .btn-primary {
   background: var(--color-primary-dark);
   color: #fff;

@@ -33,6 +33,14 @@ Repo: https://github.com/native-federation/communication
 | ---------- | -------------- | --------- |
 | 2026-11-14 | `4.0.0-next.1` | `64154bf` |
 
+## Native Federation DevTools
+
+Repo: https://github.com/native-federation/devtools
+
+| Date       | Version | Commit    |
+| ---------- | ------- | --------- |
+| 2026-11-14 | `0.3.0` | `1e8087a` |
+
 ## `@softarc/native-federation-esbuild`
 
 Repo: https://github.com/native-federation/esbuild-adapter
