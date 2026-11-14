@@ -17,6 +17,10 @@ To help you find the right information, we broke the information up into section
 - [Orchestrator — Getting Started](orchestrator/getting-started.md) — the drop-in quickstart bundle, the event registry, and writing your own `initFederation` script. _v3 & v4._
 - [Angular Adapter — Runtime](angular-adapter/runtime.md) — the Angular bootstrap split, threading the loader through DI, and dynamic remotes. _v4 (v3 on its [own page](/docs/v3/angular-adapter/runtime/))._
 
+## Communicate between micro frontends
+
+- [Communication — Getting Started](communication/getting-started.md) — a page-wide channel bus that late listeners and every bundled copy share; replaces the orchestrator's event registry. _v4._
+
 ## New to Native Federation?
 
 If you've landed here without context, start with the conceptual pages first:

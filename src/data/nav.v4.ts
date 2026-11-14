@@ -30,6 +30,18 @@ export const navV4: NavSection[] = [
 		],
 	},
 	{
+		section: 'Communication',
+		items: [
+			{ label: 'Overview', id: 'communication' },
+			{ label: 'Getting Started', id: 'communication/getting-started' },
+			{ label: 'API', id: 'communication/api' },
+			{ label: 'Typing', id: 'communication/typing' },
+			{ label: 'Recipes', id: 'communication/recipes' },
+			{ label: 'Multiple Copies', id: 'communication/multiple-copies' },
+			{ label: 'Migrating from the Registry', id: 'communication/migrating-from-registry' },
+		],
+	},
+	{
 		section: 'Core',
 		items: [
 			{ label: 'Overview', id: 'core' },
