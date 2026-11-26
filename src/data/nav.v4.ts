@@ -38,6 +38,7 @@ export const navV4: NavSection[] = [
 			{ label: 'Typing', id: 'communication/typing' },
 			{ label: 'Recipes', id: 'communication/recipes' },
 			{ label: 'Multiple Copies', id: 'communication/multiple-copies' },
+			{ label: 'Cross-tab', id: 'communication/cross-tab' },
 			{ label: 'Migrating from the Registry', id: 'communication/migrating-from-registry' },
 		],
 	},

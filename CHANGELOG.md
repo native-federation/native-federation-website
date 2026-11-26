@@ -31,6 +31,7 @@ Repo: https://github.com/native-federation/communication
 
 | Date       | Version        | Commit    |
 | ---------- | -------------- | --------- |
+| 2026-11-26 | `4.0.0`        | `6e95073` |
 | 2026-11-14 | `4.0.0-next.1` | `64154bf` |
 
 ## Native Federation DevTools

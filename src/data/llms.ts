@@ -66,11 +66,12 @@ const DESCRIPTIONS: Record<string, string> = {
 	runtime: 'the end-of-life classic runtime and the gaps that motivated the Orchestrator',
 
 	communication: 'the page-wide channel bus for micro frontends — what it solves and a quick start',
-	'communication/getting-started': 'install with a bundler or a script tag, state channels and commands',
-	'communication/api': '`emit`, `on`, `peek`, delivery rules and pitfalls',
+	'communication/getting-started': 'install the bus in the host (bundler or script tag), state channels and commands',
+	'communication/api': 'entry points, `emit`, `on`, `peek`, `tap`, `connectTransport`, transports, setup functions, delivery rules and pitfalls',
 	'communication/typing': 'checked channels via the `Channels` interface, typed handles, strict names',
-	'communication/recipes': 'Angular, React, RxJS, `firstValue`, custom elements, SSR and testing',
-	'communication/multiple-copies': 'how every copy shares one `__NF_BUS__`, the protocol, Node and other runtimes',
+	'communication/recipes': 'any framework, custom elements, React, RxJS, `firstValue`, `values`, SSR, React Native ↔ WebView and testing',
+	'communication/multiple-copies': 'how every copy shares one `__NF_BUS__`, the protocol, other runtimes and the 4.x compatibility promises',
+	'communication/cross-tab': 'sharing channels between same-origin tabs with `broadcastChannelTransport`',
 	'communication/migrating-from-registry': 'moving from the orchestrator\'s `__NF_REGISTRY__` to the bus',
 
 	core: 'what the core package does and its public surface',
