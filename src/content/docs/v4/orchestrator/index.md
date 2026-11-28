@@ -21,7 +21,7 @@ The orchestrator stays fully compatible with the Native Federation ecosystem —
 
 ## SSR
 
-On **v4** the Orchestrator runs server-side too, so remote modules **execute during SSR itself** — not just client-side after the page arrives. The [`/node` entry](node.md) installs a `module.register()` loader hook and bridges the host's shared singletons (`hostInstances`) so a remote's `@angular/core` resolves to the host's single instance. For Angular, the adapter's `node-preload` wires this for you — see [Angular Adapter → SSR & Hydration](../angular-adapter/ssr.md). For the general picture see [SSR & Hydration](../ssr-hydration.md).
+On **v4** the Orchestrator runs server-side too, so remote modules **execute during SSR itself** — not just client-side after the page arrives. The [`/node` entry](node.md) installs a `module.register()` loader hook and can bridge the host's shared singletons (`hostInstances`) so a remote's `@angular/core` resolves to the host's single instance. For Angular, the adapter's `node-preload` sets up the server side for you — see [Angular Adapter → SSR & Hydration](../angular-adapter/ssr.md). For the general picture see [SSR & Hydration](../ssr-hydration.md).
 
 > On v3 the Orchestrator was browser-only; a server-rendered host worked but loaded its remotes client-side after the page arrived. True SSR execution is a v4 capability via the `/node` entry.
 

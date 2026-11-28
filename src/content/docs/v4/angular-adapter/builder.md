@@ -165,7 +165,7 @@ initFederation('federation.manifest.json', {
 });
 ```
 
-Native import maps require a recent browser (Chrome/Edge 133+, Safari 18.4+, Firefox 150+); shim mode remains the default for broader compatibility. See [Runtime](runtime.md#initfederation) for the runtime side.
+Native import maps require a recent browser (Chrome/Edge 133+, Safari 18.4+, Firefox 150+); shim mode remains the default for broader compatibility. See [Runtime](runtime.md#initfederation) for the runtime side. An SSR host on native import maps also needs [`rewriteModulePreloads`](ssr.md#native-import-maps) in its `server.ts`.
 
 ## Subresource Integrity
 

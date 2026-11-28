@@ -65,7 +65,7 @@ Manifests decouple configuration from code: to point a host at different remotes
 
 ### Import Map
 
-A [W3C-standard browser feature](https://html.spec.whatwg.org/multipage/webappapis.html#import-maps) for redirecting bare module specifiers to URLs. Native Federation produces an `importmap.json` alongside `remoteEntry.json` in every build. At runtime, the orchestrator merges the import maps of host and remotes, resolves version conflicts, and injects the result into the page so imports like `@angular/core` resolve to the single chosen file.
+A [W3C-standard browser feature](https://html.spec.whatwg.org/multipage/webappapis.html#import-maps) for redirecting bare module specifiers to URLs. Native Federation produces an `importmap.json` alongside `remoteEntry.json` in every build. At runtime, the orchestrator builds the import map from the `remoteEntry.json` of host and remotes, resolves version conflicts, and injects the result into the page so imports like `@angular/core` resolve to the single chosen file.
 
 ### Chunk (`@nf-internal/*`)
 

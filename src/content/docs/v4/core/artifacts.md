@@ -14,7 +14,8 @@ dist/<project>/
 ├── <mapped-path>.js        # one file per shared tsconfig path
 ├── browser-shared-<hash>.js         # shared npm externals (browser)
 ├── node-shared-<hash>.js            # shared npm externals (node)
-└── browser-<package>-<hash>.js      # packages built with build: 'package'
+├── browser-<package>-<hash>.js      # packages built with build: 'package'
+└── browser-pool-<label>-<hash>.js   # packages built with build: 'pool'
 ```
 
 ## `remoteEntry.json`
@@ -85,7 +86,7 @@ It is purely informational: v4 runtimes ignore it, and a manifest without the ke
 
 ## `importmap.json`
 
-A standards-compliant [import map](https://html.spec.whatwg.org/multipage/webappapis.html#import-maps) built from every shared external. The runtime merges import maps from host and remotes at startup and injects the result into the page.
+A standards-compliant [import map](https://html.spec.whatwg.org/multipage/webappapis.html#import-maps) with one entry for every specifier `remoteEntry.json` publishes: shared externals, shared mappings and the chunks of every bundle, exposed and mapping bundles included. A host without the runtime can load an exposed module with this map alone. The orchestrator builds its own import map from `remoteEntry.json`.
 
 ## Chunks and internal splits
 

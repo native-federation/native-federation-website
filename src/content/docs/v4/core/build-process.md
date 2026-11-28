@@ -51,7 +51,7 @@ await federationBuilder.close();
 | `federationConfig` | `string` | yes | Path (relative to `workspaceRoot`) to `federation.config.js`. |
 | `projectName` | `string` | no | Overrides the project name used for cache isolation. Defaults to the `name` field of the federation config. |
 | `tsConfig` | `string` | no | Path to `tsconfig.json`, relative to `workspaceRoot`. Shared mappings are read from its `paths`, following `extends`. |
-| `packageJson` | `string` | no | Override the `package.json` used by `shareAll` for dependency discovery. |
+| `packageJson` | `string` | no | Override the `package.json` used by `fromPackageJson` / `shareAll` for dependency discovery. Relative to `workspaceRoot`. |
 | `entryPoints` | `string[]` | no | Additional entry points considered when `ignoreUnusedDeps` is enabled. Defaults to the values of `exposes`. |
 | `dev` | `boolean` | no | Development mode — influences bundling and enables the build-notifications endpoint. |
 | `watch` | `boolean` | no | Hint to the adapter that it should set up watch mode. |
