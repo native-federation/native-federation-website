@@ -1,6 +1,6 @@
 # SSR & Hydration
 
-> Angular SSR and Incremental Hydration with Native Federation — the v4 `node-preload` launch model, host-singleton bridging, federated routes under SSR, boot order, and readiness gating.
+> Angular SSR and Incremental Hydration with Native Federation — the v4 `node-preload` launch model, native import maps, federated routes under SSR, boot order, and readiness gating.
 
 The Angular adapter supports Angular SSR and Incremental Hydration — both for hosts and remotes. The server side is driven by a `node --import` **preload** that registers the federation loader before Angular evaluates; most of the wiring is done by the `init` schematic when it detects an SSR-enabled project. This page documents what it generates and the moving parts behind it.
 
@@ -13,6 +13,7 @@ The Angular adapter supports Angular SSR and Incremental Hydration — both for 
 - [Production: the node-preload launch contract](#prod)
 - [Dev SSR (`ng serve`)](#dev)
 - [Wiring the loader into Angular](#wiring)
+- [Native import maps and `modulepreload`](#native-import-maps)
 - [Federated routes under SSR](#routes)
 - [Boot order](#boot-order)
 - [Externals on the server](#externals)
@@ -73,12 +74,12 @@ const hostRemoteEntry = pathToFileURL(join(browserDir, 'remoteEntry.json')).href
 
 const { loadRemoteModule } = await initNodeFederation(
   existsSync(manifestPath) ? manifestPath : {},   // remotes have no manifest → {} still works
-  { hostRemoteEntry, hostInstances: 'all' },       // bridge all shared singletons
+  { hostRemoteEntry },
 );
 globalThis['__NF_HOST_SERVER_LOADER__'] = loadRemoteModule;   // read by the app (see Wiring)
 ```
 
-`hostInstances: 'all'` bridges the host's shared singletons so a remote's `@angular/core` (and its secondary entry points, e.g. `@angular/core/rxjs-interop`) resolve to the host's already-loaded instance instead of a duplicate. See [Orchestrator → Node.js / SSR](../orchestrator/node.md) for the mechanism (`__NF_HOST_INSTANCES__`, the `nf-host:` synthesis, `setHostInstances`).
+The host's server bundle and the remotes resolve `@angular/*`, `rxjs` and the other shared packages through the same import map, so each runs once, from the built shared bundles in `dist`. _Since 22.3.0_ the production preload passes no `hostInstances`. See [Orchestrator → Node.js / SSR](../orchestrator/node.md) for host instances.
 
 Beyond ordering, the shipped preload also:
 
@@ -141,6 +142,26 @@ function loadRemote(remoteName: string, exposedModule: string): Promise<unknown>
   return Promise.resolve().then(() => load(remoteName, exposedModule));   // defer the call
 }
 ```
+
+## <a id="native-import-maps"></a> Native import maps and `modulepreload`
+
+With native import maps ([`esmsInitOptions: { shimMode: false }`](builder.md#native-import-maps)), `@angular/ssr` adds a `<link rel="modulepreload">` for each lazy chunk of the rendered route. The browser links those modules as soon as it reads the tags, before `initFederation` has added the import map, so a chunk that imports a shared package fails with `Failed to resolve module specifier "@angular/core"` and the app doesn't boot (seen in Chromium).
+
+_Since 22.3.0_ the adapter's `./ssr` entry exports `rewriteModulePreloads`. Run every response through it in `server.ts`:
+
+```ts
+import { rewriteModulePreloads } from '@angular-architects/native-federation/ssr';
+
+app.use((req, res, next) => {
+  angularApp
+    .handle(req)
+    .then(rewriteModulePreloads)
+    .then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
+    .catch(next);
+});
+```
+
+On an HTML page built with `shimMode: false` it rewrites each `<link rel="modulepreload"` to `<link rel="preload" as="script" crossorigin>`, which still fetches the chunk early but leaves linking to the import. Every other response, shim-mode pages included, passes through unchanged.
 
 ## <a id="routes"></a> Federated routes under SSR
 

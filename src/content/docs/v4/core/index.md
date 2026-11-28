@@ -14,7 +14,7 @@ Given a federation config and a pluggable bundler adapter, the core library:
 - Bundles every **shared** external (and, optionally, its secondary entry points) into standalone EcmaScript modules.
 - Bundles every **exposed** module and every **shared mapped path** from your `tsconfig`.
 - Writes a `remoteEntry.json` describing exposes, shared packages and chunks — the contract between host and remote.
-- Writes a local `importmap.json` that the runtime hands to the browser to wire everything together.
+- Writes a local `importmap.json` that maps everything `remoteEntry.json` publishes, for hosts that load an exposed module without the runtime.
 - Caches already-built shared dependencies (keyed by checksum) so subsequent builds are fast.
 
 ## Where It Fits

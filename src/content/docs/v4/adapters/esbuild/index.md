@@ -52,7 +52,7 @@ npm i @softarc/native-federation-orchestrator
 
 - **Node 18+** — the adapter is ESM-only and uses top-level `await` in typical build scripts.
 - **`"type": "module"`** in your project's `package.json` — the adapter and its entry points are native ESM.
-- **`@softarc/native-federation` ~4.9.0** — a peer dependency, installed next to the adapter. The adapter calls `buildForFederation` / `rebuildForFederation` from it, and your `federation.config.js` imports `withNativeFederation` and `shareAll` from the same copy.
+- **`@softarc/native-federation` ~4.12.0** — a peer dependency, installed next to the adapter. The adapter calls `buildForFederation` / `rebuildForFederation` from it, and your `federation.config.js` imports `withNativeFederation` and `shareAll` from the same copy.
 - **esbuild** ships as a dependency of the adapter, so it needs no separate install.
 
 > **Note:** A complete working example lives at [native-federation-examples-react](https://github.com/Aukevanoost/native-federation-examples-react/) — React 18 + esbuild + Shadow-DOM custom element + orchestrator host page.

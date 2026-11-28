@@ -38,7 +38,7 @@ Update the packages:
     // your dependencies
   },
   "devDependencies": {
-    "@angular-architects/native-federation": "~22.2.0",
+    "@angular-architects/native-federation": "~22.3.0",
     "@softarc/native-federation-orchestrator": "^4.10.0"
   }
 }

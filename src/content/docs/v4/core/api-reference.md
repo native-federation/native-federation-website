@@ -28,7 +28,7 @@ Configuration DSL used inside `federation.config.js`.
 | Export | Kind | Summary |
 | --- | --- | --- |
 | `withNativeFederation(config)` | function | Normalize a user-supplied `FederationConfig` — applies defaults, prepares the skip list, resolves mapped paths. |
-| `fromPackageJson(baseCfg, projectPath?)` | function | Recommended dep-sharing builder. Shares all `package.json` deps and returns a fluent builder (`.only` / `.skip` / `.override` / `.patch`) that `shared` accepts as is. `.filter` is an alias of `.only`; `.get` is deprecated. |
+| `fromPackageJson(baseCfg?, projectPath?)` | function | Recommended dep-sharing builder. Shares all `package.json` deps (without `baseCfg`, as strict singletons with `build: 'package'`) and returns a fluent builder (`.only` / `.skip` / `.override` / `.patch`) that `shared` accepts as is. `.filter` is an alias of `.only`; `.get` is deprecated. |
 | `shareAll(options, opts?)` | function | Share every dependency found in `package.json`. Accepts `overrides` for per-package deviation. |
 | `share(entries, projectPath?, skipList?)` | function | Deprecated — use `fromPackageJson().only([...]).override({...})`. Share a hand-picked set of packages with per-entry options. |
 | `mappingsFromWorkspace(baseCfg?)` | function | Builder for `sharedMappings` — `.only()` (or its alias `.filter()`) narrows the selection, `.patch()` annotates a subset, `.package()` declares a package boundary, `.get()` returns the entry array (optional). See [sharedMappings](configuration.md#mappingsfromworkspace). |
@@ -58,6 +58,7 @@ Utility exports intended for adapter authors. Treated as semi-public; breaking c
 - `AbortedError`,
 - `getChecksum` / `getDefaultCachePath` cache helpers, and the deprecated `hashFile`,
 - `toDiskCase(path)`, which returns a path in the casing it has on disk,
+- `inferProjectPath(projectPath?)`, which resolves a `projectPath` the way `fromPackageJson()` does (against `workspaceRoot`), for a config helper that reads one while the config evaluates,
 - `collectOutputFiles(federationCache)`, the list behind `federationBuilder.outputFiles`,
 - `matchesExternal`, the rule core reads `external` by — for a bundler whose own externals matching differs,
 - the `logger` and `setLogLevel`,

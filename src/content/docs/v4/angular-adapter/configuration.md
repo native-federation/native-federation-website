@@ -95,15 +95,13 @@ import {
 } from "@angular-architects/native-federation/config";
 
 export default withNativeFederation({
-  shared: fromPackageJson({
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: "auto",
-  })
+  shared: fromPackageJson()
     .skip(["rxjs/ajax", "rxjs/fetch"])
     .override({ "large-lib": { singleton: false } }),
 });
 ```
+
+_Since 22.3.0_ the base config is optional. Without one every dependency is shared with `singleton`, `strictVersion`, `requiredVersion: 'auto'` and `build: 'package'`; a base config you pass replaces that default instead of merging into it. See [core → `fromPackageJson`](../core/sharing.md#frompackagejson-recommended).
 
 Unlike the core's `fromPackageJson`, this adapter's version pre-seeds `NG_SKIP_LIST` — the same list `shareAll` uses — so Angular-internal and localization packages are skipped out of the box and `.skip()` only lists what is specific to your app. The builder methods (`.only`, `.skip`, `.override`, `.patch`) are otherwise identical, and `shared` takes the builder as is; `.get()` and the `share` helper are deprecated, as in the core. See [core configuration → shared](../core/configuration.md#shared--the-share-helpers).
 
@@ -211,7 +209,7 @@ export default withNativeFederation({
 | `level`       | `'major' \| 'minor' \| 'patch'` | `'minor'`         | Granularity of the generated scope.         |
 | `dependency`  | `string`                        | `'@angular/core'` | The package whose version drives the scope. |
 | `prefix`      | `string`                        | `'ng'`            | Prepended to the generated name.            |
-| `projectPath` | `string`                        | `cwd()`           | Where to start looking for `package.json`.  |
+| `projectPath` | `string`                        | workspace root | Where to start looking for `package.json`. _Since 22.3.0_ a relative path is resolved against the workspace root. |
 
 The `level` controls the granularity of the generated scope (given `@angular/core` is `21.1.4`):
 
@@ -293,12 +291,7 @@ export default withNativeFederation({
 
   //shareScope: autoShareScope({level: 'minor'}),
 
-  shared: fromPackageJson({
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: "auto",
-    build: "package",
-  })
+  shared: fromPackageJson()
     .patch(["@angular/*"], { includeSecondaries: { keepAll: true } }),
 
   //sharedMappings: mappingsFromWorkspace({ singleton: true }).filter(['@my-org/*']).get(),
@@ -316,7 +309,7 @@ export default withNativeFederation({
 });
 ```
 
-Notable defaults: `build: 'package'` for the per-package build mode (each external gets its own meta file — see [build modes](../core/configuration.md#build-modes-on-a-shared-entry)), `includeSecondaries.keepAll` patched onto every `@angular/*` package (see [below](#why-keepall-for-angularcore)), `denseChunking: true` to compress the `remoteEntry.json`, and [`denseExternals: true`](../core/configuration.md#feature-flags) so each package's entry points travel as one entry. `.patch()` merges into the entries `fromPackageJson` already built, so every Angular package keeps the base options and its installed version. [`strictImports`](../core/configuration.md#unresolvable-bare-imports) is spelled out as `false`; flip it to fail the build on an import nothing resolves. Configs generated before 22.2.0 spread `shareAll(...)` with an `overrides` entry instead; the resolved config is the same.
+Notable defaults: `fromPackageJson()` without a base config shares every dependency as a strict singleton (`singleton`, `strictVersion`, `requiredVersion: 'auto'`) with `build: 'package'` for the per-package build mode (each external gets its own meta file — see [build modes](../core/configuration.md#build-modes-on-a-shared-entry)), `includeSecondaries.keepAll` patched onto every `@angular/*` package (see [below](#why-keepall-for-angularcore)), `denseChunking: true` to compress the `remoteEntry.json`, and [`denseExternals: true`](../core/configuration.md#feature-flags) so each package's entry points travel as one entry. `.patch()` merges into the entries `fromPackageJson` already built, so every Angular package keeps the base options and its installed version. [`strictImports`](../core/configuration.md#unresolvable-bare-imports) is spelled out as `false`; flip it to fail the build on an import nothing resolves. Configs generated before 22.3.0 pass those four options to `fromPackageJson` explicitly, and configs from before 22.2.0 spread `shareAll(...)` with an `overrides` entry; the resolved config is the same.
 
 ### Why `keepAll` for `@angular/core`?
 

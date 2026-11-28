@@ -32,12 +32,12 @@ Everything else has a sensible default. The only required field is `outputPath` 
 | Option | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `outputPath` | `string` | **required** | Directory that receives `remoteEntry.json` and the bundled artifacts. |
-| `workspaceRoot` | `string` | `process.cwd()` | Resolved against `cwd()`. esbuild runs from this directory, and relative `tsConfig`, `cachePath`, `outputPath` and `fileReplacements` paths resolve against it. Useful when the build script runs from a monorepo root. |
+| `workspaceRoot` | `string` | `process.cwd()` | Resolved against `cwd()`. esbuild runs from this directory, and relative `tsConfig`, `cachePath`, `outputPath`, `packageJson` and `fileReplacements` paths resolve against it. Useful when the build script runs from a monorepo root. |
 | `tsConfig` | `string` | `<workspaceRoot>/tsconfig.json` if it exists | Resolved against `workspaceRoot`. Forwarded to esbuild's `tsconfig` option for the source-code bundle, and the core reads its `paths` for [shared mappings](../../core/configuration.md#sharedmappings). Without one, esbuild finds the nearest `tsconfig.json` per file. Point it at `tsconfig.base.json` when your `paths` only live there. |
 | `cachePath` | `string` | core default | A relative path is resolved against `workspaceRoot`; an absolute path is used as-is. Otherwise the core's `getDefaultCachePath` is used. See [Caching](../../core/caching.md). |
 | `projectName` | `string` | — | Forwarded to the core; used for logging and cache scoping in multi-project workspaces. |
 | `entryPoints` | `string[]` | — | Source entries for the federation build. Usually the files referenced by `exposes` in `federation.config.js`. |
-| `packageJson` | `string` | — | Path to the project's `package.json`. Override when it is not next to the federation config. |
+| `packageJson` | `string` | — | Path to the project's `package.json`, resolved against `workspaceRoot`. Without it, the `package.json` is looked up from `workspaceRoot`; set it when the project's own `package.json` lives elsewhere. |
 | `dev` | `boolean` | `false` | Enables sourcemaps and disables minification in both the source-code and node-modules esbuild contexts. Also flips the `process.env.NODE_ENV` define to `"development"`. |
 | `watch` | `boolean` | `false` | Starts the file watcher and rebuild queue. The returned `federation` object stays live until you call `close()`. |
 | `watchLinkedDeps` | `boolean` | `false` | In watch mode, also polls shared packages that are `npm link`ed into a checkout outside `node_modules`, so rebuilding the library rebuilds this app. See [Watch Mode](#watch-mode). |

@@ -6,7 +6,7 @@ Shared dependencies are the mechanism that lets hosts and remotes load the same 
 
 ## `fromPackageJson` (recommended)
 
-`fromPackageJson` is the recommended way to share your dependencies. It shares **all** dependencies found in your `package.json` and returns a small fluent builder so you can fine-tune the result. The base options you pass are applied to every shared dependency; you then chain `.only(...)`, `.skip(...)`, `.override(...)` and `.patch(...)` as needed and hand the builder to `shared`:
+`fromPackageJson` is the recommended way to share your dependencies. It shares **all** dependencies found in your `package.json` and returns a small fluent builder so you can fine-tune the result. Called without arguments, it shares every dependency as a strict singleton, each in a bundle of its own:
 
 ```js
 import {
@@ -16,22 +16,29 @@ import {
 
 export default withNativeFederation({
   name: "host",
-  shared: fromPackageJson({
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: "auto",
-    includeSecondaries: false,
-  }),
+  // = { singleton: true, strictVersion: true, requiredVersion: 'auto', build: 'package' } for every dependency
+  shared: fromPackageJson(),
 });
 ```
 
-> **Note:** If you omit the `shared` property entirely, Native Federation applies exactly this `fromPackageJson` configuration for you (with `singleton`, `strictVersion` and `requiredVersion: 'auto'`). So the snippet above is also a good description of the default behavior.
+Pass a base config to apply other options to every shared dependency. It **replaces** the default above rather than merging into it, so spell out every option you want:
+
+```js
+shared: fromPackageJson({
+  singleton: true,
+  strictVersion: true,
+  requiredVersion: "auto",
+  includeSecondaries: false,
+}),
+```
+
+> **Note:** If you omit the `shared` property entirely, Native Federation shares every dependency with `singleton`, `strictVersion` and `requiredVersion: 'auto'`, all in the combined shared bundle (no `build: 'package'`).
 
 The builder offers four chainable methods, each of which returns the builder so you can combine them:
 
 - **`.only(patterns)`** — share only the `package.json` dependencies matching these patterns (e.g. `['@angular/*', 'rxjs']`). Repeated calls add to the selection; omit it to share every dependency. Packages added through `.override(...)` are unaffected, and patching a package `.only()` excluded is ignored with a warning. `.filter()` is the same method under its older name.
 - **`.skip(externals)`** — exclude packages from sharing (added on top of the [default skip list](configuration.md#the-default-skip-list)).
-- **`.override(externals)`** — replace the configuration for specific packages entirely. Use this when a package needs a completely different set of options.
+- **`.override(externals)`** — replace the configuration for specific packages entirely. Use this when a package needs a completely different set of options. An override configures only the package of exactly that name: overriding `react` leaves `react-dom` on the base config.
 - **`.patch(patterns, cfg)`** — merge a partial configuration onto the shared packages matching these patterns (e.g. `['@angular/*']`), keeping the base options for everything you don't touch. Patterns match `package.json` dependency names, so a secondary entry point takes its package's patch and can't be patched on its own. Patches merge in call order.
 
 ```js
@@ -70,7 +77,7 @@ export default withNativeFederation({
 
 Pass the builder itself to `shared`; `withNativeFederation` resolves it for you. Its `.get()` is deprecated: put extra packages in `.override()` instead of spreading the resolved object.
 
-By default the closest `package.json` (relative to your `federation.config.mjs`) is used. You can point at a different one by passing its path as the second argument: `fromPackageJson(baseCfg, projectPath)`.
+By default the `package.json` is looked up from the build's `packageJson` option, or else from the workspace root, walking up. You can point at a different one by passing its path as the second argument: `fromPackageJson(baseCfg, projectPath)`. A relative `projectPath` is resolved against the [`workspaceRoot`](build-process.md#the-federationoptions-object), not the directory the build starts in; the same holds for `shareAll` and `share`.
 
 ## Alternative: the `shareAll` helper
 
@@ -154,19 +161,21 @@ The examples below patch one package onto the base options every dependency gets
 | `version`            | `string`                                       | inferred       | The version that is being shared. Usually inferred from `package.json`.                                                                                                                                                                                                                                     |
 | `includeSecondaries` | `boolean \| { skip?, resolveGlob?, keepAll? }` | `true`         | Also share the package's secondary entry points. See below.                                                                                                                                                                                                                                                 |
 | `platform`           | `'browser' \| 'node'`                          | config default | Target platform for this shared bundle.                                                                                                                                                                                                                                                                     |
-| `build`              | `'default' \| 'separate' \| 'package'`         | `'default'`    | How the shared external is bundled. `'default'` groups all `default` shared externals into one build step. `'separate'` builds the entry on its own. `'package'` builds the entry plus its secondaries as an isolated package bundle — required when you want per-package `chunks` settings to take effect. |
-| `chunks`             | `boolean`                                      | config default | Enable or disable code-splitting for this specific package. Only applies with `build: 'separate'` or `'package'`.                                                                                                                                                                                          |
+| `build`              | `'default' \| 'separate' \| 'package' \| 'pool'` | `'default'`    | How the shared external is bundled. `'default'` groups all `default` shared externals into one build step. `'separate'` builds the entry on its own. `'package'` builds the entry plus its secondaries as an isolated package bundle — required when you want per-package `chunks` settings to take effect. `'pool'` builds every package with the same `pool` label in one bundle. See [Build modes](configuration.md#build-modes-on-a-shared-entry). `fromPackageJson()` without a base config sets `'package'`. |
+| `chunks`             | `boolean`                                      | config default | Enable or disable code-splitting for this specific package. Only applies with `build: 'separate'`, `'package'` or `'pool'`.                                                                                                                                                                               |
 | `shareScope`         | `string`                                       | config default | Optional share-scope override for this package.                                                                                                                                                                                                                                                             |
-| `pool`               | `string`                                       | –              | Optional resource-pool hint for this shared external. Passed through to `remoteEntry.json` and consumed by the orchestrator; the core build does not act on it.                                                                                                                                 |
+| `pool`               | `string`                                       | –              | Optional resource-pool label for this shared external. Passed through to `remoteEntry.json` and consumed by the orchestrator's [pooling](../orchestrator/pooling.md). On its own it leaves bundling unchanged; together with `build: 'pool'` the members are built in one bundle.                                                       |
 | `preload`            | `boolean`                                      | `false`        | Ask the runtime to fetch the package, with every chunk of its bundle, as soon as the import map is in place. See [Preloading a shared package](#preloading-a-shared-package).                                                                                                                 |
 
 ### `requiredVersion: 'auto'`
 
 With `'auto'`, the helper looks up the version in the closest `package.json`. This helps resolve unmet peer dependencies and is the recommended default.
 
+When the declared value isn't a semver range — `catalog:`, `workspace:*`, `npm:…`, `file:…` or a dist-tag like `latest` — the emitted range is `~` on the installed version, floored to its minor: `17.3.5` becomes `~17.3.0`, and a prerelease keeps its tag (`~18.0.0-rc.1`). With nothing installed, or an installed `package.json` without a valid `version`, the declared value is published as written, so give a workspace package referenced with `workspace:*` a `version`.
+
 ### Choosing the emitted range
 
-A detected version is emitted exactly as your `package.json` spells it — `^1.2.3` stays `^1.2.3`. Passing an object instead lets you pick the format:
+A detected range is emitted exactly as your `package.json` spells it — `^1.2.3` stays `^1.2.3` (a declared value that isn't a range [becomes `~` on the installed version](#requiredversion-auto)). Passing an object instead lets you pick the format:
 
 ```js
 shared: fromPackageJson(base).patch(["@my-org/lib"], { requiredVersion: { range: "^" } }),
@@ -182,7 +191,7 @@ shared: fromPackageJson(base).patch(["@my-org/lib"], { requiredVersion: { range:
 
 Any prefix already on the detected version is replaced, and a prerelease tag is kept (`2.0.0-next.1` becomes `^2.0.0-next.1`). A multi-comparator range such as `>=1.0.0 <2.0.0` has no single prefix to rewrite, so it is passed through untouched.
 
-Set `version` alongside `range` to format a version of your own instead of the detected one. `version: 'auto'` means "look the version up", so in a package's config it takes precedence over a `version` set next to it and falls back to the `package.json` lookup — which fails if the package is not declared there.
+For a declared value that isn't a range, `range` is applied to the installed version. Set `version` alongside `range` to format a version of your own instead of the detected one. `version: 'auto'` means "look the version up", so in a package's config it takes precedence over a `version` set next to it and falls back to the `package.json` lookup — which fails if the package is not declared there.
 
 ## Secondary Entry Points
 
@@ -341,7 +350,7 @@ export default withNativeFederation({
 });
 ```
 
-> **Note:** Per-package `chunks` settings are only honored when `build` is set to `'package'` (or `'separate'`). `'default'` externals share one build step that uses the top-level `chunks`, so a different value on one of them logs a warning and is dropped. Shared mappings take `chunks` as well — see [Mapping bundles](configuration.md#mapping-bundles).
+> **Note:** Per-package `chunks` settings are only honored when `build` is set to `'package'` (or `'separate'` or `'pool'`). `'default'` externals share one build step that uses the top-level `chunks`, so a different value on one of them logs a warning and is dropped. Shared mappings take `chunks` as well — see [Mapping bundles](configuration.md#mapping-bundles).
 
 ### Dense Chunking
 
@@ -379,10 +388,23 @@ shared: fromPackageJson(base).patch(["@my-org/charts"], { preload: true, build: 
 
 Once one entry point of a package sets it, every entry point of that package does. The package brings every chunk of the bundle it is built in, which has two costs the build warns about:
 
-- In the combined shared bundle (`build: 'default'`) that is the chunks of every package in it, so give a preloaded package `build: 'package'`.
+- In the combined shared bundle (`build: 'default'`) or a [pool bundle](configuration.md#building-a-pool-in-one-bundle) that is the chunks of every package in it, so give a preloaded package `build: 'package'`.
 - Without [`features.denseChunking`](#dense-chunking) there is no list per bundle, so only its entry files are preloaded.
 
 A bundle's list also holds the chunks the package loads lazily, so a library that splits languages, themes or diagrams into lazy chunks preloads all of them.
+
+## Which file a shared entry point bundles
+
+Core picks the file for each shared entry point the way Node and your bundler resolve the import, from the package's `exports`:
+
+- An exact `exports` key beats a pattern. Among patterns, the longest text before the `*` wins, and a pattern may have text after it (`"./*.js"`).
+- An `exports` that is a string, an array or a conditions object without `.` keys is the package root's entry.
+- Inside the matched target an ESM condition (`import`, `module`, …) wins, then `default`. A browser entry never takes the `node` condition, and a `platform: 'node'` entry never takes `browser`.
+- An entry point the package maps to `null` isn't shared. The build warns that the package's `exports` blocks it; remove it from `shared` or [skip](#skipping-dependencies) it.
+
+Without a matching `exports` key, core falls back to `module`, then `main` and the usual `index` files.
+
+With [`ignoreUnusedDeps`](configuration.md#feature-flags), the scan for used dependencies follows each package where the copy that runs is installed: a shared package from the workspace root, any other package from the folder of the package that imports it. Under an isolated install (pnpm), shared packages reached only through a dependency of a dependency are kept.
 
 ## CommonJS externals
 
@@ -429,6 +451,6 @@ sharedMappings: [[['@my-org/ui/*'], { requiredVersion: { range: '^' } }]],
 
 A mapped path defaults to `~<version>` — an in-workspace library moves in lockstep with nothing, so `~` is the safest bet — and that default also holds for an object that names no `range`. It is the one place mappings differ from a shared package.
 
-Give a mapping an npm-style name (`package` or `@company/package`, lowercase); any other name warns, or fails the build under [`strictImports`](configuration.md#feature-flags). Mapped paths are read from the tsconfig the build compiles with — see [sharedMappings](configuration.md#sharedmappings).
+Give a mapping an npm-style name (`package` or `@company/package`, lowercase); any other name warns, unless a [declared mapping package](configuration.md#declaring-mapping-packages) covers it. Mapped paths are read from the tsconfig the build compiles with — see [sharedMappings](configuration.md#sharedmappings).
 
 A mapping also honours `build`: by default every mapping lands in one bundle, and `build: 'separate'` or `build: 'package'` gives it a bundle of its own, and `chunks` applies to the bundle the mapping lands in (see [Mapping bundles](configuration.md#mapping-bundles)). A mapping's package comes from its name unless you [declare the packages](configuration.md#declaring-mapping-packages) yourself. See [sharedMappings](configuration.md#sharedmappings) for the builder (`mappingsFromWorkspace`), the `keepAll` / `resolveGlob` interaction with `ignoreUnusedDeps`, and the barrel-import rule.

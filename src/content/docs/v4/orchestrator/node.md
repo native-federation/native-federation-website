@@ -187,7 +187,7 @@ remote SSR code:  import { inject } from '@angular/core'
 
 The synthesized module re-exports every captured key (named exports plus `default`), so a remote's `import '@angular/core'` returns the *same* object the host loaded — one core, no duplication. Failed imports during auto-capture are logged and skipped rather than aborting init.
 
-> **Angular SSR.** You rarely call this directly — the adapter's `node-preload` passes `hostInstances: 'all'` for you. See [Angular Adapter → SSR & Hydration](../angular-adapter/ssr.md). Outside Angular, treat `hostInstances` as an escape hatch for frameworks with the same secondary-entry-point hazard.
+> **Angular SSR.** The adapter's production `node-preload` doesn't use host instances: the host's server bundle and the remotes resolve `@angular/*` through one import map. Only its dev SSR entry captures them, with its own `load`. See [Angular Adapter → SSR & Hydration](../angular-adapter/ssr.md). Outside Angular, treat `hostInstances` as an escape hatch for frameworks with the same secondary-entry-point hazard.
 
 ## What is *not* on the Node entry
 

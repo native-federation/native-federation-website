@@ -91,7 +91,7 @@ Symptoms worth checking against: two instances of a framework singleton, `instan
 
 ## Enabling pooling
 
-An external joins a pool through an optional `pool` label on a shared package in the remote's `federation.config.mjs`. It mirrors `shareScope` in shape. Core passes it through to `remoteEntry.json` untouched, and the build itself does nothing with it. See [Core — per-package options](../core/sharing.md#per-package-options).
+An external joins a pool through an optional `pool` label on a shared package in the remote's `federation.config.mjs`. It mirrors `shareScope` in shape. Core passes it through to `remoteEntry.json` untouched; on its own it changes nothing about bundling. Add [`build: 'pool'`](../core/configuration.md#building-a-pool-in-one-bundle) to build the pool's members in one bundle, so an unshared dependency they both import exists once. See [Core — per-package options](../core/sharing.md#per-package-options).
 
 > **Upgrading from 4.7.** Orchestrator 4.8.0 elects a pool's members together as one family, where 4.7 let the resolver pick each member's version and then checked the result. A pooled family's global version can therefore move — an older build wins when it serves more remotes — and the log lines changed (see [Diagnostics](#diagnostics)).
 

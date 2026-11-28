@@ -52,10 +52,11 @@ The core calls these in phases. Each phase has a unique `name` — use it as the
 
 ## 2. The phases the core drives
 
-During a full build the core will call your adapter for up to four families of phases:
+During a full build the core will call your adapter for up to five families of phases:
 
 - `browser-shared` / `node-shared` — every `build: 'default'` external for that platform bundled in one pass. Called as a matched `setup` → `build` → `dispose` triple.
 - `browser-<pkg>` / `node-<pkg>` — externals declared with `build: 'separate'` or `build: 'package'`, one phase per package group, again as a matched triple.
+- `browser-pool-<label>` / `node-pool-<label>` (`<platform>-pool-<scope>-<label>` with a share scope) — every external with `build: 'pool'` and that `pool` label, in one pass with several entries, like the combined bundle.
 - `mapping-bundle` / `mapping-<name>` — the shared `tsconfig` paths. Since v4.7 they build apart from the exposed modules: every mapping goes into `mapping-bundle` unless it sets `build: 'separate'` or `build: 'package'`, which gives it a `mapping-<name>` phase of its own.
 - `mapping-or-exposed` — every `exposes` entry.
 
@@ -444,6 +445,7 @@ That's the whole watch-mode machinery. If you squint it's 40 lines of glue: `cre
 - **Not forwarding `signal`.** Without this, `RebuildQueue` will still fire the next rebuild, but the previous one runs to completion in parallel and wastes CPU — and in the worst case overwrites the newer output.
 - **Skipping `syncNfFileWatcher` after rebuild.** New dynamic imports that land in the source graph after the first build won't be watched until you re-sync. Symptom: edits to a newly-imported file don't trigger a rebuild.
 - **Keeping state on the adapter instance instead of the cache.** The core can recreate the adapter between builds; long-lived state belongs in `options.cache.bundlerCache`.
+- **Reading a `projectPath` in a config helper of your own.** Resolve it with `inferProjectPath` from `@softarc/native-federation/internal`, so it reads the same folder as `fromPackageJson()` (relative to `workspaceRoot`, not the working directory).
 - **Forgetting to call `dispose()` without a name.** Many bundlers leak a subprocess (esbuild's service, swc's worker pool). Call `dispose()` on process exit.
 
 > **Note:** Built an adapter and want to share it? Open a PR against the [native-federation GitHub org](https://github.com/native-federation) or add a link to the [Resources](/resources/) page.

@@ -25,8 +25,9 @@ Caching happens per *bundle*, not per package. A bundle is a group of externals 
 - `browser-shared` — every `build: 'default'` browser external.
 - `node-shared` — every `build: 'default'` node external.
 - `browser-<package>` / `node-<package>` — one bundle per package declared with `build: 'separate'` or `build: 'package'`.
+- `browser-pool-<label>` / `node-pool-<label>` — every package declared with `build: 'pool'` and that `pool` label.
 
-Each bundle owns its own cache key, so bumping one isolated package doesn't invalidate the others.
+Each bundle owns its own cache key, so bumping one isolated package doesn't invalidate the others. A bundle that holds several packages (`*-shared`, a pool) is one entry: changing any of them rebuilds it.
 
 ## Cache location
 
@@ -230,4 +231,4 @@ The `Checksum of <bundle> matched, Skipped artifact bundling` line is the signal
 
 - [Build Process](build-process.md) — where caching fits in the `federationBuilder` lifecycle.
 - [Build Artifacts](artifacts.md) — the shape of the files the cache produces.
-- [Build modes](configuration.md#build-modes-on-a-shared-entry) — how `build: 'default' | 'separate' | 'package'` decides which cache bundle a package lands in.
+- [Build modes](configuration.md#build-modes-on-a-shared-entry) — how `build: 'default' | 'separate' | 'package' | 'pool'` decides which cache bundle a package lands in.

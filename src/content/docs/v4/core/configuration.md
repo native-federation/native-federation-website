@@ -58,7 +58,7 @@ Use npm-style names: `'mfe1'`, `'@org/mfe1'`, or `'team/mfe1'`. Stick to one rem
 
 ## exposes
 
-A remote's `exposes` object declares which internal modules can be loaded into a host. Keys are the public specifiers that hosts use when calling `loadRemoteModule`; values are paths to the source file, relative to the workspace root.
+A remote's `exposes` object declares which internal modules can be loaded into a host. Keys are the public specifiers that hosts use when calling `loadRemoteModule`; values are paths to the source file, relative to the workspace root. A path may leave out the extension or name a folder (its index file), as in a module import.
 
 ```js
 exposes: {
@@ -108,13 +108,11 @@ import { withNativeFederation, fromPackageJson } from '@softarc/native-federatio
 export default withNativeFederation({
   name: 'mfe1',
   // Recommended: the fromPackageJson builder
-  shared: fromPackageJson({
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: 'auto',
-  }),
+  shared: fromPackageJson(),
 });
 ```
+
+Without arguments, `fromPackageJson()` shares every dependency with `singleton`, `strictVersion`, `requiredVersion: 'auto'` and `build: 'package'`. A base config you pass replaces that default instead of merging into it.
 
 `fromPackageJson` returns a fluent builder (`.only()`, `.skip()`, `.override()`, `.patch()`) that you pass to `shared` as is; `shareAll` is the older object-spread equivalent. To hand-pick packages, select them with `.only([...])` and give any of them a config of their own with `.override({...})`. The `share` helper and the builder's `.get()` are deprecated. Both builders are covered in full on [Sharing Dependencies](sharing.md).
 
@@ -177,9 +175,10 @@ Notes:
 - `sharedMappings` is optional. Omit it and **all** mapped paths are shared.
 - `skip` still applies on top. For wildcard mappings it is matched against each resolved import (`@my-org/ui/button`), not against the pattern.
 - Mapped paths are read from the tsconfig the build compiles with (the adapter's `tsConfig`, resolved against the workspace root), so sharing and compiling see the same `paths`. They are parsed the way TypeScript does it: `extends` is followed, and targets resolve against `baseUrl` or the file that defines `paths`.
+- A `paths` target may be a file, a folder (its index file is the entry point) or a file without its extension (`./libs/ui/index`), which is resolved like a module import.
 - Without one, mapped paths come from the workspace root tsconfig — `tsconfig.base.json` if present, otherwise `tsconfig.json`.
 - A remote without any tsconfig builds with no shared mappings. The unused-dependency scan still needs a tsconfig, so such a remote that shares packages also sets [`ignoreUnusedDeps: false`](#feature-flags).
-- Name mappings like npm packages: `package` or `@company/package`, lowercase. A published mapping with another name warns once per package, or fails the build under [`strictImports`](#feature-flags). Subpaths and wildcards (`@company/package/*`) are fine, but they belong to the package their name implies: `build: 'package'`, pruning and `denseExternals` group them under it. To draw the package boundaries yourself, [declare the packages](#declaring-mapping-packages).
+- Name mappings like npm packages: `package` or `@company/package`, lowercase. A published mapping with another name warns once per package, unless a [package declaration](#declaring-mapping-packages) covers it. Subpaths and wildcards (`@company/package/*`) are fine, but they belong to the package their name implies: `build: 'package'`, pruning and `denseExternals` group them under it. To draw the package boundaries yourself, [declare the packages](#declaring-mapping-packages).
 
 ### Per-mapping configuration
 
@@ -387,19 +386,37 @@ shared: {
 },
 ```
 
-> **Note:** Per-package `chunks` only applies when the package has a bundle of its own — `build: 'package'` or `'separate'`. Default-mode externals share one build step and take the global `chunks`; one that sets a different value logs a warning. Entries built in one bundle that set different values also warn, and the first one listed in `shared` wins.
+> **Note:** Per-package `chunks` only applies when the package has a bundle of its own — `build: 'package'`, `'separate'` or `'pool'`. Default-mode externals share one build step and take the global `chunks`; one that sets a different value logs a warning. Entries built in one bundle that set different values also warn, and the first one listed in `shared` wins.
 
 Shared mappings take `chunks` too — see [Mapping bundles](#mapping-bundles).
 
 ## Build modes on a shared entry
 
-The `build` field on each shared entry controls how the core groups packages when handing them to the bundler. There are three modes:
+The `build` field on each shared entry controls how the core groups packages when handing them to the bundler. There are four modes:
 
 | Mode | Behavior | When to use |
 | --- | --- | --- |
 | `'default'` | Every `default` external on a given platform is bundled in a **single** build step. Produces one `browser-shared` (or `node-shared`) meta file in the cache and the shortest build time. | The baseline. Use unless you have a specific reason not to. |
 | `'separate'` | Each entry gets its own build step, producing one meta file per external. | Edge cases where a single package needs different bundler settings from the rest — rarely needed. |
-| `'package'` | The package and all its secondaries are built together as an isolated package bundle. | Required whenever you want per-package `chunks`, or when a single package needs its own bundler pass (custom chunking, isolated polyfills, wildcard exports that must not bleed into the shared bundle). |
+| `'package'` | The package and all its secondaries are built together as an isolated package bundle. The default of `fromPackageJson()` without a base config. | Required whenever you want per-package `chunks`, or when a single package needs its own bundler pass (custom chunking, isolated polyfills, wildcard exports that must not bleed into the shared bundle). |
+| `'pool'` | Every package with `build: 'pool'` and the same [`pool`](sharing.md#per-package-options) label (and share scope) is built in one bundle per platform, `<platform>-pool-<label>`. | Packages that import the same unshared dependency, which must exist once — see [below](#building-a-pool-in-one-bundle). |
+
+### Building a pool in one bundle
+
+Two shared packages with bundles of their own each inline a dependency they both import but don't share, so its module state exists twice. For an Angular component compiled into two shared libraries that ends in `NG0912` (component ID collision). Give the packages one `pool` label and `build: 'pool'`, and the dependency is split into one chunk of their common bundle:
+
+```js
+shared: fromPackageJson()
+  .patch(["lib-a", "lib-b"], { pool: "ui", build: "pool" }),
+```
+
+- `build: 'pool'` without a `pool` label fails the build. A `pool` label alone changes nothing about bundling.
+- The bundle is one cache entry: changing any member rebuilds all of them.
+- The single instance holds only while one build serves the whole pool at runtime, which is what the orchestrator's [pooling](../orchestrator/pooling.md) aims for.
+
+### Entry points that share private files
+
+Some packages ship several entry points that share private files through relative imports. Angular is one: `@angular/core`, `@angular/core/rxjs-interop` and `@angular/core/primitives/di` all import the file that holds the current injector. A relative import can't be made external, so those files exist once only when every entry point that reaches them is built in one bundle with code splitting on: the combined bundle, `build: 'package'` or `build: 'pool'`, each with `chunks` left on. With `build: 'separate'`, or with `chunks: false`, each entry point gets its own copy and its own state, which shows up as errors such as `NG0203`.
 
 ## Feature Flags
 
@@ -413,7 +430,7 @@ All feature flags live under `features` on the config. `ignoreUnusedDeps`, `mapp
 | `mappingVersion` | `true` | Emits a real semver for every shared mapped path (monorepo-internal library) — picked up from the nearest `package.json` walking up from the entry file to the workspace root. Also sets `requiredVersion: '~<version>'` and `strictVersion: true` on the resulting shared entry, so version mismatches across remotes are detected at runtime. The `~` is a default a per-mapping [`requiredVersion`](#per-mapping-configuration) can replace. Set to `false` to fall back to the unversioned `version: ''` shape. |
 | `integrityHashes` | `false` | Emit SRI hashes for every shared external, exposed module and chunk under a top-level `integrity` map in `remoteEntry.json`. The orchestrator copies these onto the import map so the browser (or `es-module-shims`) can verify each module before executing it. See [Subresource Integrity](../orchestrator/security.md#subresource-integrity). |
 | `synthesizeCjsExports` | `true` | For a shared external that is CommonJS, `require()`s it at build time, enumerates its runtime named exports and bundles a synthetic ESM entry that re-exports them. See [CommonJS externals](sharing.md#commonjs-externals). |
-| `strictImports` | `false` | Fails the build, instead of warning, on a bare import that `remoteEntry.json` doesn't declare, and on a shared mapping whose name isn't npm-style. See [Unresolvable bare imports](#unresolvable-bare-imports). |
+| `strictImports` | `false` | Fails the build, instead of warning, on a bare import that `remoteEntry.json` doesn't declare. See [Unresolvable bare imports](#unresolvable-bare-imports). |
 
 ### When to leave `ignoreUnusedDeps` on (and when to override it)
 
@@ -433,7 +450,7 @@ To fix a finding, share the missing entry point (`includeSecondaries: { keepAll:
 
 ## platform & shareScope
 
-`platform` at the top level sets the default target (`'browser'` or `'node'`) for any shared external that doesn't declare one itself. Mix both in a single config — the builder splits the work into four buckets (`browser-shared`, `node-shared`, `browser-<pkg>`, `node-<pkg>`) and bundles each in its own step.
+`platform` at the top level sets the default target (`'browser'` or `'node'`) for any shared external that doesn't declare one itself. Mix both in a single config — the builder splits the work per platform into the combined bundle (`browser-shared`, `node-shared`), package bundles (`browser-<pkg>`, `node-<pkg>`) and pool bundles (`browser-pool-<label>`, `node-pool-<label>`), and bundles each in its own step.
 
 `shareScope`, if set, is propagated to every shared external that doesn't already have its own scope. It's passed through to `remoteEntry.json` so the orchestrator can honour it at load time.
 
